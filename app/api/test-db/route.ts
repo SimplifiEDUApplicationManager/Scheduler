@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 /**
  * GET /api/test-db
- * Smoke-test: reads auth.users count via the service-role client.
+ * Smoke-test: reads users count via service-role client.
  * Remove this route before production.
  */
 export async function GET() {
