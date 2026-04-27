@@ -115,9 +115,12 @@
 
    ────────────────────────────────────────────────────────────────────────── */
 @theme inline {
-  /* Fonts (Task 2.2 will wire THICCCBOI; Geist stays for now) */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Fonts — THICCCBOI is the Simplifi EDU UI + display face.
+     --font-thicccboi is injected by next/font/local in layout.tsx.
+     font-sans and font-display both resolve to THICCCBOI. */
+  --font-sans: var(--font-thicccboi), 'Manrope', 'Inter', -apple-system, sans-serif;
+  --font-display: var(--font-thicccboi), 'Manrope', 'Inter', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Brand */
   --color-brand-primary: var(--brand-primary);
@@ -236,8 +239,11 @@
 /* ── Base styles ─────────────────────────────────────────────────────────── */
 html,
 body {
+  font-family: var(--font-sans);
   color: var(--fg-1);
   background: var(--bg-1);
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
