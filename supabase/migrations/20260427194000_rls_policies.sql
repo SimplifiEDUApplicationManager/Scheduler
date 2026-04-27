@@ -9,7 +9,8 @@
 -- SECURITY DEFINER so it can query public.users even after RLS is enabled.
 -- STABLE allows the planner to call it once per query rather than per-row.
 CREATE OR REPLACE FUNCTION public.auth_role()
-RETURNS text LANGUAGE sql STABLE SECURITY DEFINER AS $$
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
   SELECT role::text FROM public.users WHERE id = auth.uid()
 $$;
 
