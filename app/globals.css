@@ -1,26 +1,243 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
+/* ==========================================================================
+   Simplifi EDU — Design Tokens
+   Source: Tutor Coordinator Scheduler (2)/styles/tokens.css
+   ========================================================================== */
+
+/* ── CSS Custom Properties (runtime-mutable) ─────────────────────────────
+   Defined here so they can be overridden at runtime (dark mode, theming).
+   Tailwind utilities in @theme inline reference these via var().
+   ────────────────────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand palette */
+  --brand-primary: #6bb3a6; /* Seafoam — primary CTA, highlights */
+  --brand-primary-deep: #3f9c8b; /* Deep seafoam — hover / pressed */
+  --brand-primary-ink: #2b7265; /* Text on light bg */
+  --brand-cream: #ffe8bc;
+  --brand-cream-deep: #f5d28a;
+  --brand-ink: #162033; /* Near-black primary text */
+
+  /* Teal scale */
+  --brand-teal-50: #e8f4f1;
+  --brand-teal-100: #cfe9e2;
+  --brand-teal-200: #a8d6cb;
+  --brand-teal-300: #7fc1b2;
+  --brand-teal-400: #6bb3a6; /* = brand-primary */
+  --brand-teal-500: #3f9c8b; /* = brand-primary-deep */
+  --brand-teal-600: #2b7265;
+  --brand-teal-700: #1f5349;
+
+  /* Neutrals */
+  --neutral-0: #ffffff;
+  --neutral-50: #fafafa;
+  --neutral-100: #f5f5f5;
+  --neutral-150: #ececec;
+  --neutral-200: #e4e4e7;
+  --neutral-300: #d4d4d8;
+  --neutral-400: #a1a1aa;
+  --neutral-500: #71717a;
+  --neutral-600: #52525b;
+  --neutral-700: #3f3f46;
+  --neutral-800: #27272a;
+  --neutral-900: #18181b;
+
+  /* Semantic — foreground */
+  --fg-1: #162033; /* Primary text */
+  --fg-2: #3f3f46; /* Secondary text */
+  --fg-3: #71717a; /* Tertiary / meta */
+  --fg-muted: #a1a1aa; /* Disabled / placeholder */
+  --fg-on-brand: #ffffff;
+
+  /* Semantic — background surfaces */
+  --bg-1: #ffffff; /* Primary surface */
+  --bg-2: #fafafa; /* Elevated page bg */
+  --bg-3: #f5f5f5; /* Inset / subtle fill */
+  --bg-brand: #e8f4f1; /* Brand-tinted surface */
+  --bg-cream: #fff7e6; /* Warm tinted surface */
+
+  /* Semantic — borders */
+  --border-1: #e4e4e7; /* Default card / input */
+  --border-2: #d4d4d8; /* Focus / hover */
+  --border-brand: #6bb3a6;
+
+  /* Status */
+  --success: #22c55e;
+  --success-bg: #ecfdf5;
+  --success-ink: #047857;
+  --warning: #f59e0b;
+  --warning-bg: #fef3c7;
+  --warning-ink: #92400e;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-ink: #991b1b;
+  --info: #0ea5e9;
+  --info-bg: #f0f9ff;
+  --info-ink: #0369a1;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
 }
 
+/* ── Tailwind v4 Theme — Colors (inline = utilities reference CSS vars) ───
+   Token → Tailwind utility mapping:
+
+   Brand
+     bg/text/border-brand-primary        → --brand-primary       #6bb3a6
+     bg/text/border-brand-primary-deep   → --brand-primary-deep  #3f9c8b
+     bg/text/border-brand-primary-ink    → --brand-primary-ink   #2b7265
+     bg/text/border-brand-cream          → --brand-cream         #ffe8bc
+     bg/text/border-brand-cream-deep     → --brand-cream-deep    #f5d28a
+     bg/text/border-brand-ink            → --brand-ink           #162033
+
+   Teal scale
+     bg/text/border-brand-teal-{50–700}  → --brand-teal-{n}
+
+   Neutrals
+     bg/text/border-neutral-{0–900}      → --neutral-{n}
+
+   Semantic foreground
+     text-fg-1 / text-fg-2 / text-fg-3 / text-fg-muted / text-fg-on-brand
+
+   Semantic surfaces
+     bg-surface-1 / bg-surface-2 / bg-surface-3 / bg-surface-brand / bg-surface-cream
+
+   Semantic borders
+     border-border-default / border-border-strong / border-border-brand
+
+   Status
+     bg/text-success / bg/text-success-bg / bg/text-success-ink
+     (same pattern for warning / danger / info)
+
+   ────────────────────────────────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Fonts (Task 2.2 will wire THICCCBOI; Geist stays for now) */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Brand */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-deep: var(--brand-primary-deep);
+  --color-brand-primary-ink: var(--brand-primary-ink);
+  --color-brand-cream: var(--brand-cream);
+  --color-brand-cream-deep: var(--brand-cream-deep);
+  --color-brand-ink: var(--brand-ink);
+
+  /* Teal scale */
+  --color-brand-teal-50: var(--brand-teal-50);
+  --color-brand-teal-100: var(--brand-teal-100);
+  --color-brand-teal-200: var(--brand-teal-200);
+  --color-brand-teal-300: var(--brand-teal-300);
+  --color-brand-teal-400: var(--brand-teal-400);
+  --color-brand-teal-500: var(--brand-teal-500);
+  --color-brand-teal-600: var(--brand-teal-600);
+  --color-brand-teal-700: var(--brand-teal-700);
+
+  /* Neutrals */
+  --color-neutral-0: var(--neutral-0);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-150: var(--neutral-150);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+
+  /* Semantic foreground */
+  --color-fg-1: var(--fg-1);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-on-brand: var(--fg-on-brand);
+
+  /* Semantic surfaces */
+  --color-surface-1: var(--bg-1);
+  --color-surface-2: var(--bg-2);
+  --color-surface-3: var(--bg-3);
+  --color-surface-brand: var(--bg-brand);
+  --color-surface-cream: var(--bg-cream);
+
+  /* Semantic borders */
+  --color-border-default: var(--border-1);
+  --color-border-strong: var(--border-2);
+  --color-border-brand: var(--border-brand);
+
+  /* Status */
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-ink: var(--success-ink);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-ink: var(--warning-ink);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-ink: var(--danger-ink);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-ink: var(--info-ink);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Tailwind v4 Theme — Static values (radii, type, shadows) ─────────────
+   Token → Tailwind utility mapping:
+
+   Border radius
+     rounded-xs   → 4px     rounded-sm  → 6px    rounded-md   → 8px
+     rounded-lg   → 12px    rounded-xl  → 16px   rounded-2xl  → 20px
+     rounded-pill → 999px
+
+   Typography (font size)
+     text-display → 56px    text-h1 → 40px    text-h2 → 30px
+     text-h3      → 22px    text-h4 → 18px    text-body-lg → 16px
+     text-body    → 14px    text-sm → 13px    text-xs  → 12px
+     text-xxs     → 11px
+
+   Shadows
+     shadow-xs / shadow-sm / shadow-md / shadow-lg / shadow-xl / shadow-brand
+   ────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Border radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-pill: 999px;
+
+  /* Font sizes */
+  --text-display: 56px;
+  --text-h1: 40px;
+  --text-h2: 30px;
+  --text-h3: 22px;
+  --text-h4: 18px;
+  --text-body-lg: 16px;
+  --text-body: 14px;
+  --text-sm: 13px;
+  --text-xs: 12px;
+  --text-xxs: 11px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(22, 32, 51, 0.04);
+  --shadow-sm: 0 1px 3px rgba(22, 32, 51, 0.06), 0 1px 2px rgba(22, 32, 51, 0.04);
+  --shadow-md: 0 4px 16px rgba(22, 32, 51, 0.06);
+  --shadow-lg: 0 10px 24px rgba(22, 32, 51, 0.1);
+  --shadow-xl: 0 16px 34px rgba(22, 32, 51, 0.12);
+  --shadow-brand: 0 8px 22px rgba(107, 179, 166, 0.28);
 }
 
+/* ── Base styles ─────────────────────────────────────────────────────────── */
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--fg-1);
+  background: var(--bg-1);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
