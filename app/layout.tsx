@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import { Header } from '@/components/features/Header';
 import './globals.css';
 
-// THICCCBOI — Simplifi EDU display + UI face.
-// Variable name --font-thicccboi is consumed by globals.css → font-sans.
 const thicccboi = localFont({
   src: [
     { path: '../public/fonts/THICCCBOI-Regular.ttf', weight: '400', style: 'normal' },
@@ -29,7 +28,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${thicccboi.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex flex-col h-full bg-surface-2">
+        <Header />
+        <main className="flex-1 overflow-auto">{children}</main>
+      </body>
     </html>
   );
 }
