@@ -246,6 +246,21 @@ export const INVITATIONS: Invitation[] = [
   },
 ];
 
+export interface Hold {
+  id: string;
+  tutorId: string;
+  coordinatorName: string;
+  day: number;   // 0–6
+  start: number; // decimal hour
+  end: number;
+  reason: string;
+}
+
+export const HOLDS: Hold[] = [
+  { id: 'h-1', tutorId: 't-julia', coordinatorName: 'Austin', day: 1, start: 16,   end: 17.5, reason: 'Internal review'    },
+  { id: 'h-2', tutorId: 't-chris', coordinatorName: 'Austin', day: 3, start: 16,   end: 17,   reason: 'Trial session eval'  },
+];
+
 export const AT_RISK_STUDENTS: AtRiskStudent[] = [
   {
     name: 'Tyler Brooks', subject: 'AP Chemistry', tutor: 'Katrina A.',
