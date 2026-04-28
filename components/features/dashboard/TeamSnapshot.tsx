@@ -1,5 +1,6 @@
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
+import { capacityStatus } from '@/lib/utils/capacity';
 import { Tutor } from '@/lib/data/dashboard-mock';
 
 interface TeamSnapshotProps {
@@ -15,12 +16,9 @@ export function TeamSnapshot({ tutors }: TeamSnapshotProps) {
     <div className="flex flex-col gap-1.5">
       {sorted.slice(0, 5).map(t => {
         const pct = Math.round((t.hoursCurrent / t.hoursMax) * 100);
+        const status = capacityStatus(t.hoursCurrent, t.hoursMax);
         const pctColor =
-          t.hoursCurrent >= t.hoursMax
-            ? 'var(--danger)'
-            : t.hoursCurrent / t.hoursMax >= 0.8
-            ? 'var(--warning)'
-            : 'var(--brand-teal-500)';
+          status === 'at' ? 'var(--danger)' : status === 'near' ? 'var(--warning)' : 'var(--brand-teal-500)';
 
         return (
           <div

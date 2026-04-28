@@ -38,8 +38,8 @@ export function AttentionList({ pending, declined, expired, tutors }: AttentionL
 
   return (
     <div className="flex flex-col gap-1.5">
-      {items.slice(0, 4).map((it, i) => (
-        <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-surface-2 rounded-lg">
+      {items.slice(0, 4).map((it) => (
+        <div key={it.invite.id} className="flex items-center gap-3 px-3 py-2.5 bg-surface-2 rounded-lg">
           <Avatar initials={it.tutor?.initials ?? '?'} size="sm" tone="brand" />
           <div className="flex-1 min-w-0">
             <div className="text-xs font-semibold text-fg-1 truncate">
