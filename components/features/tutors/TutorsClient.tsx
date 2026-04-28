@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import type { Tutor, TuitionRequest, Subject, Hold } from '@/lib/data/dashboard-mock';
+import type { Tutor, TuitionRequest, Subject, Hold, Invitation } from '@/lib/data/dashboard-mock';
 import {
   parseFilters,
   filtersToParams,
@@ -14,6 +14,7 @@ import { RequestPickerBlock } from './RequestPickerBlock';
 import { FilterPanel } from './FilterPanel';
 import { TutorCard } from './TutorCard';
 import { ProposeModal } from './ProposeModal';
+import { TutorProfileDrawer } from './TutorProfileDrawer';
 import { WeekView } from '@/components/features/calendar/WeekView';
 
 interface TutorsClientProps {
@@ -21,9 +22,10 @@ interface TutorsClientProps {
   requests: TuitionRequest[];
   subjects: Subject[];
   holds: Hold[];
+  invitations: Invitation[];
 }
 
-export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClientProps) {
+export function TutorsClient({ tutors, requests, subjects, holds, invitations }: TutorsClientProps) {
   const router     = useRouter();
   const pathname   = usePathname();
   const rawParams  = useSearchParams();
@@ -34,6 +36,7 @@ export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClient
   // UI-only state (not bookmarkable)
   const [selectedTutorId, setSelectedTutorId] = useState<string | null>(null);
   const [proposeFor, setProposeFor]            = useState<Tutor | null>(null);
+  const [profileTutor, setProfileTutor]        = useState<Tutor | null>(null);
   const [toastName, setToastName]              = useState<string | null>(null);
   const [weekOffset, setWeekOffset]            = useState(0);
 
@@ -137,6 +140,7 @@ export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClient
               selected={selectedTutorId === t.id}
               onSelect={() => setSelectedTutorId(prev => prev === t.id ? null : t.id)}
               onPropose={() => setProposeFor(t)}
+              onProfile={() => setProfileTutor(t)}
             />
           ))}
         </div>
@@ -196,6 +200,17 @@ export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClient
           request={activeReq}
           onClose={() => setProposeFor(null)}
           onSend={() => handleProposeSend(proposeFor.name)}
+        />
+      )}
+
+      {/* ── Profile drawer ─────────────────────────────────────────────────── */}
+      {profileTutor && (
+        <TutorProfileDrawer
+          tutor={profileTutor}
+          subjects={subjects}
+          invitations={invitations}
+          onClose={() => setProfileTutor(null)}
+          onPropose={() => { setProfileTutor(null); setProposeFor(profileTutor); }}
         />
       )}
 

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { Tutor, TuitionRequest, Subject, Hold } from '@/lib/data/dashboard-mock';
+import type { Tutor, TuitionRequest, Hold } from '@/lib/data/dashboard-mock';
 import { parseFilters, overlapsTuple, getWeekLabel, getMonthLabel } from '@/lib/utils/tutors';
 import { WeekView } from './WeekView';
 import { MonthView } from './MonthView';
@@ -10,7 +10,6 @@ import { MonthView } from './MonthView';
 interface CalendarClientProps {
   tutors: Tutor[];
   requests: TuitionRequest[];
-  subjects: Subject[];
   holds: Hold[];
 }
 

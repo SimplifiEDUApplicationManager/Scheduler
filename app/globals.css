@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* ── Drawer animations ────────────────────────────────────────────────────── */
+@keyframes drawerFade  { from { background: rgba(24,24,27,0); }    to { background: rgba(24,24,27,0.45); } }
+@keyframes drawerSlide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
 /* ==========================================================================
    Simplifi EDU — Design Tokens
    Source: Tutor Coordinator Scheduler (2)/styles/tokens.css
