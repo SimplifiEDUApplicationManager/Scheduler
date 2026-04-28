@@ -1,18 +1,10 @@
 import type { Tutor, Subject } from '@/lib/data/dashboard-mock';
 import { Badge } from '@/components/ui/Badge';
+import { DrawerCard } from './DrawerCard';
 
 interface Props {
   tutor: Tutor;
   subjects: Subject[];
-}
-
-function DrawerCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="bg-white border border-neutral-200 rounded-xl p-4">
-      <h3 className="text-[12px] font-bold text-fg-1 mb-2.5">{title}</h3>
-      {children}
-    </section>
-  );
 }
 
 export function TutorProfileOverview({ tutor, subjects }: Props) {

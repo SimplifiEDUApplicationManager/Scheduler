@@ -1,6 +1,7 @@
 import type { Tutor } from '@/lib/data/dashboard-mock';
 import { DAY_NAMES } from '@/lib/utils/tutors';
 import { CapacityBar } from '@/components/ui/CapacityBar';
+import { DrawerCard } from './DrawerCard';
 
 interface Props {
   tutor: Tutor;
@@ -50,14 +51,6 @@ function MiniAvailability({ tutor }: { tutor: Tutor }) {
   );
 }
 
-function DrawerCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="bg-white border border-neutral-200 rounded-xl p-4">
-      <h3 className="text-[12px] font-bold text-fg-1 mb-2.5">{title}</h3>
-      {children}
-    </section>
-  );
-}
 
 export function TutorProfileAvailability({ tutor, tzLabel }: Props) {
   return (

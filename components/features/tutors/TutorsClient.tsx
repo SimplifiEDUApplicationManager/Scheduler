@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import type { Tutor, TuitionRequest, Subject, Hold } from '@/lib/data/dashboard-mock';
+import type { Tutor, TuitionRequest, Subject, Hold, Invitation } from '@/lib/data/dashboard-mock';
 import {
   parseFilters,
   filtersToParams,
@@ -15,7 +15,6 @@ import { FilterPanel } from './FilterPanel';
 import { TutorCard } from './TutorCard';
 import { ProposeModal } from './ProposeModal';
 import { TutorProfileDrawer } from './TutorProfileDrawer';
-import { INVITATIONS } from '@/lib/data/dashboard-mock';
 import { WeekView } from '@/components/features/calendar/WeekView';
 
 interface TutorsClientProps {
@@ -23,9 +22,10 @@ interface TutorsClientProps {
   requests: TuitionRequest[];
   subjects: Subject[];
   holds: Hold[];
+  invitations: Invitation[];
 }
 
-export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClientProps) {
+export function TutorsClient({ tutors, requests, subjects, holds, invitations }: TutorsClientProps) {
   const router     = useRouter();
   const pathname   = usePathname();
   const rawParams  = useSearchParams();
@@ -208,7 +208,7 @@ export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClient
         <TutorProfileDrawer
           tutor={profileTutor}
           subjects={subjects}
-          invitations={INVITATIONS}
+          invitations={invitations}
           onClose={() => setProfileTutor(null)}
           onPropose={() => { setProfileTutor(null); setProposeFor(profileTutor); }}
         />

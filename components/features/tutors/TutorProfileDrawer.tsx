@@ -6,7 +6,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { TutorProfileOverview } from './TutorProfileOverview';
 import { TutorProfileAvailability } from './TutorProfileAvailability';
-import { TutorProfileStudents, fakeRoster } from './TutorProfileStudents';
+import { TutorProfileStudents } from './TutorProfileStudents';
+import { fakeRoster } from '@/lib/utils/fake-roster';
 import { TutorProfileHistory } from './TutorProfileHistory';
 
 type Tab = 'overview' | 'availability' | 'students' | 'history';
@@ -43,11 +44,6 @@ export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPr
       style={{ background: 'rgba(24,24,27,0.45)', animation: 'drawerFade 180ms ease' }}
       onClick={onClose}
     >
-      <style>{`
-        @keyframes drawerFade  { from { background: rgba(24,24,27,0);    } to { background: rgba(24,24,27,0.45); } }
-        @keyframes drawerSlide { from { transform: translateX(100%); } to { transform: translateX(0); } }
-      `}</style>
-
       <div
         className="flex flex-col h-full bg-white"
         style={{ width: 560, boxShadow: '-24px 0 48px rgba(22,32,51,0.12)', animation: 'drawerSlide 240ms cubic-bezier(0.22,1,0.36,1)' }}
@@ -102,7 +98,11 @@ export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPr
           >
             Email
           </a>
-          <button className="h-8 px-3 rounded-lg border border-border-default text-fg-2 text-[12px] font-semibold flex items-center hover:bg-surface-2 transition-colors">
+          <button
+            disabled
+            title="Coming soon"
+            className="h-8 px-3 rounded-lg border border-border-default text-fg-muted text-[12px] font-semibold flex items-center cursor-not-allowed opacity-50"
+          >
             View calendar
           </button>
         </div>
