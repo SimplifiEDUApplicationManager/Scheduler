@@ -2,7 +2,7 @@ import type { TuitionRequest, Invitation, Tutor } from '@/lib/data/dashboard-moc
 
 interface TimelineEvent {
   t: string;
-  type: 'received' | 'proposed' | 'accepted' | 'declined' | 'matched';
+  type: 'received' | 'proposed' | 'accepted' | 'declined' | 'expired' | 'matched';
   text: string;
   sub?: string;
 }
@@ -13,6 +13,7 @@ const TYPE_STYLE: Record<TimelineEvent['type'], { bg: string; fg: string }> = {
   accepted: { bg: '#ECFDF5', fg: '#047857' },
   matched:  { bg: '#ECFDF5', fg: '#047857' },
   declined: { bg: '#FEF2F2', fg: '#991B1B' },
+  expired:  { bg: '#F5F5F5', fg: '#71717A' },
 };
 
 interface Props {
@@ -35,9 +36,11 @@ export function RequestTimeline({ request, invitations, tutors, matchedTutor }: 
     const tutor = tutors.find(t => t.id === inv.tutorId);
     events.push({ t: inv.sentAt, type: 'proposed', text: `Proposed to ${tutor?.name ?? inv.tutorId}`, sub: `by ${inv.sentBy}` });
     if (inv.status === 'accepted') {
-      events.push({ t: 'earlier today', type: 'accepted', text: `${tutor?.name} accepted`, sub: 'Student received calendar invite' });
+      events.push({ t: 'earlier today', type: 'accepted', text: `${tutor?.name ?? inv.tutorId} accepted`, sub: 'Student received calendar invite' });
     } else if (inv.status === 'declined') {
-      events.push({ t: 'earlier', type: 'declined', text: `${tutor?.name} declined`, sub: inv.declineReason });
+      events.push({ t: 'earlier', type: 'declined', text: `${tutor?.name ?? inv.tutorId} declined`, sub: inv.declineReason });
+    } else if (inv.status === 'expired') {
+      events.push({ t: inv.sentAt, type: 'expired', text: `${tutor?.name ?? inv.tutorId} — no response`, sub: 'Invitation expired' });
     }
   }
   if (matchedTutor) {
@@ -58,6 +61,7 @@ export function RequestTimeline({ request, invitations, tutors, matchedTutor }: 
               {e.type === 'proposed' && '→'}
               {(e.type === 'accepted' || e.type === 'matched') && '✓'}
               {e.type === 'declined' && '✕'}
+              {e.type === 'expired' && '–'}
             </div>
             <div className="pt-1">
               <div className="text-[12px] font-semibold text-fg-1">{e.text}</div>
