@@ -2,25 +2,28 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import type { Tutor, TuitionRequest, Subject } from '@/lib/data/dashboard-mock';
+import type { Tutor, TuitionRequest, Subject, Hold } from '@/lib/data/dashboard-mock';
 import {
   parseFilters,
   filtersToParams,
   overlapsTuple,
+  getWeekLabel,
   type FilterState,
 } from '@/lib/utils/tutors';
 import { RequestPickerBlock } from './RequestPickerBlock';
 import { FilterPanel } from './FilterPanel';
 import { TutorCard } from './TutorCard';
 import { ProposeModal } from './ProposeModal';
+import { WeekView } from '@/components/features/calendar/WeekView';
 
 interface TutorsClientProps {
   tutors: Tutor[];
   requests: TuitionRequest[];
   subjects: Subject[];
+  holds: Hold[];
 }
 
-export function TutorsClient({ tutors, requests, subjects }: TutorsClientProps) {
+export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClientProps) {
   const router     = useRouter();
   const pathname   = usePathname();
   const rawParams  = useSearchParams();
@@ -32,6 +35,7 @@ export function TutorsClient({ tutors, requests, subjects }: TutorsClientProps) 
   const [selectedTutorId, setSelectedTutorId] = useState<string | null>(null);
   const [proposeFor, setProposeFor]            = useState<Tutor | null>(null);
   const [toastName, setToastName]              = useState<string | null>(null);
+  const [weekOffset, setWeekOffset]            = useState(0);
 
   function setFilters(next: FilterState) {
     const params = filtersToParams(next);
@@ -138,19 +142,51 @@ export function TutorsClient({ tutors, requests, subjects }: TutorsClientProps) 
         </div>
       </aside>
 
-      {/* ── Right panel: shared calendar (Task 5.3) ─────────────────────────── */}
+      {/* ── Right panel: shared availability calendar ────────────────────────── */}
       <main className="flex-1 flex flex-col bg-surface-1 min-w-0 min-h-0">
-        <div className="px-5 py-3 border-b border-border-default flex items-baseline gap-3">
+        <div className="px-5 py-3 border-b border-border-default flex items-center gap-3 shrink-0">
           <h3 className="text-[15px] font-semibold text-fg-1">Shared availability</h3>
           {activeReq && (
             <span className="text-[11px] text-fg-3">
               matching <strong className="text-fg-1">{activeReq.studentName}</strong> · {activeReq.subject}
             </span>
           )}
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              onClick={() => setWeekOffset(o => o - 1)}
+              className="w-7 h-7 rounded-md border border-border-default flex items-center justify-center text-fg-2 hover:bg-surface-2 transition-colors"
+              aria-label="Previous week"
+            >
+              <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
+                <path d="M7.5 2.5L4 6l3.5 3.5" />
+              </svg>
+            </button>
+            <span className="text-[12px] font-medium text-fg-2 min-w-[164px] text-center tabular-nums">
+              {getWeekLabel(weekOffset)}
+            </span>
+            <button
+              onClick={() => setWeekOffset(o => o + 1)}
+              className="w-7 h-7 rounded-md border border-border-default flex items-center justify-center text-fg-2 hover:bg-surface-2 transition-colors"
+              aria-label="Next week"
+            >
+              <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
+                <path d="M4.5 2.5L8 6l-3.5 3.5" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setWeekOffset(0)}
+              className="px-2.5 py-1 text-[11px] font-medium text-fg-2 border border-border-default rounded-md hover:bg-surface-2 transition-colors"
+            >
+              Today
+            </button>
+          </div>
         </div>
-        <div className="flex-1 flex items-center justify-center text-fg-muted text-sm">
-          Shared calendar coming in Task 5.3
-        </div>
+        <WeekView
+          tutors={filtered}
+          requestTuples={activeReq?.tuples ?? filters.tuples}
+          holds={holds.filter(h => filtered.some(t => t.id === h.tutorId))}
+          weekOffset={weekOffset}
+        />
       </main>
 
       {/* ── Propose modal ──────────────────────────────────────────────────── */}

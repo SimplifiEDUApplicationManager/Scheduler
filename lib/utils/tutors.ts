@@ -92,3 +92,91 @@ function parseTuple(raw: string): Tuple | null {
   if (day < 0 || day > 6 || start < 0 || end <= start) return null;
   return { day, start, end };
 }
+
+// ── Calendar helpers ───────────────────────────────────────────────────────
+
+export interface WeekDay {
+  dow: string;
+  date: number;
+  month: number;
+  year: number;
+  dayIdx: number;
+  today: boolean;
+}
+
+export interface MonthCell {
+  date: number;
+  month: number;
+  year: number;
+  dayIdx: number;
+  today: boolean;
+  inMonth: boolean;
+}
+
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+];
+
+/** Returns the 7 days of the week at `weekOffset` weeks from today (Sun–Sat). */
+export function getWeekDays(weekOffset: number): WeekDay[] {
+  const now = new Date();
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() - now.getDay() + weekOffset * 7);
+  sunday.setHours(0, 0, 0, 0);
+  const todayStr = new Date().toDateString();
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
+    return {
+      dow: DAY_NAMES[i],
+      date: d.getDate(),
+      month: d.getMonth(),
+      year: d.getFullYear(),
+      dayIdx: i,
+      today: d.toDateString() === todayStr,
+    };
+  });
+}
+
+/** Returns cells for a calendar month grid including leading/trailing padding. */
+export function getMonthDays(monthOffset: number): MonthCell[] {
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const year = target.getFullYear();
+  const month = target.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayStr = new Date().toDateString();
+  const cells: MonthCell[] = [];
+  for (let i = 0; i < firstDow; i++) {
+    const d = new Date(year, month, 1 - (firstDow - i));
+    cells.push({ date: d.getDate(), month: d.getMonth(), year: d.getFullYear(), dayIdx: d.getDay(), today: false, inMonth: false });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    cells.push({ date: d, month, year, dayIdx: date.getDay(), today: date.toDateString() === todayStr, inMonth: true });
+  }
+  const remaining = (7 - (cells.length % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(year, month + 1, i);
+    cells.push({ date: d.getDate(), month: d.getMonth(), year: d.getFullYear(), dayIdx: d.getDay(), today: false, inMonth: false });
+  }
+  return cells;
+}
+
+/** "April 2026" */
+export function getMonthLabel(monthOffset: number): string {
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  return `${MONTH_NAMES[target.getMonth()]} ${target.getFullYear()}`;
+}
+
+/** "Apr 27 – May 3, 2026" */
+export function getWeekLabel(weekOffset: number): string {
+  const days = getWeekDays(weekOffset);
+  const sun = days[0];
+  const sat = days[6];
+  const fmt = (d: WeekDay) => `${MONTH_NAMES[d.month].slice(0, 3)} ${d.date}`;
+  return `${fmt(sun)} – ${fmt(sat)}, ${sat.year}`;
+}
