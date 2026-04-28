@@ -13,6 +13,7 @@ interface TutorCardProps {
   selected: boolean;
   onSelect: () => void;
   onPropose: () => void;
+  onProfile: () => void;
 }
 
 export function TutorCard({
@@ -23,6 +24,7 @@ export function TutorCard({
   selected,
   onSelect,
   onPropose,
+  onProfile,
 }: TutorCardProps) {
   const atCap   = tutor.hoursCurrent >= tutor.hoursMax;
   const capSt   = capacityStatus(tutor.hoursCurrent, tutor.hoursMax);
@@ -143,7 +145,7 @@ export function TutorCard({
                 Propose
               </button>
               <button
-                onClick={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); onProfile(); }}
                 className="flex-1 h-7 rounded-md border border-neutral-600 text-fg-on-brand text-[11px] font-semibold hover:bg-neutral-700 transition-colors"
               >
                 Profile

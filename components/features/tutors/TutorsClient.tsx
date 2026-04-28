@@ -14,6 +14,8 @@ import { RequestPickerBlock } from './RequestPickerBlock';
 import { FilterPanel } from './FilterPanel';
 import { TutorCard } from './TutorCard';
 import { ProposeModal } from './ProposeModal';
+import { TutorProfileDrawer } from './TutorProfileDrawer';
+import { INVITATIONS } from '@/lib/data/dashboard-mock';
 import { WeekView } from '@/components/features/calendar/WeekView';
 
 interface TutorsClientProps {
@@ -34,6 +36,7 @@ export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClient
   // UI-only state (not bookmarkable)
   const [selectedTutorId, setSelectedTutorId] = useState<string | null>(null);
   const [proposeFor, setProposeFor]            = useState<Tutor | null>(null);
+  const [profileTutor, setProfileTutor]        = useState<Tutor | null>(null);
   const [toastName, setToastName]              = useState<string | null>(null);
   const [weekOffset, setWeekOffset]            = useState(0);
 
@@ -137,6 +140,7 @@ export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClient
               selected={selectedTutorId === t.id}
               onSelect={() => setSelectedTutorId(prev => prev === t.id ? null : t.id)}
               onPropose={() => setProposeFor(t)}
+              onProfile={() => setProfileTutor(t)}
             />
           ))}
         </div>
@@ -196,6 +200,17 @@ export function TutorsClient({ tutors, requests, subjects, holds }: TutorsClient
           request={activeReq}
           onClose={() => setProposeFor(null)}
           onSend={() => handleProposeSend(proposeFor.name)}
+        />
+      )}
+
+      {/* ── Profile drawer ─────────────────────────────────────────────────── */}
+      {profileTutor && (
+        <TutorProfileDrawer
+          tutor={profileTutor}
+          subjects={subjects}
+          invitations={INVITATIONS}
+          onClose={() => setProfileTutor(null)}
+          onPropose={() => { setProfileTutor(null); setProposeFor(profileTutor); }}
         />
       )}
 

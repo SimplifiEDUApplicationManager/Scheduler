@@ -24,6 +24,10 @@ export interface Tutor {
   id: string;
   initials: string;
   name: string;
+  email: string;
+  tz: string;
+  bio: string;
+  personality: string;
   status: TutorStatus;
   subjects: TutorSubject[];
   availability: Availability;
@@ -90,6 +94,9 @@ export const SUBJECTS: Subject[] = [
 export const TUTORS: Tutor[] = [
   {
     id: 't-julia', initials: 'JH', name: 'Julia Hering', status: 'active',
+    email: 'julia.hering@simplifiedu.com', tz: 'America/New_York',
+    bio: 'Julia holds a BS in Mathematics from Cornell and has 4 years of tutoring experience across AP STEM subjects. She specializes in building conceptual intuition before drilling problem sets.',
+    personality: 'Patient and methodical — she never moves on until the student demonstrates understanding, not just the right answer.',
     subjects: [
       { id: 'apcalcbc', conf: 'HIGH'   },
       { id: 'apcalcab', conf: 'HIGH'   },
@@ -101,6 +108,9 @@ export const TUTORS: Tutor[] = [
   },
   {
     id: 't-katrina', initials: 'KA', name: 'Katrina Anderson', status: 'active',
+    email: 'katrina.anderson@simplifiedu.com', tz: 'America/Chicago',
+    bio: 'Katrina is a second-year medical student who scored in the 99th percentile on the MCAT. She tutors life sciences and test prep with a focus on pre-med students navigating a heavy courseload.',
+    personality: 'High-energy and motivating — she meets students where they are and pushes them incrementally without overwhelming them.',
     subjects: [
       { id: 'apbio',  conf: 'HIGH' },
       { id: 'apchem', conf: 'HIGH' },
@@ -111,6 +121,9 @@ export const TUTORS: Tutor[] = [
   },
   {
     id: 't-elisa', initials: 'EK', name: 'Elisa Kim', status: 'active',
+    email: 'elisa.kim@simplifiedu.com', tz: 'America/Los_Angeles',
+    bio: 'Elisa is a native French speaker and heritage Korean speaker who earned her MA in Linguistics from UCLA. She tutors modern languages and writing with a focus on fluency over rote grammar.',
+    personality: 'Warm and conversational — sessions feel like a natural dialogue, which helps anxious students open up.',
     subjects: [
       { id: 'spanish', conf: 'HIGH'   },
       { id: 'french',  conf: 'HIGH'   },
@@ -121,6 +134,9 @@ export const TUTORS: Tutor[] = [
   },
   {
     id: 't-chris', initials: 'CD', name: 'Chris Davis', status: 'active',
+    email: 'chris.davis@simplifiedu.com', tz: 'America/New_York',
+    bio: 'Chris has a BS in Statistics from Carnegie Mellon and worked as a data analyst before transitioning full-time to tutoring. He excels at making quantitative reasoning click for students who "just aren\'t math people."',
+    personality: 'Direct and structured — he teaches in clear steps, calls out common traps, and uses a lot of worked examples.',
     subjects: [
       { id: 'apstat',  conf: 'HIGH'   },
       { id: 'satmath', conf: 'HIGH'   },
@@ -132,6 +148,9 @@ export const TUTORS: Tutor[] = [
   },
   {
     id: 't-robbie', initials: 'RM', name: 'Robbie Maillard', status: 'onboarding',
+    email: 'robbie.maillard@simplifiedu.com', tz: 'America/Chicago',
+    bio: 'Robbie is completing his MFA in Creative Writing at Northwestern. He specializes in analytical writing and verbal reasoning, with a track record of dramatically improving student essay scores.',
+    personality: 'Socratic — he rarely gives answers directly, instead guiding students to articulate their own reasoning on paper.',
     subjects: [
       { id: 'writing',   conf: 'HIGH'    },
       { id: 'apenglang', conf: 'MEDIUM'  },
@@ -142,6 +161,9 @@ export const TUTORS: Tutor[] = [
   },
   {
     id: 't-steven', initials: 'SK', name: 'Steven Kuhn', status: 'active',
+    email: 'steven.kuhn@simplifiedu.com', tz: 'America/Denver',
+    bio: 'Steven taught high school AP History and English for six years before moving to private tutoring. He brings a classroom teacher\'s perspective — deep knowledge of rubrics and what graders actually want.',
+    personality: 'Calm and thorough — he helps students slow down and read critically, which often transforms their written output.',
     subjects: [
       { id: 'apushist',  conf: 'HIGH' },
       { id: 'apenglang', conf: 'HIGH' },
@@ -151,6 +173,9 @@ export const TUTORS: Tutor[] = [
   },
   {
     id: 't-sahana', initials: 'SN', name: 'Sahana Nateson', status: 'active',
+    email: 'sahana.nateson@simplifiedu.com', tz: 'America/Los_Angeles',
+    bio: 'Sahana is a senior at UC Berkeley double-majoring in Mathematics and Statistics. She tutors foundational math and test prep, with particular success helping students bridge the gap between Algebra II and calculus.',
+    personality: 'Encouraging and precise — she has a talent for identifying the exact conceptual gap that is causing a student\'s errors.',
     subjects: [
       { id: 'algii',    conf: 'HIGH'   },
       { id: 'apcalcab', conf: 'MEDIUM' },
@@ -161,6 +186,9 @@ export const TUTORS: Tutor[] = [
   },
   {
     id: 't-maya', initials: 'MP', name: 'Maya Patel', status: 'active',
+    email: 'maya.patel@simplifiedu.com', tz: 'America/New_York',
+    bio: 'Maya is a physics PhD student at Columbia specializing in experimental mechanics. She tutors AP Physics with a lab-science lens — connecting abstract equations to real physical intuition.',
+    personality: 'Enthusiastic and visual — she draws a lot of diagrams and loves when a student has an "aha" moment.',
     subjects: [
       { id: 'apphys1', conf: 'HIGH'    },
       { id: 'apphysc', conf: 'MEDIUM'  },
