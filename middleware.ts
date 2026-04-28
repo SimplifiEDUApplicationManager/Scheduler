@@ -14,6 +14,14 @@ const ROLE_HOME: Record<UserRole, string> = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ── Dev bypass ─────────────────────────────────────────────────────────────
+  // Skip auth entirely in local development so magic-link issues don't block
+  // UI work. Remove this block (or set NEXT_PUBLIC_DEV_BYPASS=false) before
+  // deploying to staging/production.
+  if (process.env.NEXT_PUBLIC_DEV_BYPASS === 'true') {
+    return NextResponse.next({ request });
+  }
+
   // Build a mutable response so cookie refreshes propagate to the browser.
   let response = NextResponse.next({ request });
 

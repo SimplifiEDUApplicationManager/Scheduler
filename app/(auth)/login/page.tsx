@@ -5,7 +5,11 @@ import { LoginForm } from './LoginForm';
 
 export const metadata: Metadata = { title: 'Sign in — Simplifi EDU' };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -15,5 +19,7 @@ export default async function LoginPage() {
     redirect('/');
   }
 
-  return <LoginForm />;
+  const { error } = await searchParams;
+
+  return <LoginForm linkExpired={error === 'auth'} />;
 }

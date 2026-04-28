@@ -40,20 +40,26 @@ export interface TuitionRequest {
   id: string;
   source: RequestSource;
   studentName: string;
+  studentEmail: string;
   subject: string;
   subjectId: string;
   tuples: Tuple[];
+  tz: string;
+  startDate: string;
   receivedAt: string;
   notes: string;
   status: RequestStatus;
+  matchedTutorId?: string;
 }
 
 export interface Invitation {
   id: string;
   tutorId: string;
+  requestId?: string;
   studentName: string;
   subject: string;
   sentAt: string;
+  sentBy: string;
   status: InvitationStatus;
   declineReason?: string;
 }
@@ -202,75 +208,97 @@ export const TUTORS: Tutor[] = [
 export const REQUESTS: TuitionRequest[] = [
   {
     id: 'req-1', source: 'asana', status: 'open', receivedAt: '2h ago',
-    studentName: 'Ava Rodriguez', subject: 'AP Calculus BC', subjectId: 'apcalcbc',
+    studentName: 'Ava Rodriguez', studentEmail: 'ava.rodriguez@gmail.com',
+    subject: 'AP Calculus BC', subjectId: 'apcalcbc',
     tuples: [{ day: 1, start: 17, end: 20 }, { day: 3, start: 18, end: 21 }],
+    tz: 'America/New_York', startDate: 'May 6',
     notes: 'Junior, preparing for May exam. Needs help with series and parametric.',
   },
   {
     id: 'req-2', source: 'asana', status: 'open', receivedAt: 'Yesterday',
-    studentName: 'Liam Chen', subject: 'SAT Math', subjectId: 'satmath',
+    studentName: 'Liam Chen', studentEmail: 'liam.chen@gmail.com',
+    subject: 'SAT Math', subjectId: 'satmath',
     tuples: [{ day: 2, start: 16, end: 19 }, { day: 4, start: 16, end: 19 }],
+    tz: 'America/Los_Angeles', startDate: 'May 10',
     notes: 'Target score 780+. Currently 680.',
   },
   {
     id: 'req-3', source: 'manual', status: 'open', receivedAt: '3 days ago',
-    studentName: 'Zoe Kaplan', subject: 'AP Physics C', subjectId: 'apphysc',
+    studentName: 'Zoe Kaplan', studentEmail: 'zoe.kaplan@gmail.com',
+    subject: 'AP Physics C', subjectId: 'apphysc',
     tuples: [{ day: 2, start: 15, end: 18 }, { day: 4, start: 15, end: 18 }],
+    tz: 'America/Chicago', startDate: 'ASAP',
     notes: 'Mechanics only. E&M is covered at school.',
   },
   {
     id: 'req-4', source: 'asana', status: 'open', receivedAt: '4h ago',
-    studentName: 'Mateo Ruiz', subject: 'Spanish', subjectId: 'spanish',
+    studentName: 'Mateo Ruiz', studentEmail: 'mateo.ruiz@gmail.com',
+    subject: 'Spanish', subjectId: 'spanish',
     tuples: [{ day: 1, start: 15, end: 17 }, { day: 3, start: 15, end: 17 }],
+    tz: 'America/New_York', startDate: 'May 12',
     notes: 'Heritage speaker. Weak on formal writing.',
   },
   {
     id: 'req-5', source: 'asana', status: 'open', receivedAt: '5h ago',
-    studentName: 'Priya Desai', subject: 'MCAT', subjectId: 'mcat',
+    studentName: 'Priya Desai', studentEmail: 'priya.desai@gmail.com',
+    subject: 'MCAT', subjectId: 'mcat',
     tuples: [{ day: 0, start: 10, end: 13 }, { day: 6, start: 10, end: 13 }],
+    tz: 'America/Chicago', startDate: 'May 18',
     notes: 'Retaking in September. Needs CARS boost.',
   },
   {
     id: 'req-6', source: 'manual', status: 'open', receivedAt: 'Yesterday',
-    studentName: 'Jackson Wu', subject: 'AP Statistics', subjectId: 'apstat',
+    studentName: 'Jackson Wu', studentEmail: 'jackson.wu@gmail.com',
+    subject: 'AP Statistics', subjectId: 'apstat',
     tuples: [{ day: 2, start: 17, end: 19 }, { day: 4, start: 17, end: 19 }],
+    tz: 'America/Denver', startDate: 'May 7',
     notes: 'Senior. First AP. Nervous.',
   },
   {
     id: 'req-7', source: 'asana', status: 'open', receivedAt: '2 days ago',
-    studentName: 'Hannah Kim', subject: 'AP English Lang', subjectId: 'apenglang',
+    studentName: 'Hannah Kim', studentEmail: 'hannah.kim@gmail.com',
+    subject: 'AP English Lang', subjectId: 'apenglang',
     tuples: [{ day: 2, start: 16, end: 18 }, { day: 5, start: 10, end: 12 }],
+    tz: 'America/New_York', startDate: 'ASAP',
     notes: 'Needs essay structure help urgently.',
   },
   {
     id: 'req-8', source: 'asana', status: 'matched', receivedAt: '1 week ago',
-    studentName: 'Oliver Grant', subject: 'AP Chemistry', subjectId: 'apchem',
+    studentName: 'Oliver Grant', studentEmail: 'oliver.grant@gmail.com',
+    subject: 'AP Chemistry', subjectId: 'apchem',
     tuples: [{ day: 1, start: 17, end: 19 }, { day: 3, start: 17, end: 19 }],
+    tz: 'America/New_York', startDate: 'Apr 21',
     notes: 'Sophomore. Strong math.',
+    matchedTutorId: 't-katrina',
   },
 ];
 
 export const INVITATIONS: Invitation[] = [
   {
-    id: 'inv-1', tutorId: 't-julia',  studentName: 'Ava Rodriguez', subject: 'AP Calculus BC',
-    sentAt: '2h ago', status: 'pending',
+    id: 'inv-1', tutorId: 't-julia',  requestId: 'req-1',
+    studentName: 'Ava Rodriguez', subject: 'AP Calculus BC',
+    sentAt: '2h ago', sentBy: 'Meg Adams', status: 'pending',
   },
   {
-    id: 'inv-2', tutorId: 't-maya',   studentName: 'Marcus Webb',   subject: 'AP Physics C',
-    sentAt: 'Yesterday', status: 'pending',
+    id: 'inv-2', tutorId: 't-maya',   requestId: 'req-3',
+    studentName: 'Marcus Webb', subject: 'AP Physics C',
+    sentAt: 'Yesterday', sentBy: 'Meg Adams', status: 'pending',
   },
   {
-    id: 'inv-3', tutorId: 't-chris',  studentName: 'Liam Chen',     subject: 'SAT Math',
-    sentAt: '3h ago', status: 'accepted',
+    id: 'inv-3', tutorId: 't-chris',  requestId: 'req-2',
+    studentName: 'Liam Chen', subject: 'SAT Math',
+    sentAt: '3h ago', sentBy: 'Meg Adams', status: 'accepted',
   },
   {
-    id: 'inv-4', tutorId: 't-robbie', studentName: 'Sienna Park',   subject: 'Essay Writing',
-    sentAt: '2d ago', status: 'declined',
+    id: 'inv-4', tutorId: 't-robbie', requestId: 'req-7',
+    studentName: 'Sienna Park', subject: 'Essay Writing',
+    sentAt: '2d ago', sentBy: 'Meg Adams', status: 'declined',
     declineReason: 'Schedule conflict — committed hours are full for May.',
   },
   {
-    id: 'inv-5', tutorId: 't-elisa',  studentName: 'Noa Friedman',  subject: 'Spanish',
-    sentAt: '4d ago', status: 'expired',
+    id: 'inv-5', tutorId: 't-elisa',  requestId: 'req-4',
+    studentName: 'Noa Friedman', subject: 'Spanish',
+    sentAt: '4d ago', sentBy: 'Meg Adams', status: 'expired',
   },
 ];
 

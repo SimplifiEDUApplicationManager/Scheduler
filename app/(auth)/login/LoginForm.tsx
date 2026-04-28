@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 
 type FormState = 'idle' | 'loading' | 'success' | { error: string };
 
-export function LoginForm() {
+export function LoginForm({ linkExpired }: { linkExpired?: boolean }) {
   const [email, setEmail] = useState('');
   const [formState, setFormState] = useState<FormState>('idle');
 
@@ -52,6 +52,11 @@ export function LoginForm() {
       <CardHeader>
         <CardTitle>Sign in to Simplifi EDU</CardTitle>
       </CardHeader>
+      {linkExpired && (
+        <p className="text-sm text-danger-ink mb-3">
+          That link has expired. Enter your email to get a new one.
+        </p>
+      )}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
           label="Email address"
