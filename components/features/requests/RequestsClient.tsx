@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { TuitionRequest, Invitation, Tutor, Subject } from '@/lib/data/dashboard-mock';
 import { RequestListItem } from './RequestListItem';
 import { RequestDetail } from './RequestDetail';
@@ -14,7 +15,12 @@ interface Props {
 }
 
 export function RequestsClient({ requests, invitations, tutors, subjects }: Props) {
-  const [selectedId, setSelectedId] = useState<string>(requests[0]?.id ?? '');
+  const searchParams = useSearchParams();
+  const reqParam = searchParams.get('req');
+  const initialId = (reqParam && requests.some(r => r.id === reqParam))
+    ? reqParam
+    : (requests[0]?.id ?? '');
+  const [selectedId, setSelectedId] = useState<string>(initialId);
   const [proposeFor, setProposeFor] = useState<{ tutor: Tutor; request: TuitionRequest } | null>(null);
   const [toastName, setToastName] = useState<string | null>(null);
 
