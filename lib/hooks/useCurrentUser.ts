@@ -4,10 +4,18 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { ActiveUser } from '@/lib/auth';
 
+/**
+ * Discriminated union with four distinct states:
+ *   loading    — initial fetch in progress
+ *   unauthenticated — no active session (not an error)
+ *   user       — authenticated and row fetched
+ *   error      — authenticated but DB fetch failed
+ */
 type UseCurrentUserResult =
-  | { user: ActiveUser; loading: false; error: null }
-  | { user: null; loading: true; error: null }
-  | { user: null; loading: false; error: string | null };
+  | { status: 'loading'; user: null; error: null }
+  | { status: 'unauthenticated'; user: null; error: null }
+  | { status: 'authenticated'; user: ActiveUser; error: null }
+  | { status: 'error'; user: null; error: string };
 
 /**
  * Client-side hook for reading the current authenticated user.
@@ -15,11 +23,14 @@ type UseCurrentUserResult =
  * Fetches the user's row from public.users and re-fetches on auth state changes
  * (sign-in, sign-out, token refresh). Does NOT redirect — use getCurrentUser()
  * in Server Components when a redirect is required.
+ *
+ * onAuthStateChange fires INITIAL_SESSION immediately on subscription, so no
+ * explicit initial fetch is needed.
  */
 export function useCurrentUser(): UseCurrentUserResult {
   const [state, setState] = useState<UseCurrentUserResult>({
+    status: 'loading',
     user: null,
-    loading: true,
     error: null,
   });
 
@@ -27,14 +38,14 @@ export function useCurrentUser(): UseCurrentUserResult {
     const supabase = createClient();
 
     async function fetchUser() {
-      setState({ user: null, loading: true, error: null });
+      setState({ status: 'loading', user: null, error: null });
 
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
 
       if (!authUser) {
-        setState({ user: null, loading: false, error: null });
+        setState({ status: 'unauthenticated', user: null, error: null });
         return;
       }
 
@@ -45,15 +56,14 @@ export function useCurrentUser(): UseCurrentUserResult {
         .single();
 
       if (error || !data) {
-        setState({ user: null, loading: false, error: error?.message ?? 'User not found' });
+        setState({ status: 'error', user: null, error: error?.message ?? 'User not found' });
         return;
       }
 
-      setState({ user: data, loading: false, error: null });
+      setState({ status: 'authenticated', user: data, error: null });
     }
 
-    fetchUser();
-
+    // onAuthStateChange fires INITIAL_SESSION immediately — no need for a separate fetchUser() call.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(() => {

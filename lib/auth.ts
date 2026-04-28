@@ -47,5 +47,10 @@ export async function getCurrentUser(): Promise<ActiveUser> {
     redirect('/auth/disabled');
   }
 
+  // Positive guard: catches any future status values not explicitly handled above.
+  if (userRow.status !== 'ACTIVE') {
+    redirect('/login');
+  }
+
   return userRow;
 }
