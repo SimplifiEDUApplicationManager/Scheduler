@@ -111,10 +111,10 @@ export function ProposalsClient({ invitations, tutors, requests }: Props) {
                     {/* Arrow */}
                     <div className="text-fg-muted text-[13px] px-1 shrink-0">→</div>
 
-                    {/* Student */}
+                    {/* Student — prefer canonical data from the linked request */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-bold text-fg-1">{inv.studentName}</div>
-                      <div className="text-[11px] text-fg-3">{inv.subject}</div>
+                      <div className="text-[13px] font-bold text-fg-1">{request?.studentName ?? inv.studentName}</div>
+                      <div className="text-[11px] text-fg-3">{request?.subject ?? inv.subject}</div>
                     </div>
 
                     {/* Status pill */}
