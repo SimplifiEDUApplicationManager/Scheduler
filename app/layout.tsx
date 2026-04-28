@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
-import { Header } from '@/components/features/Header';
 import './globals.css';
 
 const thicccboi = localFont({
@@ -28,10 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${thicccboi.variable} h-full antialiased`}>
-      <body className="flex flex-col h-full bg-surface-2">
-        <Header />
-        <main className="flex-1 overflow-auto">{children}</main>
-      </body>
+      <body className="flex flex-col h-full bg-surface-2">{children}</body>
     </html>
   );
 }
