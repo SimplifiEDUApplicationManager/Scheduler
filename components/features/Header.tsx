@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils/cn';
+import { LogoutButton } from '@/components/features/LogoutButton';
 import {
   NAV_TABS,
   ROLE_DEMO_USER,
@@ -87,13 +88,14 @@ export function Header() {
         })}
       </nav>
 
-      {/* User info */}
+      {/* User info + logout */}
       <div className="ml-auto flex items-center gap-3">
         <div className="text-right">
           <p className="text-xs font-medium text-fg-1 leading-none">{user.email}</p>
           <p className="text-xxs text-fg-muted mt-0.5">{ROLE_LABEL[role]}</p>
         </div>
         <Avatar initials={user.initials} tone="brand" size="md" />
+        <LogoutButton />
       </div>
     </header>
   );
