@@ -69,6 +69,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/disabled', request.url));
   }
 
+  // Positive guard: catches any future status values not explicitly handled above.
+  if (userRow.status !== 'ACTIVE') {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   // ── Role-based route guards ────────────────────────────────────────────────
   const role = userRow.role;
   const home = ROLE_HOME[role] ?? '/';
