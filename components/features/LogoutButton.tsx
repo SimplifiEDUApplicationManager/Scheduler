@@ -11,12 +11,16 @@ export function LogoutButton() {
 
   async function handleLogout() {
     setLoading(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    // refresh() invalidates the Next.js router cache so server components
-    // re-run; push('/login') then lands the user on the login page.
-    router.push('/login');
-    router.refresh();
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      // refresh() invalidates the Next.js router cache so server components
+      // re-run with the cleared session; push('/login') then navigates there.
+      router.refresh();
+      router.push('/login');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
