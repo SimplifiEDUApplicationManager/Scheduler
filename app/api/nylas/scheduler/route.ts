@@ -91,8 +91,9 @@ export async function PATCH(request: Request) {
         ],
         availability: {
           duration_minutes:  60,
-          // interval_minutes acts as the slot size; breakMin is added as a buffer
-          interval_minutes:  breakMin > 0 ? breakMin : 15,
+          // interval_minutes controls slot cadence on the booking page.
+          // Use breakMin directly; fall back to 15 only when not provided.
+          interval_minutes:  breakMin ?? 15,
         },
       }),
     },
