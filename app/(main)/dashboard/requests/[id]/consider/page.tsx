@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { REQUESTS, TUTORS, SUBJECTS, HOLDS } from '@/lib/data/dashboard-mock';
+import { REQUESTS, TUTORS, HOLDS } from '@/lib/data/dashboard-mock';
 import { ConsiderRequestClient } from '@/components/features/requests/ConsiderRequestClient';
 
 interface Props {
@@ -16,7 +16,6 @@ export default async function ConsiderRequestPage({ params }: Props) {
     <ConsiderRequestClient
       request={request}
       tutors={TUTORS}
-      subjects={SUBJECTS}
       holds={HOLDS}
     />
   );

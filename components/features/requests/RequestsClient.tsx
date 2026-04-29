@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { TuitionRequest, Invitation, Tutor, Subject } from '@/lib/data/dashboard-mock';
+import type { TuitionRequest, Invitation, Tutor } from '@/lib/data/dashboard-mock';
 import { RequestListItem } from './RequestListItem';
 import { RequestDetail } from './RequestDetail';
 import { ProposeModal } from '@/components/features/tutors/ProposeModal';
@@ -11,10 +11,9 @@ interface Props {
   requests: TuitionRequest[];
   invitations: Invitation[];
   tutors: Tutor[];
-  subjects: Subject[];
 }
 
-export function RequestsClient({ requests, invitations, tutors, subjects }: Props) {
+export function RequestsClient({ requests, invitations, tutors }: Props) {
   const searchParams = useSearchParams();
   const reqParam = searchParams.get('req');
   const initialId = (reqParam && requests.some(r => r.id === reqParam))
@@ -69,7 +68,6 @@ export function RequestsClient({ requests, invitations, tutors, subjects }: Prop
             request={selected}
             invitations={invitations.filter(i => i.requestId === selected.id)}
             tutors={tutors}
-            subjects={subjects}
             matchedTutor={matchedTutorMap[selected.id]}
             onPropose={tutor => setProposeFor({ tutor, request: selected })}
           />

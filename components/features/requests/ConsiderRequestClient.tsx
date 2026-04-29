@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { TuitionRequest, Tutor, Subject, Hold } from '@/lib/data/dashboard-mock';
+import type { TuitionRequest, Tutor, Hold } from '@/lib/data/dashboard-mock';
 import { overlapsTuple, DAY_NAMES_FULL, fmtRange, getWeekLabel } from '@/lib/utils/tutors';
 import { SuggestionRow } from './SuggestionRow';
 import { WeekView } from '@/components/features/calendar/WeekView';
@@ -10,7 +10,6 @@ import { ProposeModal } from '@/components/features/tutors/ProposeModal';
 interface Props {
   request: TuitionRequest;
   tutors: Tutor[];
-  subjects: Subject[];
   holds: Hold[];
 }
 
