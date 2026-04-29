@@ -2,14 +2,16 @@
 
 ## Project Overview
 
-This project is a lightweight scheduling system for **Simplifi EDU**, an online tutoring company. It replaces the originally-planned Next.js dashboard with a leaner architecture built around **Nylas Scheduler** as the scheduling brain, **Supabase** as a thin user directory, a **Claude Skill** for coordinator workflows, and a **single static web page** as the tutor self-service hub.
+This project is a scheduling system for **Simplifi EDU**, an online tutoring company. It is built around **Nylas Scheduler** as the scheduling brain, **Supabase** as a thin user directory, a **Claude Skill** for coordinator workflows, and a **Next.js app** as the tutor self-service dashboard.
+
+> **Note on scope evolution:** The original V1 spec described the tutor hub as a single static HTML page. The project has since evolved into a full Next.js prototype with a rich tutor dashboard (calendar, proposals, subjects, settings). The static-HTML and no-framework constraints no longer apply. What remains constant is the core principle below.
 
 The two user roles, and how they interact with the system:
 
 - **Coordinators** use Claude. They run commands (`/invite`, `/book`, `/available`) to invite new people, query availability, and book sessions on tutors' calendars.
-- **Tutors** do **not** use Claude. They interact with the system through (a) Nylas hosted pages for calendar OAuth and scheduling configuration, and (b) a single static web page that acts as their personal hub.
+- **Tutors** do **not** use Claude. They interact with the system through the Next.js tutor dashboard.
 
-The design principle driving this architecture: **don't rebuild what Nylas already provides.** Nylas Scheduler already handles calendar OAuth, working hours, day overrides, break duration, max meetings per day, availability computation, and public booking pages. Our job is to orchestrate Nylas, not replace it.
+The design principle driving this architecture: **don't rebuild what Nylas already provides.** Nylas Scheduler already handles calendar OAuth, working hours, day overrides, break duration, max meetings per day, availability computation, and public booking pages. Our job is to orchestrate Nylas, not replace it. Any settings the tutor configures in our UI that affect scheduling (working hours, breaks, max meetings, availability windows) **must sync to Nylas** — the UI can display and edit these values, but Nylas is the source of truth.
 
 ---
 
@@ -17,11 +19,11 @@ The design principle driving this architecture: **don't rebuild what Nylas alrea
 
 ```
 ┌──────────────────────┐        ┌──────────────────────┐
-│  Claude Skill        │        │  Tutor Hub Page      │
-│  (coordinator-facing)│        │  (static HTML + JS)  │
+│  Claude Skill        │        │  Tutor Dashboard     │
+│  (coordinator-facing)│        │  (Next.js app)       │
 │                      │        │                      │
 │  /invite /book       │        │  Magic-link login    │
-│  /available          │        │  Links out to Nylas  │
+│  /available          │        │  Calendar, proposals │
 └──────────┬───────────┘        └──────────┬───────────┘
            │                               │
            │        ┌──────────────┐       │
@@ -45,8 +47,8 @@ The design principle driving this architecture: **don't rebuild what Nylas alrea
 ### 1. Claude Skill (coordinator tool)
 A skill folder loaded into Claude. Coordinators invoke it through `/invite`, `/book`, and `/available`. The skill reads/writes Supabase to resolve users and their Nylas identifiers, and calls Nylas APIs for everything scheduling-related.
 
-### 2. Tutor Hub Page (tutor self-service)
-A single static HTML page — essentially a personal bookmark — that each tutor logs into via magic link. It displays their connection status and provides deep links out to Nylas for any actual configuration work. No scheduling UI is rebuilt here; this page is a launcher, not an editor.
+### 2. Tutor Dashboard (tutor self-service)
+A Next.js app that tutors log into via magic link. It provides a full self-service dashboard: calendar view, incoming proposals, subjects, and settings. Settings that affect scheduling (working hours, breaks, availability) are displayed and editable in the UI but must be synced to Nylas — Nylas remains the authoritative source for all scheduling state.
 
 ### 3. Supabase (shared data + auth)
 The single source of truth for *who* the users are. Stores user records and handles magic-link auth for the tutor hub page. Contains no scheduling state — no working hours, no overrides, no event cache. All scheduling state lives in Nylas.
@@ -90,35 +92,24 @@ Lists availability for a target user over a date range. Inputs: target email, op
 4. Convert times to the booker's timezone if provided, otherwise the target's timezone. Always display timezone abbreviation.
 5. Render grouped by day. If nothing is available, say so and suggest the next date Nylas reports openings.
 
-### Tutor Hub Page
-A single static HTML page served from e.g. `tutors.simplifiedu.com`. Behavior:
+### Tutor Dashboard
+A Next.js app (deployed at e.g. `tutors.simplifiedu.com`) that tutors log into via magic link. It includes:
 
-- Magic-link login via Supabase Auth (the invite email and any "log me back in" request both use this flow).
-- After login, the page shows the tutor's current state and link-outs:
+- Calendar view with week/month toggle and incoming proposal review
+- Proposals inbox with accept/decline workflows
+- Subjects editor
+- Settings page (profile, capacity, working hours, notifications, pause)
 
-> Welcome, **Jane Doe**.
->
-> **Calendar:** Connected via Google Calendar&nbsp;&nbsp;[Reconnect]
-> **Scheduling preferences:** [Edit in Nylas Scheduler]
-> **Your booking page:** `book.nylas.com/jane-doe`&nbsp;&nbsp;[Copy] [Open]
-> **Status:** Active
->
-> *Need to deactivate your account? Contact your coordinator.*
-
-- Pending users (pre-OAuth) see a different state: a single "Connect your calendar" button that starts Nylas hosted auth.
-- No custom settings UI. Every "edit" link bounces the tutor out to Nylas.
-- The page is a single HTML file with Supabase JS client and a few fetch calls. No framework, no build step required.
+Settings that affect scheduling (working hours, breaks, max meetings, availability windows) must be written through to Nylas when saved — the dashboard UI can display and edit these values, but all actual scheduling logic and availability computation runs in Nylas. Do not recompute availability or enforce scheduling rules locally; always defer to Nylas APIs for ground truth.
 
 ---
 
-## Out of Scope for V1
+## Out of Scope (current)
 
-- Any custom UI for working hours, overrides, break duration, or max meetings. Nylas Scheduler owns this.
-- Any custom availability-computation logic. Nylas owns this.
+- Custom availability-computation logic that duplicates Nylas' rules. Display and edit scheduling preferences in the UI, but defer all availability math to the Nylas API.
 - Event caching on our side. Every `/available` and `/book` call hits Nylas live.
-- Subject-based filtering and multi-tutor queries. Deferred to V2.
 - Automated reminders, post-booking follow-ups, billing.
-- A coordinator web UI. Coordinators only use Claude in V1.
+- A coordinator web UI. Coordinators only use Claude.
 
 ---
 
@@ -212,7 +203,7 @@ The tutor hub is deployed as static files (Netlify, Vercel static, GitHub Pages 
 - **Each helper script is focused** — `nylas.py` only talks to Nylas, `supabase.py` only talks to Supabase, and each command lives in its own file under `commands/`.
 - **No secrets in code.** Read from `os.environ` only.
 - **Nylas errors are surfaced verbatim** to Claude so the coordinator sees why something failed. Never expose the `grant_id` or API key in those surfaces.
-- **Tutor hub stays frameworkless** — vanilla JS + Supabase JS client from a CDN. If it ever needs a framework, that's a signal the scope crept.
+- **Tutor dashboard is a Next.js app** — React components, TypeScript, Tailwind. Standard Next.js App Router patterns apply.
 
 ---
 
@@ -239,9 +230,8 @@ SIMPLIFI_CALLER_EMAIL=      # email of the coordinator currently invoking the sk
 
 ## What to Avoid
 
-- Don't rebuild anything Nylas already provides (working hours UI, overrides, break config, availability math).
+- Don't recompute availability or enforce scheduling rules locally — always use the Nylas API. The dashboard UI may display and edit scheduling settings, but Nylas is the source of truth; any edits must be synced to Nylas.
 - Don't store scheduling state in Supabase. Supabase is a user directory, not a scheduling database.
-- Don't add a framework to the tutor hub page. One HTML file + one JS file.
 - Don't expose Nylas credentials or `grant_id`s to any client-side code.
 - Don't swallow Nylas errors silently — surface them to the coordinator.
 - Don't add new Python dependencies without flagging them first.
