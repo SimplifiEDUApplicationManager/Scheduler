@@ -317,6 +317,97 @@ export const HOLDS: Hold[] = [
   { id: 'h-2', tutorId: 't-chris', coordinatorName: 'Austin', day: 3, start: 16,   end: 17,   reason: 'Trial session eval'  },
 ];
 
+// ── Tutor calendar ────────────────────────────────────────────────────────
+
+export type TutorEventKind = 'session' | 'other';
+export type TutorEventStatus = 'upcoming' | 'completed' | 'cancelled';
+
+export interface TutorEvent {
+  id: string;
+  day: number;             // 0=Sun … 6=Sat (recurring day-of-week)
+  start: number;           // decimal hour, e.g. 15 = 3 PM
+  end: number;
+  title: string;
+  kind: TutorEventKind;
+  status: TutorEventStatus;
+  studentName?: string;
+  studentInitials?: string;
+  subject?: string;
+  recurring?: boolean;
+}
+
+export type TutorProposalStatus = 'pending' | 'accepted' | 'declined';
+
+export interface TutorProposal {
+  id: string;
+  studentName: string;
+  studentEmail: string;
+  subject: string;
+  tuples: Tuple[];
+  startDate: string;
+  hoursPerWeek: number;
+  notes: string;
+  coordinator: string;
+  sentAt: string;
+  status: TutorProposalStatus;
+  declineReason?: string;
+}
+
+export const ME_TUTOR_ID = 't-julia';
+
+// Julia Hering's recurring weekly sessions + one-off events
+export const TUTOR_EVENTS: TutorEvent[] = [
+  { id: 'ev-1', day: 1, start: 15,   end: 17,   title: 'Oliver G. · AP Chem',    kind: 'session', status: 'upcoming',  studentName: 'Oliver Grant', studentInitials: 'OG', subject: 'AP Chemistry', recurring: true  },
+  { id: 'ev-2', day: 1, start: 17.5, end: 19.5, title: 'Mia C. · AP Calc BC',    kind: 'session', status: 'upcoming',  studentName: 'Mia Chen',     studentInitials: 'MC', subject: 'AP Calc BC',   recurring: true  },
+  { id: 'ev-3', day: 2, start: 9,    end: 11,   title: 'Tyler B. · AP Physics C', kind: 'session', status: 'completed', studentName: 'Tyler Brooks', studentInitials: 'TB', subject: 'AP Physics C', recurring: true  },
+  { id: 'ev-4', day: 2, start: 16.5, end: 18.5, title: 'Emma S. · AP Chem',      kind: 'session', status: 'upcoming',  studentName: 'Emma Santos',  studentInitials: 'ES', subject: 'AP Chemistry', recurring: true  },
+  { id: 'ev-5', day: 3, start: 15,   end: 17,   title: 'Oliver G. · AP Chem',    kind: 'session', status: 'upcoming',  studentName: 'Oliver Grant', studentInitials: 'OG', subject: 'AP Chemistry', recurring: true  },
+  { id: 'ev-6', day: 3, start: 17.5, end: 19.5, title: 'Mia C. · AP Calc BC',    kind: 'session', status: 'upcoming',  studentName: 'Mia Chen',     studentInitials: 'MC', subject: 'AP Calc BC',   recurring: true  },
+  { id: 'ev-7', day: 4, start: 9,    end: 11,   title: 'Sofia L. · AP Calc BC',  kind: 'session', status: 'upcoming',  studentName: 'Sofia Lim',    studentInitials: 'SL', subject: 'AP Calc BC',   recurring: true  },
+  { id: 'ev-8', day: 5, start: 13,   end: 14.5, title: 'Team sync',              kind: 'other',   status: 'upcoming',  recurring: false },
+];
+
+// Proposals sent to Julia by coordinators
+export const TUTOR_PROPOSALS: TutorProposal[] = [
+  {
+    id: 'tp-1', status: 'pending', sentAt: '2h ago',
+    studentName: 'Ava Rodriguez', studentEmail: 'ava.rodriguez@gmail.com',
+    subject: 'AP Calculus BC',
+    tuples: [{ day: 1, start: 17, end: 20 }, { day: 3, start: 18, end: 21 }],
+    startDate: 'May 6', hoursPerWeek: 6,
+    notes: 'Junior, preparing for May exam. Needs help with series and parametric.',
+    coordinator: 'Meg Adams',
+  },
+  {
+    id: 'tp-2', status: 'pending', sentAt: '1d ago',
+    studentName: 'Jackson Wu', studentEmail: 'jackson.wu@gmail.com',
+    subject: 'AP Physics C',
+    tuples: [{ day: 4, start: 9, end: 11 }],
+    startDate: 'May 7', hoursPerWeek: 2,
+    notes: 'Senior. First AP. Nervous. Mechanics focus.',
+    coordinator: 'Austin R.',
+  },
+  {
+    id: 'tp-3', status: 'accepted', sentAt: '3d ago',
+    studentName: 'Liam Chen', studentEmail: 'liam.chen@gmail.com',
+    subject: 'AP Calculus AB',
+    tuples: [{ day: 2, start: 16, end: 18 }],
+    startDate: 'May 10', hoursPerWeek: 2,
+    notes: 'Needs to solidify integration before finals.',
+    coordinator: 'Meg Adams',
+  },
+  {
+    id: 'tp-4', status: 'declined', sentAt: '5d ago',
+    studentName: 'Chloe Park', studentEmail: 'chloe.park@gmail.com',
+    subject: 'AP Chemistry',
+    tuples: [{ day: 1, start: 15, end: 17 }],
+    startDate: 'ASAP', hoursPerWeek: 2,
+    notes: 'Weak on equilibrium and thermodynamics.',
+    coordinator: 'Austin R.',
+    declineReason: 'Schedule conflict — committed hours are full for May.',
+  },
+];
+
 export const AT_RISK_STUDENTS: AtRiskStudent[] = [
   {
     name: 'Tyler Brooks', subject: 'AP Chemistry', tutor: 'Katrina A.',
