@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { TuitionRequest, Invitation, Tutor, Subject } from '@/lib/data/dashboard-mock';
+import type { TuitionRequest, Invitation, Tutor } from '@/lib/data/dashboard-mock';
 import { overlapsTuple, DAY_NAMES_FULL, fmtRange } from '@/lib/utils/tutors';
 import { RequestDetailCard } from './RequestDetailCard';
 import { RequestTimeline } from './RequestTimeline';
@@ -11,7 +11,6 @@ interface Props {
   request: TuitionRequest;
   invitations: Invitation[];
   tutors: Tutor[];
-  subjects: Subject[];
   matchedTutor?: Tutor;
   onPropose: (tutor: Tutor) => void;
 }
@@ -61,7 +60,7 @@ export function RequestDetail({ request: r, invitations, tutors, matchedTutor, o
           </div>
           {r.status === 'open' && (
             <a
-              href={`/dashboard/tutors?req=${r.id}`}
+              href={`/dashboard/requests/${r.id}/consider`}
               className="h-8 px-3.5 rounded-lg bg-brand-ink text-white text-[12px] font-semibold flex items-center gap-1.5 hover:bg-neutral-700 transition-colors shrink-0"
             >
               Find a tutor →
