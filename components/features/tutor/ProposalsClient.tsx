@@ -1,0 +1,187 @@
+'use client';
+
+import { useState } from 'react';
+import type { Tutor, TutorEvent, TutorProposal } from '@/lib/data/dashboard-mock';
+import { ConsiderModal } from './consider/ConsiderModal';
+import { DeclineModal } from './DeclineModal';
+import { ProposalRow, type DisplayStatus } from './ProposalRow';
+
+type FilterKey = 'pending' | 'accepted' | 'declined' | 'all';
+
+interface EnrichedProposal extends TutorProposal {
+  displayStatus: DisplayStatus;
+  conflicts: { tupleIdx: number; hits: TutorEvent[] }[];
+}
+
+interface Props {
+  me: Tutor;
+  initialEvents: TutorEvent[];
+  initialProposals: TutorProposal[];
+}
+
+export function ProposalsClient({ me, initialEvents, initialProposals }: Props) {
+  const [events, setEvents]       = useState<TutorEvent[]>(initialEvents);
+  const [proposals, setProposals] = useState<TutorProposal[]>(initialProposals);
+  const [reviewed, setReviewed]   = useState<Set<string>>(new Set());
+  const [declineReasons, setDeclineReasons] = useState<Record<string, string>>({});
+  const [filter, setFilter]       = useState<FilterKey>('pending');
+  const [consideringId, setConsideringId] = useState<string | null>(null);
+  const [declineFor, setDeclineFor]       = useState<TutorProposal | null>(null);
+  const [toast, setToast]         = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2800);
+  }
+
+  function getDisplayStatus(p: TutorProposal): DisplayStatus {
+    if (p.status === 'accepted') return 'accepted';
+    if (p.status === 'declined') return 'declined';
+    return reviewed.has(p.id) ? 'reviewed' : 'pending';
+  }
+
+  function conflictsFor(p: TutorProposal) {
+    return p.tuples
+      .map((t, tupleIdx) => ({
+        tupleIdx,
+        hits: events.filter(e =>
+          e.day === t.day && e.kind === 'session' && e.status !== 'cancelled' &&
+          e.start < t.end && e.end > t.start,
+        ),
+      }))
+      .filter(c => c.hits.length > 0);
+  }
+
+  const enriched: EnrichedProposal[] = proposals.map(p => {
+    const ds = getDisplayStatus(p);
+    return { ...p, displayStatus: ds, conflicts: ds === 'pending' || ds === 'reviewed' ? conflictsFor(p) : [] };
+  });
+
+  const actionCount = enriched.filter(p => p.displayStatus === 'pending' || p.displayStatus === 'reviewed').length;
+
+  const visible = filter === 'all'
+    ? enriched
+    : filter === 'pending'
+    ? enriched.filter(p => p.displayStatus === 'pending' || p.displayStatus === 'reviewed')
+    : enriched.filter(p => p.displayStatus === filter);
+
+  function openDetail(id: string) {
+    setReviewed(r => { const n = new Set(r); n.add(id); return n; });
+    setConsideringId(id);
+  }
+
+  function handleAccept(placements: ({ day: number; start: number } | null)[]) {
+    const p = proposals.find(prop => prop.id === consideringId);
+    if (!p) return;
+    const newEvents: TutorEvent[] = placements
+      .map((pl, i) => {
+        if (!pl) return null;
+        const dur = p.tuples[i].end - p.tuples[i].start;
+        return {
+          id: `prop-${p.id}-${i}`,
+          day: pl.day, start: pl.start, end: pl.start + dur,
+          title: `${p.studentName} · ${p.subject}`,
+          kind: 'session' as const, status: 'upcoming' as const,
+          studentName: p.studentName,
+          studentInitials: p.studentName.split(/\s+/).map((w: string) => w[0]).join('').slice(0, 2),
+          subject: p.subject, recurring: true,
+        };
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null) as TutorEvent[];
+    setEvents(ev => [...ev, ...newEvents]);
+    setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'accepted' } : prop));
+    setConsideringId(null);
+    showToast(`Accepted ${p.studentName} · calendar invite sent to family`);
+  }
+
+  function handleDecline(id: string, reason: string) {
+    const p = proposals.find(prop => prop.id === id);
+    setProposals(ps => ps.map(prop => prop.id === id ? { ...prop, status: 'declined', declineReason: reason } : prop));
+    setDeclineReasons(r => ({ ...r, [id]: reason }));
+    setDeclineFor(null);
+    setConsideringId(null);
+    showToast(`Declined · ${p?.coordinator.split(' ')[0]} has been notified`);
+  }
+
+  const considering = consideringId ? proposals.find(p => p.id === consideringId) ?? null : null;
+
+  const FILTERS = [
+    ['pending',  'Needs response', actionCount,                                            '#F59E0B'],
+    ['accepted', 'Accepted',       enriched.filter(p => p.displayStatus === 'accepted').length, '#22C55E'],
+    ['declined', 'Declined',       enriched.filter(p => p.displayStatus === 'declined').length, '#DC2626'],
+    ['all',      'All',            enriched.length,                                        '#52525B'],
+  ] as const;
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, background: '#FAFAFA' }}>
+      {/* Header */}
+      <div style={{ padding: '22px 28px 16px', background: '#fff', borderBottom: '1px solid #E4E4E7', flexShrink: 0 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.015em' }}>Proposals</h1>
+          <p style={{ fontSize: 12, color: '#71717A', margin: '4px 0 14px' }}>
+            Student matches sent by your coordinators. Open a row to review and respond.
+          </p>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {FILTERS.map(([k, label, n, c]) => (
+              <button key={k} onClick={() => setFilter(k)} style={{ padding: '6px 12px', border: 'none', borderRadius: 999, cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', background: filter === k ? c : '#F5F5F5', color: filter === k ? '#fff' : '#52525B', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'background 120ms' }}>
+                {label}
+                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, lineHeight: 1.3, background: filter === k ? 'rgba(255,255,255,0.22)' : '#fff', color: filter === k ? '#fff' : '#A1A1AA' }}>{n}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* List */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px 40px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {visible.length === 0 && (
+            <div style={{ padding: 64, textAlign: 'center', background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12 }}>
+              <div style={{ fontSize: 24, color: '#A7F3D0', marginBottom: 10 }}>✓</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#52525B' }}>Inbox zero</div>
+              <div style={{ fontSize: 12, color: '#A1A1AA', marginTop: 3 }}>
+                No {filter === 'all' ? '' : filter + ' '}proposals right now.
+              </div>
+            </div>
+          )}
+          {visible.map(p => (
+            <ProposalRow
+              key={p.id}
+              proposal={p}
+              displayStatus={p.displayStatus}
+              conflicts={p.conflicts}
+              declineReason={declineReasons[p.id]}
+              onOpen={() => openDetail(p.id)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {considering && (
+        <ConsiderModal
+          proposal={considering}
+          me={me}
+          events={events}
+          onClose={() => setConsideringId(null)}
+          onAccept={handleAccept}
+          onDecline={() => { setConsideringId(null); setDeclineFor(considering); }}
+        />
+      )}
+
+      {declineFor && (
+        <DeclineModal
+          proposal={declineFor}
+          onClose={() => setDeclineFor(null)}
+          onSubmit={reason => handleDecline(declineFor.id, reason)}
+        />
+      )}
+
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 60, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#18181B', color: '#fff', borderRadius: 10, boxShadow: '0 10px 24px rgba(22,32,51,0.18)', fontSize: 13, fontWeight: 500 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 999, background: '#22C55E', flexShrink: 0 }} />
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}

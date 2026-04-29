@@ -10,6 +10,8 @@ import { SessionDrawer } from './SessionDrawer';
 import { TutorWeekView } from './TutorWeekView';
 import { TutorMonthView } from './TutorMonthView';
 import { getWeekLabel, getMonthLabel } from '@/lib/utils/tutors';
+import { ConsiderModal } from './consider/ConsiderModal';
+import type { TutorEventKind, TutorEventStatus } from '@/lib/data/dashboard-mock';
 
 type CalView = 'week' | 'month';
 
@@ -31,6 +33,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
   const [weekOffset, setWeekOffset]   = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const [toast, setToast]             = useState<Toast | null>(null);
+  const [consideringId, setConsideringId] = useState<string | null>(null);
 
   // The active proposal to overlay on calendar: hovered one, or first pending by default
   const activeProposal = proposals.find(p =>
@@ -48,6 +51,32 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
     setProposals(ps => ps.map(p => p.id === id ? { ...p, status: 'accepted' } : p));
     const name = proposals.find(p => p.id === id)?.studentName ?? '';
     showToast({ type: 'accept', name });
+  }
+
+  function handleAcceptWithPlacements(placements: ({ day: number; start: number } | null)[]) {
+    const p = proposals.find(prop => prop.id === consideringId);
+    if (!p) return;
+    const newEvents: TutorEvent[] = placements
+      .map((pl, i) => {
+        if (!pl) return null;
+        const tp = p.tuples[i];
+        const dur = tp.end - tp.start;
+        const initials = p.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2);
+        return {
+          id: `ev-new-${p.id}-${i}-${Date.now()}`,
+          day: pl.day, start: pl.start, end: pl.start + dur,
+          title: `${p.studentName} · ${p.subject}`,
+          kind: 'session' as TutorEventKind,
+          status: 'upcoming' as TutorEventStatus,
+          studentName: p.studentName, studentInitials: initials,
+          subject: p.subject, recurring: true,
+        };
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null) as TutorEvent[];
+    setEvents(es => [...es, ...newEvents]);
+    setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'accepted' } : prop));
+    setConsideringId(null);
+    showToast({ type: 'accept', name: p.studentName });
   }
 
   function handleDecline(id: string, reason: string) {
@@ -115,7 +144,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
               events={events}
               onHover={() => setHoveredId(p.id)}
               onLeave={() => setHoveredId(null)}
-              onConsider={() => handleAccept(p.id)}
+              onConsider={() => setConsideringId(p.id)}
               onDecline={() => setDeclineFor(p)}
             />
           ))}
@@ -193,6 +222,22 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
           onCancel={handleCancel}
         />
       )}
+      {consideringId && (() => {
+        const cp = proposals.find(p => p.id === consideringId);
+        return cp ? (
+          <ConsiderModal
+            proposal={cp}
+            me={me}
+            events={events}
+            onClose={() => setConsideringId(null)}
+            onAccept={handleAcceptWithPlacements}
+            onDecline={() => {
+              setConsideringId(null);
+              setDeclineFor(cp);
+            }}
+          />
+        ) : null;
+      })()}
 
       {/* Toast */}
       {toast && (

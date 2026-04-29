@@ -18,6 +18,7 @@ export type Availability = Record<number, [number, number][]>;
 export interface TutorSubject {
   id: string;
   conf: SubjectConf;
+  qualificationNote?: string;
 }
 
 export interface Tutor {
@@ -75,26 +76,27 @@ export interface AtRiskStudent {
 export interface Subject {
   id: string;
   name: string;
+  cat: string;
 }
 
 export const SUBJECTS: Subject[] = [
-  { id: 'apcalcbc',  name: 'AP Calculus BC'    },
-  { id: 'apcalcab',  name: 'AP Calculus AB'    },
-  { id: 'apphysc',   name: 'AP Physics C'      },
-  { id: 'apphys1',   name: 'AP Physics 1'      },
-  { id: 'apchem',    name: 'AP Chemistry'      },
-  { id: 'apbio',     name: 'AP Biology'        },
-  { id: 'satmath',   name: 'SAT Math'          },
-  { id: 'satverb',   name: 'SAT Verbal'        },
-  { id: 'actmath',   name: 'ACT Math'          },
-  { id: 'mcat',      name: 'MCAT'              },
-  { id: 'apstat',    name: 'AP Statistics'     },
-  { id: 'algii',     name: 'Algebra II'        },
-  { id: 'apenglang', name: 'AP English Lang'   },
-  { id: 'apushist',  name: 'AP US History'     },
-  { id: 'spanish',   name: 'Spanish'           },
-  { id: 'french',    name: 'French'            },
-  { id: 'writing',   name: 'Writing'           },
+  { id: 'apcalcbc',  name: 'AP Calculus BC',  cat: 'STEM'      },
+  { id: 'apcalcab',  name: 'AP Calculus AB',  cat: 'STEM'      },
+  { id: 'apphysc',   name: 'AP Physics C',    cat: 'STEM'      },
+  { id: 'apphys1',   name: 'AP Physics 1',    cat: 'STEM'      },
+  { id: 'apchem',    name: 'AP Chemistry',    cat: 'STEM'      },
+  { id: 'apbio',     name: 'AP Biology',      cat: 'STEM'      },
+  { id: 'satmath',   name: 'SAT Math',        cat: 'Test Prep' },
+  { id: 'satverb',   name: 'SAT Verbal',      cat: 'Test Prep' },
+  { id: 'actmath',   name: 'ACT Math',        cat: 'Test Prep' },
+  { id: 'mcat',      name: 'MCAT',            cat: 'Test Prep' },
+  { id: 'apstat',    name: 'AP Statistics',   cat: 'STEM'      },
+  { id: 'algii',     name: 'Algebra II',      cat: 'STEM'      },
+  { id: 'apenglang', name: 'AP English Lang', cat: 'Humanities'},
+  { id: 'apushist',  name: 'AP US History',   cat: 'Humanities'},
+  { id: 'spanish',   name: 'Spanish',         cat: 'Languages' },
+  { id: 'french',    name: 'French',          cat: 'Languages' },
+  { id: 'writing',   name: 'Writing',         cat: 'Humanities'},
 ];
 
 export const TUTORS: Tutor[] = [
@@ -348,9 +350,13 @@ export interface TutorProposal {
   hoursPerWeek: number;
   notes: string;
   coordinator: string;
+  coordinatorEmail?: string;
   sentAt: string;
   status: TutorProposalStatus;
   declineReason?: string;
+  tz: string;
+  rationale?: string;
+  studentGrade?: string;
 }
 
 export const ME_TUTOR_ID = 't-julia';
@@ -372,38 +378,41 @@ export const TUTOR_PROPOSALS: TutorProposal[] = [
   {
     id: 'tp-1', status: 'pending', sentAt: '2h ago',
     studentName: 'Ava Rodriguez', studentEmail: 'ava.rodriguez@gmail.com',
-    subject: 'AP Calculus BC',
+    subject: 'AP Calculus BC', tz: 'America/New_York',
     tuples: [{ day: 1, start: 17, end: 20 }, { day: 3, start: 18, end: 21 }],
     startDate: 'May 6', hoursPerWeek: 6,
     notes: 'Junior, preparing for May exam. Needs help with series and parametric.',
-    coordinator: 'Meg Adams',
+    coordinator: 'Meg Adams', coordinatorEmail: 'meg@simplifiedu.com',
+    studentGrade: 'Junior',
+    rationale: 'Julia has high confidence in AP Calc BC and strong availability overlap on Mon/Wed evenings — a clean match for Ava\'s study window before the May exam.',
   },
   {
     id: 'tp-2', status: 'pending', sentAt: '1d ago',
     studentName: 'Jackson Wu', studentEmail: 'jackson.wu@gmail.com',
-    subject: 'AP Physics C',
+    subject: 'AP Physics C', tz: 'America/Chicago',
     tuples: [{ day: 4, start: 9, end: 11 }],
     startDate: 'May 7', hoursPerWeek: 2,
     notes: 'Senior. First AP. Nervous. Mechanics focus.',
-    coordinator: 'Austin R.',
+    coordinator: 'Austin R.', coordinatorEmail: 'austin@simplifiedu.com',
+    studentGrade: 'Senior',
   },
   {
     id: 'tp-3', status: 'accepted', sentAt: '3d ago',
     studentName: 'Liam Chen', studentEmail: 'liam.chen@gmail.com',
-    subject: 'AP Calculus AB',
+    subject: 'AP Calculus AB', tz: 'America/Los_Angeles',
     tuples: [{ day: 2, start: 16, end: 18 }],
     startDate: 'May 10', hoursPerWeek: 2,
     notes: 'Needs to solidify integration before finals.',
-    coordinator: 'Meg Adams',
+    coordinator: 'Meg Adams', coordinatorEmail: 'meg@simplifiedu.com',
   },
   {
     id: 'tp-4', status: 'declined', sentAt: '5d ago',
     studentName: 'Chloe Park', studentEmail: 'chloe.park@gmail.com',
-    subject: 'AP Chemistry',
+    subject: 'AP Chemistry', tz: 'America/New_York',
     tuples: [{ day: 1, start: 15, end: 17 }],
     startDate: 'ASAP', hoursPerWeek: 2,
     notes: 'Weak on equilibrium and thermodynamics.',
-    coordinator: 'Austin R.',
+    coordinator: 'Austin R.', coordinatorEmail: 'austin@simplifiedu.com',
     declineReason: 'Schedule conflict — committed hours are full for May.',
   },
 ];
