@@ -28,10 +28,10 @@ export interface SessionDetail extends TutorEvent {
 export interface SessionDetailDrawerProps {
   session: SessionDetail;
   onClose: () => void;
-  onCancel: (id: string, scope: 'this' | 'all') => void;
+  onCancel: (id: string, scope: 'one' | 'all') => void;
   onReschedule: (
     id: string,
-    scope: 'this' | 'all',
+    scope: 'one' | 'all',
     slot: { day: number; start: number; end: number },
   ) => void;
   onUpdate?: (id: string, data: Partial<SessionDetail>) => void;
@@ -113,6 +113,7 @@ export function SessionDetailDrawer({
   onClose,
   onCancel,
   onReschedule,
+  onUpdate,
 }: SessionDetailDrawerProps) {
   const [view, setView] = useState<View>('detail');
   const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
@@ -128,7 +129,7 @@ export function SessionDetailDrawer({
       setPendingChange({ type: 'cancel' });
       setView('recurring-prompt');
     } else {
-      onCancel(session.id, 'this');
+      onCancel(session.id, 'one');
     }
   };
 
@@ -137,12 +138,12 @@ export function SessionDetailDrawer({
       setPendingChange({ type: 'reschedule', day, start, end });
       setView('recurring-prompt');
     } else {
-      onReschedule(session.id, 'this', { day, start, end });
+      onReschedule(session.id, 'one', { day, start, end });
       onClose();
     }
   };
 
-  const applyRecurringScope = (scope: 'this' | 'all') => {
+  const applyRecurringScope = (scope: 'one' | 'all') => {
     if (!pendingChange) return;
     if (pendingChange.type === 'cancel') {
       onCancel(session.id, scope);
@@ -216,6 +217,7 @@ export function SessionDetailDrawer({
             isCancelled={isCancelled}
             onCancel={handleCancelClick}
             onReschedule={() => setView('reschedule')}
+            onEditNotes={onUpdate ? () => onUpdate(session.id, {}) : undefined}
           />
         )}
         {view === 'reschedule' && (
@@ -247,6 +249,7 @@ interface DetailContentProps {
   isCancelled: boolean;
   onCancel: () => void;
   onReschedule: () => void;
+  onEditNotes?: () => void;
 }
 
 function DetailContent({
@@ -257,6 +260,7 @@ function DetailContent({
   isCancelled,
   onCancel,
   onReschedule,
+  onEditNotes,
 }: DetailContentProps) {
   const dim = isCancelled ? 0.55 : isCompleted ? 0.88 : 1;
   const when = session.date ?? DAY_NAMES_FULL[session.day];
@@ -393,7 +397,10 @@ function DetailContent({
 
       {isCompleted && (
         <div className="px-6 py-4">
-          <button className="w-full h-[38px] rounded-md border border-border-default bg-white text-fg-2 text-sm font-semibold hover:bg-surface-3 transition-colors">
+          <button
+            onClick={onEditNotes}
+            className="w-full h-[38px] rounded-md border border-border-default bg-white text-fg-2 text-sm font-semibold hover:bg-surface-3 transition-colors"
+          >
             Edit notes
           </button>
         </div>
@@ -459,8 +466,9 @@ function ReschedulePanel({
   onApply: (day: number, start: number, end: number) => void;
 }) {
   const [day,   setDay]   = useState(session.day);
-  const [start, setStart] = useState(Math.floor(session.start));
-  const dur = session.end - session.start;
+  const snappedStart = Math.floor(session.start);
+  const [start, setStart] = useState(snappedStart);
+  const dur = Math.floor(session.end) - snappedStart;
 
   return (
     <div className="flex-1 overflow-auto">
@@ -559,7 +567,7 @@ function RecurringScopePrompt({
   session: SessionDetail;
   pendingChange: PendingChange;
   onBack: () => void;
-  onChoose: (scope: 'this' | 'all') => void;
+  onChoose: (scope: 'one' | 'all') => void;
 }) {
   const verb = pendingChange.type === 'cancel' ? 'cancel' : 'reschedule';
   const when = session.date ?? DAY_NAMES_FULL[session.day];
@@ -586,7 +594,7 @@ function RecurringScopePrompt({
         <ScopeChoice
           title="Just this session"
           sub={`Only ${when}. The rest of the series continues as planned.`}
-          onClick={() => onChoose('this')}
+          onClick={() => onChoose('one')}
         />
         <ScopeChoice
           title="This and all future sessions"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import type { Coordinator, CoordinatorInvite } from '@/lib/data/dashboard-mock';
 
@@ -198,14 +198,16 @@ interface Confirm { kind: 'revoke' | 'deactivate'; id: string; name: string }
 interface ToastState { msg: string; kind: 'success' | 'neutral' }
 
 function CoordinatorsPage({
-  initCoords,
-  initInvites,
+  coords,
+  setCoords,
+  invites,
+  setInvites,
 }: {
-  initCoords: Coordinator[];
-  initInvites: CoordinatorInvite[];
+  coords: Coordinator[];
+  setCoords: React.Dispatch<React.SetStateAction<Coordinator[]>>;
+  invites: CoordinatorInvite[];
+  setInvites: React.Dispatch<React.SetStateAction<CoordinatorInvite[]>>;
 }) {
-  const [coords,      setCoords]      = useState(initCoords);
-  const [invites,     setInvites]     = useState(initInvites);
   const [showInvite,  setShowInvite]  = useState(false);
   const [confirm,     setConfirm]     = useState<Confirm | null>(null);
   const [toast,       setToast]       = useState<ToastState | null>(null);
@@ -851,15 +853,22 @@ function GhostButton({
 }
 
 // ── Root export ────────────────────────────────────────────────────────────
-export function AdminClient({ coordinators, invites }: AdminClientProps) {
-  const [section, setSection] = useState<Section>('coordinators');
+export function AdminClient({ coordinators, invites: initInvites }: AdminClientProps) {
+  const [section,  setSection]  = useState<Section>('coordinators');
+  const [coords,   setCoords]   = useState(coordinators);
+  const [invites,  setInvites]  = useState(initInvites);
 
   return (
     <div className="flex flex-1 overflow-hidden min-h-0 bg-surface-2">
       <AdminSidebar section={section} setSection={setSection} />
       <main className="flex-1 overflow-auto min-w-0">
         {section === 'coordinators' && (
-          <CoordinatorsPage initCoords={coordinators} initInvites={invites} />
+          <CoordinatorsPage
+            coords={coords}
+            setCoords={setCoords}
+            invites={invites}
+            setInvites={setInvites}
+          />
         )}
       </main>
     </div>
