@@ -70,9 +70,17 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     setConsideringId(id);
   }
 
-  function handleAccept(placements: ({ day: number; start: number } | null)[]) {
+  async function handleAccept(placements: ({ day: number; start: number } | null)[]) {
     const p = proposals.find(prop => prop.id === consideringId);
     if (!p) return;
+
+    const res = await fetch(`/api/proposals/${p.id}/accept`, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to accept proposal'}`);
+      return;
+    }
+
     const newEvents: TutorEvent[] = placements
       .map((pl, i) => {
         if (!pl) return null;
@@ -94,8 +102,20 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     showToast(`Accepted ${p.studentName} · calendar invite sent to family`);
   }
 
-  function handleDecline(id: string, reason: string) {
+  async function handleDecline(id: string, reason: string) {
     const p = proposals.find(prop => prop.id === id);
+
+    const res = await fetch(`/api/proposals/${id}/decline`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to decline proposal'}`);
+      return;
+    }
+
     setProposals(ps => ps.map(prop => prop.id === id ? { ...prop, status: 'declined', declineReason: reason } : prop));
     setDeclineReasons(r => ({ ...r, [id]: reason }));
     setDeclineFor(null);
