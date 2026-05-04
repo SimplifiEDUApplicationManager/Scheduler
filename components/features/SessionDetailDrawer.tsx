@@ -468,7 +468,7 @@ function ReschedulePanel({
   const [day,   setDay]   = useState(session.day);
   const snappedStart = Math.floor(session.start);
   const [start, setStart] = useState(snappedStart);
-  const dur = Math.floor(session.end) - snappedStart;
+  const dur = session.end - session.start;
 
   return (
     <div className="flex-1 overflow-auto">

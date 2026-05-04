@@ -221,7 +221,7 @@ function CoordinatorsPage({
     setTimeout(() => setToast(null), 3600);
   };
 
-  const sendInvite = (data: { email: string; name: string; region: string }) => {
+  const sendInvite = (data: { email: string; name: string; region: string; message: string }) => {
     const inv: CoordinatorInvite = {
       id: `cinv-${Date.now()}`,
       ...data,
@@ -635,7 +635,7 @@ const REGIONS = [
 
 function InviteModal({ onClose, onSend }: {
   onClose: () => void;
-  onSend: (data: { email: string; name: string; region: string }) => void;
+  onSend: (data: { email: string; name: string; region: string; message: string }) => void;
 }) {
   const [email,   setEmail]   = useState('');
   const [name,    setName]    = useState('');
@@ -648,7 +648,7 @@ function InviteModal({ onClose, onSend }: {
 
   const handleSend = () => {
     if (!valid) return;
-    onSend({ email, name: name || email.split('@')[0], region });
+    onSend({ email, name: name || email.split('@')[0], region, message });
   };
 
   return (

@@ -444,6 +444,7 @@ export interface CoordinatorInvite {
   sentAt: string;
   expiresIn: string;
   status: 'pending';
+  message?: string | null;
   warning?: string | null;
 }
 
