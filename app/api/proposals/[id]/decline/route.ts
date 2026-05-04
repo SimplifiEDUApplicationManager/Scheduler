@@ -19,12 +19,16 @@ export async function POST(
 
   const { data: caller } = await supabase
     .from('users')
-    .select('role')
+    .select('role, status')
     .eq('id', user.id)
     .single();
 
   if (!caller || caller.role !== 'TUTOR') {
     return NextResponse.json({ error: 'Only tutors can decline proposals', status: 403 }, { status: 403 });
+  }
+
+  if (caller.status !== 'ACTIVE') {
+    return NextResponse.json({ error: 'Account is not active', status: 403 }, { status: 403 });
   }
 
   const body = await req.json() as { reason?: string };

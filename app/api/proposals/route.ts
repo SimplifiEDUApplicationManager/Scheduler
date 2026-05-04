@@ -17,12 +17,16 @@ export async function POST(req: NextRequest) {
 
   const { data: caller } = await supabase
     .from('users')
-    .select('role')
+    .select('role, status')
     .eq('id', user.id)
     .single();
 
   if (!caller || !['COORDINATOR', 'SUPER_ADMIN'].includes(caller.role)) {
     return NextResponse.json({ error: 'Only coordinators can create proposals', status: 403 }, { status: 403 });
+  }
+
+  if (caller.status !== 'ACTIVE') {
+    return NextResponse.json({ error: 'Account is not active', status: 403 }, { status: 403 });
   }
 
   const body = await req.json() as Record<string, unknown>;
