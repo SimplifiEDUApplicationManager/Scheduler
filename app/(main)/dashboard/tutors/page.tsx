@@ -20,7 +20,7 @@ export default async function TutorsPage() {
   ] = await Promise.all([
     supabase
       .from('users')
-      .select('id, name, email, timezone, bio, max_weekly_hours, min_weekly_hours, tutor_subjects(subject_id, confidence, qualification_note)')
+      .select('id, name, email, timezone, bio, max_weekly_hours, min_weekly_hours, tutor_subjects!tutor_subjects_tutor_id_fkey(subject_id, confidence, qualification_note)')
       .eq('role', 'TUTOR')
       .eq('status', 'ACTIVE')
       .order('name'),
