@@ -417,6 +417,70 @@ export const TUTOR_PROPOSALS: TutorProposal[] = [
   },
 ];
 
+// ── Admin / Coordinator management ────────────────────────────────────────
+
+export interface Coordinator {
+  id: string;
+  initials: string;
+  name: string;
+  email: string;
+  region: string;
+  role: string;
+  status: 'active' | 'inactive';
+  activeTutors: number;
+  activeStudents: number;
+  openRequests: number;
+  lastActive: string;
+  deactivatedAt?: string | null;
+  deactivatedReason?: string | null;
+}
+
+export interface CoordinatorInvite {
+  id: string;
+  name: string;
+  email: string;
+  region: string;
+  invitedBy: string;
+  sentAt: string;
+  expiresIn: string;
+  status: 'pending';
+  warning?: string | null;
+}
+
+export const COORDINATORS: Coordinator[] = [
+  {
+    id: 'coord-meg', initials: 'MA', name: 'Meg Adams',
+    email: 'meg@simplifiedu.com', region: 'Bay Area', role: 'Coordinator',
+    status: 'active', activeTutors: 12, activeStudents: 28, openRequests: 6,
+    lastActive: '2 hours ago',
+  },
+  {
+    id: 'coord-james', initials: 'JL', name: 'James Liu',
+    email: 'james@simplifiedu.com', region: 'Pacific Northwest', role: 'Coordinator',
+    status: 'active', activeTutors: 8, activeStudents: 19, openRequests: 3,
+    lastActive: 'Yesterday',
+  },
+  {
+    id: 'coord-priya', initials: 'PS', name: 'Priya Sharma',
+    email: 'priya.s@simplifiedu.com', region: 'Midwest', role: 'Coordinator',
+    status: 'inactive', activeTutors: 0, activeStudents: 0, openRequests: 0,
+    lastActive: '3 months ago', deactivatedAt: '2 months ago', deactivatedReason: 'Left the team',
+  },
+];
+
+export const COORDINATOR_INVITES: CoordinatorInvite[] = [
+  {
+    id: 'cinv-1', name: 'Rachel Kim', email: 'rachel.kim@example.com',
+    region: 'New England', invitedBy: 'Austin R.', sentAt: '2 days ago',
+    expiresIn: '5 days', status: 'pending',
+  },
+  {
+    id: 'cinv-2', name: '', email: 'carlos.m@example.com',
+    region: 'Southwest', invitedBy: 'Austin R.', sentAt: '6 days ago',
+    expiresIn: '1 day', status: 'pending', warning: 'Expires tomorrow',
+  },
+];
+
 export const AT_RISK_STUDENTS: AtRiskStudent[] = [
   {
     name: 'Tyler Brooks', subject: 'AP Chemistry', tutor: 'Katrina A.',

@@ -118,7 +118,7 @@ A single static HTML page served from e.g. `tutors.simplifiedu.com`. Behavior:
 - Event caching on our side. Every `/available` and `/book` call hits Nylas live.
 - Subject-based filtering and multi-tutor queries. Deferred to V2.
 - Automated reminders, post-booking follow-ups, billing.
-- A coordinator web UI. Coordinators only use Claude in V1.
+- ~~A coordinator web UI.~~ The coordinator web UI (admin dashboard, tutor management, session views) is now in scope and is being built across tasks 5.x. Coordinators use both Claude and the web UI.
 
 ---
 
