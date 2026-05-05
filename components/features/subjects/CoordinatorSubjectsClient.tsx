@@ -102,7 +102,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
   // ── Grade tutor_subject ────────────────────────────────────────────────────
 
   async function handleGrade(rowId: string) {
-    const confidence = gradingMap[rowId] ?? 'UNPROVEN';
+    const confidence = gradingMap[rowId] ?? 'HIGH';
     setGradingBusy(prev => ({ ...prev, [rowId]: true }));
 
     const res = await fetch(`/api/tutor-subjects/${rowId}/grade`, {

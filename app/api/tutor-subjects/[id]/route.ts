@@ -23,8 +23,8 @@ export async function DELETE(
     .eq('id', user.id)
     .single();
 
-  if (!caller || caller.role !== 'TUTOR') {
-    return NextResponse.json({ error: 'Only tutors can remove subjects from their profile', status: 403 }, { status: 403 });
+  if (!caller || !['TUTOR', 'COORDINATOR', 'SUPER_ADMIN'].includes(caller.role)) {
+    return NextResponse.json({ error: 'Unauthorized', status: 403 }, { status: 403 });
   }
 
   if (caller.status !== 'ACTIVE') {
@@ -33,7 +33,7 @@ export async function DELETE(
 
   const { id } = await params;
 
-  // Verify ownership before deleting
+  // Verify the row exists; tutors may only remove their own claims.
   const { data: existing } = await supabase
     .from('tutor_subjects')
     .select('id, tutor_id')
@@ -44,7 +44,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Subject claim not found', status: 404 }, { status: 404 });
   }
 
-  if (existing.tutor_id !== user.id) {
+  if (caller.role === 'TUTOR' && existing.tutor_id !== user.id) {
     return NextResponse.json({ error: 'You can only remove your own subjects', status: 403 }, { status: 403 });
   }
 
