@@ -39,7 +39,7 @@ export function TutorProfileHistory({ tutor, invitations }: Props) {
       <div className="flex flex-col items-center justify-center py-16 text-center px-8">
         <div className="text-[13px] font-semibold text-fg-2 mt-3">No invitations yet</div>
         <div className="text-[11px] text-fg-3 mt-1">
-          When you propose {firstName} to a student, it'll show up here.
+          When you propose {firstName} to a student, it&apos;ll show up here.
         </div>
       </div>
     );
@@ -62,7 +62,7 @@ export function TutorProfileHistory({ tutor, invitations }: Props) {
           </div>
           {inv.declineReason && (
             <div className="mt-2 px-2 py-1.5 bg-danger-bg rounded text-[11px] text-danger-ink italic leading-snug">
-              "{inv.declineReason}"
+              &ldquo;{inv.declineReason}&rdquo;
             </div>
           )}
           <div className="mt-1.5 text-[10px] text-fg-muted">Sent {inv.sentAt}</div>

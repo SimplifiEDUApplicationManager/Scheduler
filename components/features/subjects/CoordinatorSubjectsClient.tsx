@@ -102,7 +102,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
   // ── Grade tutor_subject ────────────────────────────────────────────────────
 
   async function handleGrade(rowId: string) {
-    const confidence = gradingMap[rowId] ?? 'HIGH';
+    const confidence = gradingMap[rowId] ?? 'UNPROVEN';
     setGradingBusy(prev => ({ ...prev, [rowId]: true }));
 
     const res = await fetch(`/api/tutor-subjects/${rowId}/grade`, {
@@ -214,7 +214,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {reviews.map(r => {
-                  const selectedConf = gradingMap[r.rowId] ?? 'HIGH';
+                  const selectedConf = gradingMap[r.rowId] ?? 'UNPROVEN';
                   const busy = gradingBusy[r.rowId] ?? false;
                   const meta = CONF_META[selectedConf];
                   return (

@@ -56,7 +56,7 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
               <span style={{ color: '#DC2626', flexShrink: 0, fontSize: 15 }}>⚠</span>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B' }}>{conflictN} calendar conflict{conflictN > 1 ? 's' : ''} detected</div>
-                <div style={{ fontSize: 12, color: '#7F1D1D', marginTop: 2 }}>You'll be able to pick a new time during scheduling.</div>
+                <div style={{ fontSize: 12, color: '#7F1D1D', marginTop: 2 }}>You&apos;ll be able to pick a new time during scheduling.</div>
               </div>
             </div>
           )}
@@ -136,7 +136,7 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
                 </div>
                 <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: overCap ? '#FEF2F2' : '#F0FDF4', border: `1px solid ${overCap ? '#FECACA' : '#BBF7D0'}`, fontSize: 12, color: overCap ? '#991B1B' : '#166534', lineHeight: 1.4 }}>
                   {overCap
-                    ? <><b>Over cap.</b> Accepting adds {p.hoursPerWeek} hrs · you'd be {newTotal - me.hoursMax} hr{newTotal - me.hoursMax === 1 ? '' : 's'} over.</>
+                    ? <><b>Over cap.</b> Accepting adds {p.hoursPerWeek} hrs · you&apos;d be {newTotal - me.hoursMax} hr{newTotal - me.hoursMax === 1 ? '' : 's'} over.</>
                     : <><b>Room to take this on.</b> Accepting adds {p.hoursPerWeek} hrs · {remaining} hr{remaining === 1 ? '' : 's'} left after.</>}
                 </div>
               </SideCard>

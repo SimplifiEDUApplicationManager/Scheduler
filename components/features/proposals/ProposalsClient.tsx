@@ -129,7 +129,7 @@ export function ProposalsClient({ invitations, tutors, requests }: Props) {
                   {/* Decline reason */}
                   {inv.declineReason && (
                     <div className="mt-2.5 px-2.5 py-1.5 bg-danger-bg rounded-lg text-[11px] text-danger-ink italic leading-snug">
-                      "{inv.declineReason}"
+                      &ldquo;{inv.declineReason}&rdquo;
                     </div>
                   )}
 

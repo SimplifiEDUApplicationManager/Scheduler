@@ -669,7 +669,7 @@ function InviteModal({ onClose, onSend }: {
               Invite a coordinator
             </h2>
             <p className="text-xs text-fg-3 mt-1 m-0">
-              They'll get an email with a setup link, valid for 7 days.
+              They&apos;ll get an email with a setup link, valid for 7 days.
             </p>
           </div>
           <button onClick={onClose} className="flex text-fg-3 hover:text-fg-1 p-1 bg-transparent border-none cursor-pointer transition-colors">
@@ -728,8 +728,8 @@ function InviteModal({ onClose, onSend }: {
           >
             <span className="text-fg-3 mt-px shrink-0"><IconMail size={12} /></span>
             <div>
-              <b>What they'll get:</b> A setup email with a one-time link to create their password
-              and complete their profile. They'll have <b>Coordinator</b> permissions by default.
+              <b>What they&apos;ll get:</b> A setup email with a one-time link to create their password
+              and complete their profile. They&apos;ll have <b>Coordinator</b> permissions by default.
             </div>
           </div>
         </div>

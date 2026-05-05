@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { SubjectsClient } from '@/components/features/tutor/SubjectsClient';
 import type { Tutor, Subject, SubjectConf } from '@/lib/data/dashboard-mock';
+import { TUTORS, SUBJECTS, ME_TUTOR_ID } from '@/lib/data/dashboard-mock';
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -11,6 +12,13 @@ function initials(name: string): string {
 }
 
 export default async function TutorSubjectsPage() {
+  if (process.env.NEXT_PUBLIC_DEV_BYPASS === 'true') {
+    const me = TUTORS.find(t => t.id === ME_TUTOR_ID);
+    if (!me) return notFound();
+    const allSubjects: Subject[] = SUBJECTS.map(s => ({ id: s.id, name: s.name, cat: s.cat }));
+    return <SubjectsClient me={me} allSubjects={allSubjects} />;
+  }
+
   const supabase = await createClient();
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();

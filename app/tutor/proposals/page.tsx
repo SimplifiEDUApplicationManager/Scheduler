@@ -1,6 +1,7 @@
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { Tutor, TutorProposal, SubjectConf } from '@/lib/data/dashboard-mock';
+import { TUTORS, TUTOR_PROPOSALS, TUTOR_EVENTS, ME_TUTOR_ID } from '@/lib/data/dashboard-mock';
 import { ProposalsClient } from '@/components/features/tutor/ProposalsClient';
 
 function initials(name: string): string {
@@ -29,6 +30,12 @@ function sentAgo(iso: string): string {
 }
 
 export default async function TutorProposalsPage() {
+  if (process.env.NEXT_PUBLIC_DEV_BYPASS === 'true') {
+    const me = TUTORS.find(t => t.id === ME_TUTOR_ID);
+    if (!me) return notFound();
+    return <ProposalsClient me={me} initialEvents={TUTOR_EVENTS} initialProposals={TUTOR_PROPOSALS} />;
+  }
+
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();

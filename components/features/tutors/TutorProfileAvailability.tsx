@@ -57,7 +57,7 @@ export function TutorProfileAvailability({ tutor, tzLabel }: Props) {
     <div className="p-5 flex flex-col gap-3.5">
       <DrawerCard title="Weekly availability">
         <p className="text-[11px] text-fg-3 mb-3 leading-snug">
-          Committed windows from {tutor.name.split(' ')[0]}'s scheduling preferences in {tzLabel} time.
+          Committed windows from {tutor.name.split(' ')[0]}&apos;s scheduling preferences in {tzLabel} time.
         </p>
         <MiniAvailability tutor={tutor} />
       </DrawerCard>
