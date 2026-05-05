@@ -60,8 +60,8 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
   }, [subjects]);
 
   const totalPending = useMemo(
-    () => subjects.reduce((a, s) => a + s.pendingCount, 0),
-    [subjects],
+    () => Object.values(claims).flat().filter(c => c.gradedBy === null).length,
+    [claims],
   );
 
   const filteredSubjects = useMemo(() => {
@@ -93,21 +93,21 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
       return;
     }
 
-    // Update local claim confidence
+    // Update local claim — mark as graded (gradedBy non-null) and set new confidence
     setClaims(prev => ({
       ...prev,
       [subjectId]: (prev[subjectId] ?? []).map(c =>
-        c.rowId === rowId ? { ...c, confidence } : c,
+        c.rowId === rowId ? { ...c, confidence, gradedBy: 'graded' } : c,
       ),
     }));
 
-    // Recalculate pendingCount for this subject
+    // Recalculate pendingCount: pending = gradedBy === null
     setSubjects(prev => prev.map(s => {
       if (s.id !== subjectId) return s;
       const updatedClaims = (claims[subjectId] ?? []).map(c =>
-        c.rowId === rowId ? { ...c, confidence } : c,
+        c.rowId === rowId ? { ...c, gradedBy: 'graded' } : c,
       );
-      return { ...s, pendingCount: updatedClaims.filter(c => c.confidence === 'UNPROVEN').length };
+      return { ...s, pendingCount: updatedClaims.filter(c => c.gradedBy === null).length };
     }));
 
     showToast(`Graded as ${CONF_LABEL[confidence]}`);
@@ -371,10 +371,10 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
                         )}
                       </div>
 
-                      {/* Confidence toggle buttons */}
+                      {/* Confidence toggle buttons — nothing selected until a coordinator grades */}
                       <div className="flex items-center gap-1 shrink-0">
                         {CONF_OPTIONS.map(conf => {
-                          const isSelected = claim.confidence === conf;
+                          const isSelected = claim.gradedBy !== null && claim.confidence === conf;
                           return (
                             <button
                               key={conf}
