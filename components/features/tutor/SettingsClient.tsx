@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, type ReactNode } from 'react';
-import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/data/dashboard-mock';
+import type { Tutor, Subject, TutorSubject } from '@/lib/data/dashboard-mock';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { AddSubjectModal } from './AddSubjectModal';
@@ -12,12 +12,6 @@ interface Props { me: Tutor; allSubjects: Subject[] }
 const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'];
 const BOOKING_URL = 'https://book.nylas.com/us/simplifi/julia-hering';
 
-const CONF_META: Record<SubjectConf, { label: string; bg: string; fg: string }> = {
-  HIGH:     { label: 'High',     bg: '#DCFCE7', fg: '#166534' },
-  MEDIUM:   { label: 'Medium',   bg: '#DBEAFE', fg: '#1E40AF' },
-  UNPROVEN: { label: 'Unproven', bg: '#FEF3C7', fg: '#92400E' },
-  LOW:      { label: 'Low',      bg: '#FEE2E2', fg: '#991B1B' },
-};
 
 const NAV = [
   ['profile',       'Profile'],

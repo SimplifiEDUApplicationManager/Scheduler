@@ -42,7 +42,7 @@ export function ConsiderModal({ proposal: p, me, events, onClose, onAccept, onDe
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') step === 'schedule' ? setStep('review') : onClose();
+      if (e.key === 'Escape') { if (step === 'schedule') setStep('review'); else onClose(); }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);

@@ -47,11 +47,6 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
     setTimeout(() => setToast(null), 4000);
   }
 
-  function handleAccept(id: string) {
-    setProposals(ps => ps.map(p => p.id === id ? { ...p, status: 'accepted' } : p));
-    const name = proposals.find(p => p.id === id)?.studentName ?? '';
-    showToast({ type: 'accept', name });
-  }
 
   function handleAcceptWithPlacements(placements: ({ day: number; start: number } | null)[]) {
     const p = proposals.find(prop => prop.id === consideringId);

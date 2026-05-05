@@ -89,7 +89,7 @@ export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReas
 
           {displayStatus === 'declined' && declineReason && (
             <div style={{ marginTop: 8, fontSize: 11, color: '#991B1B', fontStyle: 'italic' }}>
-              Decline reason: "{declineReason}"
+              Decline reason: &ldquo;{declineReason}&rdquo;
             </div>
           )}
         </div>

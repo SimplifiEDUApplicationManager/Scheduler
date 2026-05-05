@@ -45,7 +45,7 @@ export function ConfirmAcceptModal({ p, overCap, anyConflict, newTotal, capHours
             <h3 style={{ fontSize: 19, fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>Confirm acceptance</h3>
           </div>
           <div style={{ fontSize: 13, color: '#52525B', lineHeight: 1.5 }}>
-            You're accepting <b style={{ color: '#18181B' }}>{sessions} session{sessions === 1 ? '' : 's'}</b>{' '}
+            You&apos;re accepting <b style={{ color: '#18181B' }}>{sessions} session{sessions === 1 ? '' : 's'}</b>{' '}
             totaling <b style={{ color: '#18181B' }}>{fmtHrs(totalHrs)}/week</b>{' '}
             with <b style={{ color: '#18181B' }}>{studentShort}</b>.
           </div>
@@ -82,7 +82,7 @@ export function ConfirmAcceptModal({ p, overCap, anyConflict, newTotal, capHours
             <div style={{ fontWeight: 700, marginBottom: 2 }}>A couple of things to confirm:</div>
             <ul style={{ margin: '2px 0 0 16px', padding: 0 }}>
               {overCap && <li>This pushes you to <b>{newTotal}/{capHours} hrs/week</b> — <b>{newTotal - capHours} hr{newTotal - capHours === 1 ? '' : 's'} over</b> your stated cap.</li>}
-              {anyConflict && <li>{conflictCount} proposed time{conflictCount === 1 ? '' : 's'} overlap existing session{conflictCount === 1 ? '' : 's'} — you'll resolve in the scheduling step.</li>}
+              {anyConflict && <li>{conflictCount} proposed time{conflictCount === 1 ? '' : 's'} overlap existing session{conflictCount === 1 ? '' : 's'} — you&apos;ll resolve in the scheduling step.</li>}
             </ul>
           </div>
         )}

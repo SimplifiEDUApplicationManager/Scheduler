@@ -243,7 +243,7 @@ async function main() {
       userIdMap.set(row.email, id);
       process.stdout.write('OK\n');
     } catch (err) {
-      const msg = (err as any)?.message ?? JSON.stringify(err);
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
       process.stdout.write(`ERROR — ${msg}\n`);
     }
   }

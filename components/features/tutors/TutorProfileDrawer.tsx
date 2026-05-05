@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Tutor, Subject, Invitation } from '@/lib/data/dashboard-mock';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
@@ -23,6 +23,29 @@ interface Props {
 export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPropose }: Props) {
   const [tab, setTab] = useState<Tab>('overview');
   const roster = useMemo(() => fakeRoster(tutor, subjects), [tutor, subjects]);
+
+  // Coordinator-managed personality notes fetched from tutor_context
+  const [contextPersonality, setContextPersonality] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    fetch(`/api/tutor-context/${tutor.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { context?: { personality?: string } } | null) => {
+        if (typeof data?.context?.personality === 'string') {
+          setContextPersonality(data.context.personality);
+        }
+      })
+      .catch(() => { /* silently fail — DEV_BYPASS has no session */ });
+  }, [tutor.id]);
+
+  async function handleSavePersonality(text: string) {
+    const res = await fetch(`/api/tutor-context/${tutor.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context: { personality: text } }),
+    });
+    if (res.ok) setContextPersonality(text);
+  }
   const sentInvites = invitations.filter(i => i.tutorId === tutor.id);
   const accepted = sentInvites.filter(i => i.status === 'accepted').length;
   const declined = sentInvites.filter(i => i.status === 'declined').length;
@@ -126,7 +149,7 @@ export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPr
 
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto min-h-0 bg-neutral-50">
-          {tab === 'overview'     && <TutorProfileOverview tutor={tutor} subjects={subjects} />}
+          {tab === 'overview'     && <TutorProfileOverview tutor={tutor} subjects={subjects} contextPersonality={contextPersonality} onSavePersonality={handleSavePersonality} />}
           {tab === 'availability' && <TutorProfileAvailability tutor={tutor} tzLabel={tzLabel} />}
           {tab === 'students'     && <TutorProfileStudents roster={roster} />}
           {tab === 'history'      && <TutorProfileHistory tutor={tutor} invitations={sentInvites} />}
