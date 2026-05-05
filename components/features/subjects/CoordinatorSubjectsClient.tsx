@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { Avatar } from '@/components/ui/Avatar';
+import { Badge } from '@/components/ui/Badge';
+import type { BadgeVariant } from '@/components/ui/Badge';
 
 interface Subject {
   id: string;
@@ -25,19 +28,14 @@ interface Props {
   initialPendingReviews: PendingReview[];
 }
 
-const CONF_META = {
-  HIGH:     { label: 'High',     bg: '#DCFCE7', fg: '#166534', bar: '#22C55E' },
-  MEDIUM:   { label: 'Medium',   bg: '#DBEAFE', fg: '#1E40AF', bar: '#3B82F6' },
-  UNPROVEN: { label: 'Unproven', bg: '#FEF3C7', fg: '#92400E', bar: '#F59E0B' },
-  LOW:      { label: 'Low',      bg: '#FEE2E2', fg: '#991B1B', bar: '#EF4444' },
-} as const;
+const CONFIDENCE_OPTIONS = [
+  { value: 'HIGH',     label: 'High' },
+  { value: 'MEDIUM',   label: 'Med' },
+  { value: 'UNPROVEN', label: 'Unp' },
+  { value: 'LOW',      label: 'Low' },
+] as const;
 
-const CONFIDENCE_OPTIONS = ['HIGH', 'MEDIUM', 'UNPROVEN', 'LOW'] as const;
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '')).toUpperCase();
-}
+type ConfidenceValue = typeof CONFIDENCE_OPTIONS[number]['value'];
 
 export function CoordinatorSubjectsClient({ initialSubjects, initialPendingReviews }: Props) {
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
@@ -51,7 +49,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Grading state: rowId → selected confidence
-  const [gradingMap, setGradingMap]   = useState<Record<string, 'HIGH' | 'MEDIUM' | 'UNPROVEN' | 'LOW'>>({});
+  const [gradingMap, setGradingMap]   = useState<Record<string, ConfidenceValue>>({});
   const [gradingBusy, setGradingBusy] = useState<Record<string, boolean>>({});
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2800); }
@@ -102,7 +100,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
   // ── Grade tutor_subject ────────────────────────────────────────────────────
 
   async function handleGrade(rowId: string) {
-    const confidence = gradingMap[rowId] ?? 'UNPROVEN';
+    const confidence = gradingMap[rowId] ?? 'HIGH';
     setGradingBusy(prev => ({ ...prev, [rowId]: true }));
 
     const res = await fetch(`/api/tutor-subjects/${rowId}/grade`, {
@@ -123,7 +121,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
         ? prev.map(r => r.rowId === rowId ? { ...r, confidence: 'UNPROVEN' } : r)
         : prev.filter(r => r.rowId !== rowId),
     );
-    showToast(`Graded as ${CONF_META[confidence].label}`);
+    showToast(`Graded as ${confidence.charAt(0) + confidence.slice(1).toLowerCase()}`);
   }
 
   // ── Group subjects by category ─────────────────────────────────────────────
@@ -134,22 +132,22 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
   }, {});
 
   return (
-    <div style={{ flex: 1, overflow: 'auto', background: '#FAFAFA' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 32px 60px' }}>
+    <div className="flex-1 overflow-auto bg-surface-2">
+      <div className="max-w-[1100px] mx-auto px-8 py-7 pb-16">
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 24 }}>
+        {/* ── Page header ─────────────────────────────────────────────────── */}
+        <div className="flex items-start justify-between gap-5 mb-6">
           <div>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 4px', letterSpacing: '-0.015em' }}>Subjects</h1>
-            <p style={{ fontSize: 13, color: '#71717A', margin: 0 }}>
-              Manage the master subject list and grade tutor confidence.
-            </p>
+            <h1 className="text-[26px] font-extrabold tracking-[-0.02em] text-fg-1 mb-1">Subjects</h1>
+            <p className="text-sm text-fg-3">Manage the master subject list and grade tutor confidence.</p>
           </div>
           <button
             onClick={() => setShowAddForm(v => !v)}
-            style={{ height: 36, padding: '0 14px', borderRadius: 8, border: 'none', background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+            className="h-9 px-4 rounded-lg bg-brand-ink text-fg-on-brand text-sm font-bold inline-flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
           >
-            <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" aria-hidden><path d="M6.5 2v9M2 6.5h9" /></svg>
+            <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden>
+              <path d="M6.5 2v9M2 6.5h9" />
+            </svg>
             Add subject
           </button>
         </div>
@@ -158,102 +156,129 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
         {showAddForm && (
           <form
             onSubmit={handleAddSubject}
-            style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: '18px 20px', marginBottom: 24, display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}
+            className="bg-surface-1 border border-border-default rounded-xl p-5 mb-6 flex gap-3 items-end flex-wrap"
           >
-            <div style={{ flex: 2, minWidth: 180 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#52525B', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subject name</label>
+            <div className="flex-[2] min-w-[180px]">
+              <label className="block text-[11px] font-bold text-fg-3 uppercase tracking-[0.05em] mb-1.5">
+                Subject name
+              </label>
               <input
                 autoFocus
                 value={addName}
                 onChange={e => setAddName(e.target.value)}
                 placeholder="e.g. AP Calculus BC"
                 required
-                style={{ width: '100%', height: 36, padding: '0 10px', border: '1px solid #E4E4E7', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                className="w-full h-9 px-3 border border-border-default rounded-lg text-sm text-fg-1 placeholder:text-fg-muted outline-none focus:border-border-strong bg-surface-1 font-[inherit]"
               />
             </div>
-            <div style={{ flex: 1, minWidth: 140 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#52525B', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</label>
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-[11px] font-bold text-fg-3 uppercase tracking-[0.05em] mb-1.5">
+                Category
+              </label>
               <input
                 value={addCategory}
                 onChange={e => setAddCategory(e.target.value)}
                 placeholder="e.g. Math"
                 required
-                style={{ width: '100%', height: 36, padding: '0 10px', border: '1px solid #E4E4E7', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                className="w-full h-9 px-3 border border-border-default rounded-lg text-sm text-fg-1 placeholder:text-fg-muted outline-none focus:border-border-strong bg-surface-1 font-[inherit]"
               />
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button type="button" onClick={() => setShowAddForm(false)} style={{ height: 36, padding: '0 12px', borderRadius: 7, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                className="h-9 px-4 rounded-lg border border-border-default bg-surface-1 text-fg-2 text-sm font-semibold hover:bg-surface-2 transition-colors font-[inherit]"
+              >
                 Cancel
               </button>
-              <button type="submit" disabled={addPending} style={{ height: 36, padding: '0 14px', borderRadius: 7, border: 'none', background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: addPending ? 'wait' : 'pointer', opacity: addPending ? 0.7 : 1 }}>
+              <button
+                type="submit"
+                disabled={addPending}
+                className="h-9 px-4 rounded-lg bg-brand-ink text-fg-on-brand text-sm font-bold disabled:opacity-50 hover:opacity-90 transition-opacity font-[inherit]"
+              >
                 {addPending ? 'Adding…' : 'Add'}
               </button>
             </div>
           </form>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+        {/* ── Two-column layout ────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-5 items-start">
 
-          {/* ── Pending reviews ─────────────────────────────────────────────── */}
+          {/* ── Pending reviews ──────────────────────────────────────────── */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Pending reviews</h2>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-[13px] font-bold text-fg-1">Pending reviews</h2>
               {reviews.length > 0 && (
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: '#FEF3C7', color: '#92400E' }}>
-                  {reviews.length}
-                </span>
+                <Badge variant="warning" size="xs">{reviews.length}</Badge>
               )}
             </div>
 
             {reviews.length === 0 ? (
-              <div style={{ padding: '40px 24px', background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 20, color: '#A7F3D0', marginBottom: 8 }}>✓</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#52525B' }}>All caught up</div>
-                <div style={{ fontSize: 12, color: '#A1A1AA', marginTop: 3 }}>No ungraded subject claims.</div>
+              <div className="bg-surface-1 border border-border-default rounded-xl p-10 text-center">
+                <div className="text-[20px] text-success mb-2">✓</div>
+                <div className="text-sm font-semibold text-fg-1">All caught up</div>
+                <div className="text-xs text-fg-muted mt-1">No ungraded subject claims.</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="flex flex-col gap-3">
                 {reviews.map(r => {
-                  const selectedConf = gradingMap[r.rowId] ?? 'UNPROVEN';
+                  const selectedConf: ConfidenceValue = gradingMap[r.rowId] ?? 'HIGH';
                   const busy = gradingBusy[r.rowId] ?? false;
-                  const meta = CONF_META[selectedConf];
+
                   return (
-                    <div key={r.rowId} style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: '14px 16px', position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#F59E0B' }} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 999, background: '#18181B', color: '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {r.tutorInitials || initials(r.tutorName)}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#18181B' }}>{r.tutorName}</div>
-                          <div style={{ fontSize: 11, color: '#A1A1AA' }}>{r.subjectCategory} · {r.subjectName}</div>
-                        </div>
-                        <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}>Ungraded</span>
-                      </div>
+                    <div
+                      key={r.rowId}
+                      className="bg-surface-1 border border-border-default rounded-xl overflow-hidden"
+                    >
+                      {/* Amber left accent — ungraded */}
+                      <div className="flex">
+                        <div className="w-1 bg-warning shrink-0" />
+                        <div className="flex-1 p-4">
+                          {/* Tutor + subject row */}
+                          <div className="flex items-center gap-3 mb-3">
+                            <Avatar initials={r.tutorInitials} tone="dark" size="md" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[13px] font-bold text-fg-1">{r.tutorName}</div>
+                              <div className="text-[11px] text-fg-3 mt-px">{r.subjectCategory} · {r.subjectName}</div>
+                            </div>
+                            <Badge variant="UNPROVEN" size="xs">Ungraded</Badge>
+                          </div>
 
-                      {r.qualificationNote && (
-                        <div style={{ fontSize: 12, color: '#52525B', background: '#FAFAFA', border: '1px solid #F5F5F5', borderRadius: 8, padding: '8px 10px', marginBottom: 10, lineHeight: 1.55, fontStyle: 'italic' }}>
-                          &ldquo;{r.qualificationNote}&rdquo;
-                        </div>
-                      )}
+                          {/* Qualification note */}
+                          {r.qualificationNote && (
+                            <blockquote className="text-xs text-fg-2 bg-surface-2 border border-border-default rounded-lg px-3 py-2.5 mb-3 italic leading-relaxed m-0">
+                              &ldquo;{r.qualificationNote}&rdquo;
+                            </blockquote>
+                          )}
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <select
-                          value={selectedConf}
-                          onChange={e => setGradingMap(prev => ({ ...prev, [r.rowId]: e.target.value as typeof selectedConf }))}
-                          style={{ flex: 1, height: 32, padding: '0 8px', border: `1px solid ${meta.bar}`, borderRadius: 6, fontSize: 12, fontFamily: 'inherit', background: meta.bg, color: meta.fg, fontWeight: 700, cursor: 'pointer', outline: 'none' }}
-                        >
-                          {CONFIDENCE_OPTIONS.map(c => (
-                            <option key={c} value={c}>{CONF_META[c].label}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => handleGrade(r.rowId)}
-                          disabled={busy}
-                          style={{ height: 32, padding: '0 12px', borderRadius: 6, border: 'none', background: '#18181B', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.7 : 1, flexShrink: 0 }}
-                        >
-                          {busy ? 'Saving…' : 'Grade'}
-                        </button>
+                          {/* Confidence selector + grade button */}
+                          <div className="flex items-center gap-2">
+                            <div className="flex p-0.5 bg-surface-3 rounded-lg">
+                              {CONFIDENCE_OPTIONS.map(opt => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => setGradingMap(prev => ({ ...prev, [r.rowId]: opt.value }))}
+                                  className={[
+                                    'px-2.5 py-1 rounded-md text-xs font-semibold transition-all font-[inherit]',
+                                    selectedConf === opt.value
+                                      ? 'bg-surface-1 text-fg-1 shadow-xs'
+                                      : 'text-fg-3 hover:text-fg-2',
+                                  ].join(' ')}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            <button
+                              onClick={() => handleGrade(r.rowId)}
+                              disabled={busy}
+                              className="h-8 px-4 rounded-lg bg-brand-ink text-fg-on-brand text-xs font-bold disabled:opacity-50 hover:opacity-90 transition-opacity font-[inherit] shrink-0"
+                            >
+                              {busy ? 'Saving…' : 'Grade'}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -262,39 +287,42 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
             )}
           </div>
 
-          {/* ── Master subject list ──────────────────────────────────────────── */}
+          {/* ── Master subject list ──────────────────────────────────────── */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Master list</h2>
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: '#F5F5F5', color: '#52525B' }}>
-                {subjects.length}
-              </span>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-[13px] font-bold text-fg-1">Master list</h2>
+              <Badge variant="default" size="xs">{subjects.length}</Badge>
             </div>
 
             {subjects.length === 0 ? (
-              <div style={{ padding: '40px 24px', background: '#fff', border: '2px dashed #E4E4E7', borderRadius: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#52525B' }}>No subjects yet</div>
-                <div style={{ fontSize: 12, color: '#A1A1AA', marginTop: 3 }}>Add the first subject above.</div>
+              <div className="bg-surface-1 border-2 border-dashed border-border-default rounded-xl p-10 text-center">
+                <div className="text-sm font-semibold text-fg-1">No subjects yet</div>
+                <div className="text-xs text-fg-muted mt-1">Add the first subject above.</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {Object.entries(byCategory).map(([cat, subs]) => (
+              <div className="bg-surface-1 border border-border-default rounded-xl overflow-hidden">
+                {Object.entries(byCategory).map(([cat, subs], catIdx) => (
                   <div key={cat}>
-                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#A1A1AA', padding: '6px 4px 4px' }}>{cat}</div>
+                    {/* Category header */}
+                    <div className={[
+                      'px-4 py-2 bg-surface-2',
+                      catIdx > 0 ? 'border-t border-border-default' : '',
+                    ].join(' ')}>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.07em] text-fg-muted">{cat}</span>
+                    </div>
+                    {/* Subject rows */}
                     {subs.map(s => (
                       <div
                         key={s.id}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#fff', border: '1px solid #E4E4E7', borderRadius: 8, marginBottom: 4 }}
+                        className="flex items-center gap-3 px-4 py-2.5 border-t border-border-default first:border-t-0 hover:bg-surface-2 transition-colors group"
                       >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#18181B' }}>{s.name}</div>
-                        </div>
+                        <div className="flex-1 min-w-0 text-[13px] font-medium text-fg-1">{s.name}</div>
                         <button
                           onClick={() => handleDeleteSubject(s.id, s.name)}
                           title="Remove subject"
-                          style={{ width: 26, height: 26, borderRadius: 5, border: '1px solid #FECACA', background: '#fff', color: '#DC2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                          className="w-6 h-6 rounded-md border border-transparent text-fg-muted opacity-0 group-hover:opacity-100 hover:!border-danger-bg hover:bg-danger-bg hover:!text-danger transition-all inline-flex items-center justify-center shrink-0"
                         >
-                          <svg width={10} height={10} viewBox="0 0 10 10" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" aria-hidden>
+                          <svg width={10} height={10} viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
                             <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" />
                           </svg>
                         </button>
@@ -308,9 +336,10 @@ export function CoordinatorSubjectsClient({ initialSubjects, initialPendingRevie
         </div>
       </div>
 
+      {/* ── Toast ──────────────────────────────────────────────────────────── */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 60, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#18181B', color: '#fff', borderRadius: 10, boxShadow: '0 10px 24px rgba(22,32,51,0.18)', fontSize: 13, fontWeight: 500 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 999, background: '#22C55E', flexShrink: 0 }} />
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 bg-brand-ink text-fg-on-brand rounded-xl shadow-lg text-sm font-medium">
+          <div className="w-2 h-2 rounded-full bg-success shrink-0" />
           {toast}
         </div>
       )}
