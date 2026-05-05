@@ -230,6 +230,38 @@ export function SubjectsClient({ me, allSubjects }: Props) {
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
 
+  async function handleAdd(ts: TutorSubject) {
+    const res = await fetch('/api/tutor-subjects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject_id: ts.id, qualification_note: ts.qualificationNote }),
+    });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to add subject'}`);
+      return;
+    }
+    const row = await res.json() as { id: string; subject_id: string };
+    setMySubjects(prev => [...prev, { ...ts, rowId: row.id }]);
+    setAddOpen(false);
+    showToast(`${allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject'} added · pending coordinator review`);
+  }
+
+  async function handleRemove(ts: TutorSubject) {
+    if (!ts.rowId) {
+      showToast('Cannot remove: subject has no row ID');
+      return;
+    }
+    const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to remove subject'}`);
+      return;
+    }
+    setMySubjects(prev => prev.filter(x => x.id !== ts.id));
+    showToast('Subject removed');
+  }
+
   const totalStudents = mySubjects.reduce((a, s) => a + statsFor(s.id, me.id).studentsAllTime, 0);
   const totalHours    = mySubjects.reduce((a, s) => a + statsFor(s.id, me.id).hoursLogged, 0);
   const totalReviews  = mySubjects.reduce((a, s) => a + statsFor(s.id, me.id).reviewCount, 0);
@@ -324,10 +356,7 @@ export function SubjectsClient({ me, allSubjects }: Props) {
                   tutorId={me.id}
                   expanded={expandedId === ts.id}
                   onToggle={() => setExpandedId(expandedId === ts.id ? null : ts.id)}
-                  onRemove={() => {
-                    setMySubjects(prev => prev.filter(x => x.id !== ts.id));
-                    showToast('Subject removed');
-                  }}
+                  onRemove={() => handleRemove(ts)}
                 />
               );
             })}
@@ -340,11 +369,7 @@ export function SubjectsClient({ me, allSubjects }: Props) {
           allSubjects={allSubjects}
           existing={mySubjects.map(s => s.id)}
           onClose={() => setAddOpen(false)}
-          onAdd={ts => {
-            setMySubjects(prev => [...prev, ts]);
-            setAddOpen(false);
-            showToast(`${allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject'} added · pending coordinator review`);
-          }}
+          onAdd={handleAdd}
         />
       )}
 

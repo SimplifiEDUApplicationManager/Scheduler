@@ -16,7 +16,8 @@ export interface Tuple {
 export type Availability = Record<number, [number, number][]>;
 
 export interface TutorSubject {
-  id: string;
+  id: string;       // subject_id
+  rowId?: string;   // tutor_subjects row id — present when fetched from DB
   conf: SubjectConf;
   qualificationNote?: string;
 }
