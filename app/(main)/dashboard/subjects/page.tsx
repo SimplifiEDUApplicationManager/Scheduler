@@ -8,12 +8,30 @@ function initials(name: string): string {
   return (first + last).toUpperCase();
 }
 
+export interface SubjectRow {
+  id: string;
+  name: string;
+  category: string;
+  tutorCount: number;
+  pendingCount: number;
+}
+
+export interface TutorClaim {
+  rowId: string;
+  tutorId: string;
+  tutorName: string;
+  tutorInitials: string;
+  tutorBio: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'UNPROVEN' | 'LOW';
+  qualificationNote: string;
+}
+
 export default async function SubjectsPage() {
   const supabase = await createClient();
 
   const [
     { data: subjectRows, error: subjectsError },
-    { data: reviewRows,  error: reviewsError  },
+    { data: claimRows,   error: claimsError   },
   ] = await Promise.all([
     supabase
       .from('subjects')
@@ -22,41 +40,42 @@ export default async function SubjectsPage() {
       .order('name'),
     supabase
       .from('tutor_subjects')
-      .select('id, qualification_note, confidence, subject_id, tutor_id, subjects(name, category), users!tutor_subjects_tutor_id_fkey(name)')
+      .select('id, confidence, qualification_note, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio)')
       .order('created_at'),
   ]);
 
   if (subjectsError) throw subjectsError;
-  if (reviewsError)  throw reviewsError;
+  if (claimsError)   throw claimsError;
 
-  const subjects = (subjectRows ?? []).map(s => ({
-    id:       s.id,
-    name:     s.name,
-    category: s.category,
+  // Build map: subject_id → claims
+  const claimsBySubject: Record<string, TutorClaim[]> = {};
+  for (const row of claimRows ?? []) {
+    const tutorInfo = row.users as { name: string; bio: string | null } | null;
+    const name = tutorInfo?.name ?? 'Unknown';
+    const claim: TutorClaim = {
+      rowId:             row.id,
+      tutorId:           row.tutor_id,
+      tutorName:         name,
+      tutorInitials:     initials(name),
+      tutorBio:          tutorInfo?.bio ?? '',
+      confidence:        row.confidence as TutorClaim['confidence'],
+      qualificationNote: row.qualification_note ?? '',
+    };
+    (claimsBySubject[row.subject_id] ??= []).push(claim);
+  }
+
+  const subjects: SubjectRow[] = (subjectRows ?? []).map(s => ({
+    id:           s.id,
+    name:         s.name,
+    category:     s.category,
+    tutorCount:   claimsBySubject[s.id]?.length ?? 0,
+    pendingCount: claimsBySubject[s.id]?.filter(c => c.confidence === 'UNPROVEN').length ?? 0,
   }));
-
-  const pendingReviews = (reviewRows ?? [])
-    .filter(r => r.confidence === 'UNPROVEN')
-    .map(r => {
-      const tutorName = (r.users as { name: string } | null)?.name ?? 'Unknown';
-      const subj      = r.subjects as { name: string; category: string } | null;
-      return {
-        rowId:             r.id,
-        tutorId:           r.tutor_id,
-        tutorName,
-        tutorInitials:     initials(tutorName),
-        subjectId:         r.subject_id,
-        subjectName:       subj?.name ?? '',
-        subjectCategory:   subj?.category ?? '',
-        qualificationNote: r.qualification_note ?? '',
-        confidence:        r.confidence as 'UNPROVEN',
-      };
-    });
 
   return (
     <CoordinatorSubjectsClient
       initialSubjects={subjects}
-      initialPendingReviews={pendingReviews}
+      claimsBySubject={claimsBySubject}
     />
   );
 }
