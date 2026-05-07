@@ -54,7 +54,7 @@ export function fmtRange(start: number, end: number): string {
 export function filterTutors(tutors: Tutor[], filters: FilterState): Tutor[] {
   return tutors.filter(t => {
     if (filters.q && !t.name.toLowerCase().includes(filters.q.toLowerCase())) return false;
-    if (filters.hideAtCap && t.hoursCurrent >= t.hoursMax) return false;
+    if (filters.hideAtCap && t.hoursCurrent > t.hoursMax) return false;
     if (filters.subjects.length > 0) {
       const hasMatch = t.subjects.some(
         ts => filters.subjects.includes(ts.id) && filters.conf.includes(ts.conf),

@@ -43,10 +43,15 @@ export function TutorCard({
     <div
       onClick={onSelect}
       className={cn(
-        'px-4 py-3 border-b border-neutral-100 cursor-pointer transition-colors',
+        'relative px-4 py-3 border-b border-neutral-100 cursor-pointer transition-colors',
         selected ? 'bg-brand-ink text-fg-on-brand' : 'hover:bg-surface-2',
       )}
     >
+      {subjectMatch?.coordConf && (
+        <div className="absolute top-2 right-2">
+          <Badge variant={subjectMatch.coordConf} size="xs">C: {subjectMatch.coordConf}</Badge>
+        </div>
+      )}
       <div className="flex gap-2.5 items-start">
         <Avatar
           initials={tutor.initials}
