@@ -65,6 +65,10 @@ describe('parseFilters — invalid tuples dropped', () => {
     expect(parseFilters(new URLSearchParams('tuple=-1:10:12')).tuples).toHaveLength(0);
   });
 
+  it('drops a tuple where start is negative', () => {
+    expect(parseFilters(new URLSearchParams('tuple=1:-5:12')).tuples).toHaveLength(0);
+  });
+
   it('drops a tuple where end equals start', () => {
     expect(parseFilters(new URLSearchParams('tuple=1:10:10')).tuples).toHaveLength(0);
   });
