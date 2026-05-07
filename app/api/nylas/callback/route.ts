@@ -8,8 +8,8 @@ export async function GET(request: Request) {
   const state      = searchParams.get('state');
   const errorParam = searchParams.get('error');
 
-  const errRedirect = (code: string) =>
-    NextResponse.redirect(`${origin}/dashboard?nylas_error=${encodeURIComponent(code)}`);
+  const errRedirect = (reason: string) =>
+    NextResponse.redirect(`${origin}/dashboard?nylas_error=${encodeURIComponent(reason)}`);
 
   if (errorParam)      return errRedirect(errorParam);
   if (!code || !state) return errRedirect('missing_params');
