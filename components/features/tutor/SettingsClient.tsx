@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, type ReactNode } from 'react';
-import type { Tutor, Subject, TutorSubject } from '@/lib/data/dashboard-mock';
+import type { Tutor, Subject, TutorSubject } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { AddSubjectModal } from './AddSubjectModal';
@@ -10,7 +10,6 @@ import { BookingPagePreview } from './BookingPagePreview';
 interface Props { me: Tutor; allSubjects: Subject[] }
 
 const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'];
-const BOOKING_URL = 'https://book.nylas.com/us/simplifi/julia-hering';
 
 
 const NAV = [
@@ -26,9 +25,10 @@ type SectionId = typeof NAV[number][0];
 export function SettingsClient({ me, allSubjects }: Props) {
   const [name, setName]           = useState(me.name);
   const [tz, setTz]               = useState(me.tz);
-  const [meetingLink, setLink]    = useState('https://meet.google.com/xyz-abcd-efg');
+  const [meetingLink, setLink]    = useState(me.meetingLink ?? '');
   const [maxHours, setMax]        = useState(me.hoursMax);
   const [minHours, setMin]        = useState(me.hoursMin);
+  const bookingUrl                = me.bookingPageUrl ?? null;
   const [mySubjects, setSubjects] = useState<TutorSubject[]>(me.subjects);
   const [notifs, setNotifs]       = useState({ newRequest: true, reminders: true, coordMessages: true, cancellations: true, weeklySummary: false });
   const [dirty, setDirty]         = useState(false);
@@ -43,7 +43,32 @@ export function SettingsClient({ me, allSubjects }: Props) {
   const maxError = maxHours < 6 || maxHours > 40;
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
-  function save(msg: string) { setDirty(false); showToast(msg); }
+
+  async function save(msg: string) {
+    try {
+      const res = await fetch('/api/tutor/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          timezone: tz,
+          maxWeeklyHours: maxHours,
+          minWeeklyHours: minHours,
+          meetingLink,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error ?? 'Failed to save changes');
+        return;
+      }
+    } catch {
+      showToast('Failed to save changes');
+      return;
+    }
+    setDirty(false);
+    showToast(msg);
+  }
 
   // Scrollspy
   useEffect(() => {
@@ -69,7 +94,8 @@ export function SettingsClient({ me, allSubjects }: Props) {
   }
 
   function copyBookingUrl() {
-    navigator.clipboard?.writeText(BOOKING_URL).catch(() => {});
+    if (!bookingUrl) return;
+    navigator.clipboard?.writeText(bookingUrl).catch(() => {});
     showToast('Booking link copied to clipboard');
   }
 
@@ -181,38 +207,61 @@ export function SettingsClient({ me, allSubjects }: Props) {
               <PrefRow label="Break between sessions" value="15 minutes" />
               <PrefRow label="Max sessions per day" value="5 sessions" />
             </div>
-            <button onClick={() => showToast('Opening Nylas Scheduler…')} style={btn('primary')}>
-              <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" aria-hidden><rect x={1.5} y={2.5} width={10} height={9} rx={1.5} /><path d="M1.5 5.5h10M4.5 1v3M8.5 1v3" /></svg>
-              Edit on Nylas Scheduler
-            </button>
+            {bookingUrl ? (
+              <a href={bookingUrl} target="_blank" rel="noreferrer" style={{ ...btn('primary'), textDecoration: 'none' }}>
+                <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" aria-hidden><rect x={1.5} y={2.5} width={10} height={9} rx={1.5} /><path d="M1.5 5.5h10M4.5 1v3M8.5 1v3" /></svg>
+                Edit on Nylas Scheduler
+              </a>
+            ) : (
+              <button disabled style={{ ...btn('primary'), opacity: 0.5, cursor: 'not-allowed' }}>
+                <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" aria-hidden><rect x={1.5} y={2.5} width={10} height={9} rx={1.5} /><path d="M1.5 5.5h10M4.5 1v3M8.5 1v3" /></svg>
+                Edit on Nylas Scheduler
+              </button>
+            )}
           </Card>
 
           {/* Calendar connection & booking page */}
           <Card id="calendar" title="Calendar connection" subtitle="We read your existing events via Nylas to block off busy time — so coordinators never propose a session on top of something you already have.">
-            <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr auto', gap: 14, alignItems: 'center', background: '#F0FDF9', border: '1px solid #A7F3D0', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#18181B' }}>G</div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>Google Calendar · julia.hering@gmail.com</div>
-                <div style={{ fontSize: 12, color: '#47624E', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: 999, background: '#22C55E' }} />
-                  Connected · last synced 2 min ago · 148 events on file
+            {me.nylasGrantId ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr auto', gap: 14, alignItems: 'center', background: '#F0FDF9', border: '1px solid #A7F3D0', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#18181B' }}>G</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>Google Calendar · {me.email}</div>
+                  <div style={{ fontSize: 12, color: '#47624E', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: 999, background: '#22C55E' }} />
+                    Connected
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button style={btn('secondary', 'sm')}>Disconnect</button>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button style={btn('secondary', 'sm')}>Resync</button>
-                <button style={btn('secondary', 'sm')}>Disconnect</button>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr auto', gap: 14, alignItems: 'center', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#18181B' }}>G</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>No calendar connected</div>
+                  <div style={{ fontSize: 12, color: '#991B1B', marginTop: 2 }}>Connect your Google Calendar so coordinators can see your availability.</div>
+                </div>
+                <a href={`/api/nylas/auth?userId=${me.id}&email=${encodeURIComponent(me.email)}`} style={{ ...btn('primary'), background: '#1a73e8', textDecoration: 'none' }}>
+                  Connect Google
+                </a>
               </div>
-            </div>
+            )}
             <div style={{ padding: 12, background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, fontSize: 12, color: '#78350F', lineHeight: 1.55, marginBottom: 16 }}>
               <b>Careful:</b> disconnecting your calendar hides your availability from coordinators until a new calendar is connected.
             </div>
             <div style={{ height: 1, background: '#F5F5F5', margin: '0 0 16px' }} />
             <Row label="Personal booking page" sub="A Nylas-hosted page students can use to book time directly with you, based on your working hours and connected calendar.">
-              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                <input readOnly value={BOOKING_URL} style={{ ...input(), fontFamily: 'monospace', fontSize: 12 }} />
-                <button onClick={copyBookingUrl} style={btn('secondary')}>Copy</button>
-                <a href={`https://${BOOKING_URL}`} target="_blank" rel="noreferrer" style={{ ...btn('secondary'), textDecoration: 'none' }}>Open ↗</a>
-              </div>
+              {bookingUrl ? (
+                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                  <input readOnly value={bookingUrl} style={{ ...input(), fontFamily: 'monospace', fontSize: 12 }} />
+                  <button onClick={copyBookingUrl} style={btn('secondary')}>Copy</button>
+                  <a href={bookingUrl} target="_blank" rel="noreferrer" style={{ ...btn('secondary'), textDecoration: 'none' }}>Open ↗</a>
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: '#71717A', padding: '8px 0' }}>No booking page connected yet.</div>
+              )}
               <BookingPagePreview tutor={me} />
             </Row>
           </Card>

@@ -1,4 +1,4 @@
-import type { TuitionRequest, Invitation, Tutor } from '@/lib/data/dashboard-mock';
+import type { TuitionRequest, Invitation, Tutor } from '@/lib/types/domain';
 
 interface TimelineEvent {
   t: string;

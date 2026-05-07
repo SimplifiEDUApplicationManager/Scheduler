@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Tutor, TutorEvent, TutorProposal } from '@/lib/data/dashboard-mock';
+import type { Tutor, TutorEvent, TutorProposal } from '@/lib/types/domain';
 import { ConsiderModal } from './consider/ConsiderModal';
 import { DeclineModal } from './DeclineModal';
 import { ProposalRow, type DisplayStatus } from './ProposalRow';

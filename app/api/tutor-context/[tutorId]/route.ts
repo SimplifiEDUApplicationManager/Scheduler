@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireAuth, requireActiveRole } from '@/lib/auth';
 import type { Json } from '@/lib/types/database';
 
 type Params = { params: Promise<{ tutorId: string }> };
@@ -13,12 +13,9 @@ export async function GET(
   _req: NextRequest,
   { params }: Params,
 ) {
-  const supabase = await createClient();
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized', status: 401 }, { status: 401 });
-  }
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.response;
+  const { supabase } = auth;
 
   const { tutorId } = await params;
 
@@ -42,26 +39,9 @@ export async function PUT(
   req: NextRequest,
   { params }: Params,
 ) {
-  const supabase = await createClient();
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized', status: 401 }, { status: 401 });
-  }
-
-  const { data: caller } = await supabase
-    .from('users')
-    .select('role, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!caller || !['COORDINATOR', 'SUPER_ADMIN'].includes(caller.role)) {
-    return NextResponse.json({ error: 'Only coordinators can update tutor context', status: 403 }, { status: 403 });
-  }
-
-  if (caller.status !== 'ACTIVE') {
-    return NextResponse.json({ error: 'Account is not active', status: 403 }, { status: 403 });
-  }
+  const auth = await requireActiveRole(['COORDINATOR', 'SUPER_ADMIN']);
+  if (!auth.ok) return auth.response;
+  const { user, supabase } = auth;
 
   const { tutorId } = await params;
   const body = await req.json() as Record<string, unknown>;

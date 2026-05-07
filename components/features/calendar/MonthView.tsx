@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Tutor, Tuple } from '@/lib/data/dashboard-mock';
+import type { Tutor, Tuple } from '@/lib/types/domain';
 import { getMonthDays } from '@/lib/utils/tutors';
 import { cn } from '@/lib/utils/cn';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import type { TutorEvent, Tuple } from '@/lib/data/dashboard-mock';
+import type { TutorEvent, Tuple } from '@/lib/types/domain';
 import { fmtHour } from '@/lib/utils/tutors';
 
 const START_H = 8;

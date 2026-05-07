@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { TutorProposal, TutorEvent } from '@/lib/data/dashboard-mock';
+import type { TutorProposal, TutorEvent } from '@/lib/types/domain';
 import { TUPLE_COLORS, countFitSlots } from './tupleColors';
 import { DropWeek } from './DropWeek';
 

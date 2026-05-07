@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
-import type { TutorEvent } from '@/lib/data/dashboard-mock';
+import type { TutorEvent } from '@/lib/types/domain';
 import { fmtRange, fmtHour, DAY_NAMES_FULL } from '@/lib/utils/tutors';
 
 // Extends TutorEvent with optional rich fields shown in the drawer

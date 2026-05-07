@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Subject, TutorSubject } from '@/lib/data/dashboard-mock';
+import type { Subject, TutorSubject } from '@/lib/types/domain';
 
 interface Props {
   allSubjects: Subject[];
@@ -134,7 +134,7 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
                 Cancel
               </button>
               <button
-                onClick={() => onAdd({ id: picked!.id, conf: 'UNPROVEN', qualificationNote: note.trim() })}
+                onClick={() => onAdd({ id: picked!.id, conf: 'MEDIUM', qualificationNote: note.trim() })}
                 disabled={!canAdd}
                 style={{ height: 34, padding: '0 16px', borderRadius: 7, border: 'none', background: canAdd ? '#18181B' : '#E4E4E7', color: canAdd ? '#fff' : '#A1A1AA', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: canAdd ? 'pointer' : 'default' }}
               >

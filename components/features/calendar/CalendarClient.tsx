@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { Tutor, TuitionRequest, Hold } from '@/lib/data/dashboard-mock';
+import type { Tutor, TuitionRequest } from '@/lib/types/domain';
 import { parseFilters, overlapsTuple, getWeekLabel, getMonthLabel } from '@/lib/utils/tutors';
 import { WeekView } from './WeekView';
 import { MonthView } from './MonthView';
@@ -10,12 +10,11 @@ import { MonthView } from './MonthView';
 interface CalendarClientProps {
   tutors: Tutor[];
   requests: TuitionRequest[];
-  holds: Hold[];
 }
 
 type Mode = 'week' | 'month';
 
-export function CalendarClient({ tutors, requests, holds }: CalendarClientProps) {
+export function CalendarClient({ tutors, requests }: CalendarClientProps) {
   const rawParams = useSearchParams();
   const filters   = useMemo(() => parseFilters(rawParams), [rawParams]);
   const [mode, setMode]     = useState<Mode>('week');
@@ -24,6 +23,7 @@ export function CalendarClient({ tutors, requests, holds }: CalendarClientProps)
   const activeReq = requests.find(r => r.id === filters.reqId) ?? null;
 
   const filtered = useMemo(() => tutors.filter(t => {
+
     if (filters.q && !t.name.toLowerCase().includes(filters.q.toLowerCase())) return false;
     if (filters.hideAtCap && t.hoursCurrent >= t.hoursMax) return false;
     if (filters.subjects.length > 0) {
@@ -36,7 +36,6 @@ export function CalendarClient({ tutors, requests, holds }: CalendarClientProps)
   }), [tutors, filters]);
 
   const requestTuples = activeReq?.tuples ?? filters.tuples;
-  const filteredHolds = holds.filter(h => filtered.some(t => t.id === h.tutorId));
   const label = mode === 'week' ? getWeekLabel(offset) : getMonthLabel(offset);
 
   return (
@@ -104,7 +103,6 @@ export function CalendarClient({ tutors, requests, holds }: CalendarClientProps)
         <WeekView
           tutors={filtered}
           requestTuples={requestTuples}
-          holds={filteredHolds}
           weekOffset={offset}
         />
       ) : (

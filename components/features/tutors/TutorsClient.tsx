@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import type { Tutor, TuitionRequest, Subject, Hold, Invitation } from '@/lib/data/dashboard-mock';
+import type { Tutor, TuitionRequest, Subject, Invitation } from '@/lib/types/domain';
 import {
   parseFilters,
   filtersToParams,
@@ -21,11 +21,10 @@ interface TutorsClientProps {
   tutors: Tutor[];
   requests: TuitionRequest[];
   subjects: Subject[];
-  holds: Hold[];
   invitations: Invitation[];
 }
 
-export function TutorsClient({ tutors, requests, subjects, holds, invitations }: TutorsClientProps) {
+export function TutorsClient({ tutors, requests, subjects, invitations }: TutorsClientProps) {
   const router     = useRouter();
   const pathname   = usePathname();
   const rawParams  = useSearchParams();
@@ -188,7 +187,6 @@ export function TutorsClient({ tutors, requests, subjects, holds, invitations }:
         <WeekView
           tutors={filtered}
           requestTuples={activeReq?.tuples ?? filters.tuples}
-          holds={holds.filter(h => filtered.some(t => t.id === h.tutorId))}
           weekOffset={weekOffset}
         />
       </main>

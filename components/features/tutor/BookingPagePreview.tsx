@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Tutor } from '@/lib/data/dashboard-mock';
+import type { Tutor } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 
 const BOOKING_URL = 'book.nylas.com/us/simplifi/julia-hering';

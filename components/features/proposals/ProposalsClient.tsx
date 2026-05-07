@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Invitation, InvitationStatus, Tutor, TuitionRequest } from '@/lib/data/dashboard-mock';
+import type { Invitation, InvitationStatus, Tutor, TuitionRequest } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 
 const STATUS_COLOR: Record<InvitationStatus, string> = {

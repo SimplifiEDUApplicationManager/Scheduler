@@ -268,9 +268,10 @@ async function main() {
 
     const { error } = await supabase.from('tutor_subjects').upsert(
       links.map(l => ({
-        tutor_id:   l.tutor_id,
-        subject_id: l.subject_id,
-        confidence: 'UNPROVEN' as const,
+        tutor_id:               l.tutor_id,
+        subject_id:             l.subject_id,
+        tutor_confidence:       'MEDIUM'   as const,
+        coordinator_confidence: 'UNPROVEN' as const,
       })),
       { onConflict: 'tutor_id,subject_id' },
     );

@@ -1,6 +1,6 @@
 'use client';
 
-import type { TutorEvent, TutorProposal } from '@/lib/data/dashboard-mock';
+import type { TutorEvent, TutorProposal } from '@/lib/types/domain';
 import { fmtRange, DAY_NAMES_FULL } from '@/lib/utils/tutors';
 
 interface Props {

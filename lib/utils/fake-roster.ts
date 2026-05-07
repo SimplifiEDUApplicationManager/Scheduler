@@ -1,4 +1,4 @@
-import type { Tutor, Subject } from '@/lib/data/dashboard-mock';
+import type { Tutor, Subject } from '@/lib/types/domain';
 
 export interface FakeStudent {
   name: string;

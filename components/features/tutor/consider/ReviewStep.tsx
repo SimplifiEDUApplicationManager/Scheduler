@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import type { TutorProposal, TutorEvent, Tuple, Tutor, SubjectConf } from '@/lib/data/dashboard-mock';
+import type { TutorProposal, TutorEvent, Tuple, Tutor, SubjectConf } from '@/lib/types/domain';
 import { DAY_NAMES_FULL } from '@/lib/utils/tutors';
 import { MiniWeekPreview } from './MiniWeekPreview';
 import { ConfirmAcceptModal } from './ConfirmAcceptModal';

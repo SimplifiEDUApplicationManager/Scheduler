@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireActiveRole } from '@/lib/auth';
 
 /**
  * DELETE /api/tutor-subjects/[id]
@@ -10,26 +10,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = await createClient();
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized', status: 401 }, { status: 401 });
-  }
-
-  const { data: caller } = await supabase
-    .from('users')
-    .select('role, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!caller || !['TUTOR', 'COORDINATOR', 'SUPER_ADMIN'].includes(caller.role)) {
-    return NextResponse.json({ error: 'Unauthorized', status: 403 }, { status: 403 });
-  }
-
-  if (caller.status !== 'ACTIVE') {
-    return NextResponse.json({ error: 'Account is not active', status: 403 }, { status: 403 });
-  }
+  const auth = await requireActiveRole(['TUTOR', 'COORDINATOR', 'SUPER_ADMIN']);
+  if (!auth.ok) return auth.response;
+  const { user, role, supabase } = auth;
 
   const { id } = await params;
 
@@ -44,7 +27,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Subject claim not found', status: 404 }, { status: 404 });
   }
 
-  if (caller.role === 'TUTOR' && existing.tutor_id !== user.id) {
+  if (role === 'TUTOR' && existing.tutor_id !== user.id) {
     return NextResponse.json({ error: 'You can only remove your own subjects', status: 403 }, { status: 403 });
   }
 

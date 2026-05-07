@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Tutor, Subject } from '@/lib/data/dashboard-mock';
+import type { Tutor, Subject } from '@/lib/types/domain';
 import { Badge } from '@/components/ui/Badge';
 import { DrawerCard } from './DrawerCard';
 

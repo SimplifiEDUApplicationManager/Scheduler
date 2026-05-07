@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { TuitionRequest, Invitation, Tutor } from '@/lib/data/dashboard-mock';
+import type { TuitionRequest, Invitation, Tutor } from '@/lib/types/domain';
 import { RequestListItem } from './RequestListItem';
 import { RequestDetail } from './RequestDetail';
 import { ProposeModal } from '@/components/features/tutors/ProposeModal';

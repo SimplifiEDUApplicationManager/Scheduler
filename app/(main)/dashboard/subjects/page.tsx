@@ -42,7 +42,7 @@ export default async function SubjectsPage() {
       .order('name'),
     supabase
       .from('tutor_subjects')
-      .select('id, confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio)')
+      .select('id, coordinator_confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio)')
       .order('created_at'),
   ]);
 
@@ -60,7 +60,7 @@ export default async function SubjectsPage() {
       tutorName:         name,
       tutorInitials:     initials(name),
       tutorBio:          tutorInfo?.bio ?? '',
-      confidence:        row.confidence as TutorClaim['confidence'],
+      confidence:        row.coordinator_confidence as TutorClaim['confidence'],
       qualificationNote: row.qualification_note ?? '',
       gradedBy:          row.graded_by ?? null,
     };

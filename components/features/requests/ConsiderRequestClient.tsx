@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { TuitionRequest, Tutor, Hold } from '@/lib/data/dashboard-mock';
+import type { TuitionRequest, Tutor } from '@/lib/types/domain';
 import { overlapsTuple, DAY_NAMES_FULL, fmtRange, getWeekLabel } from '@/lib/utils/tutors';
 import { SuggestionRow } from './SuggestionRow';
 import { WeekView } from '@/components/features/calendar/WeekView';
@@ -10,10 +10,9 @@ import { ProposeModal } from '@/components/features/tutors/ProposeModal';
 interface Props {
   request: TuitionRequest;
   tutors: Tutor[];
-  holds: Hold[];
 }
 
-export function ConsiderRequestClient({ request: r, tutors, holds }: Props) {
+export function ConsiderRequestClient({ request: r, tutors }: Props) {
   const [activeTutorId, setActiveTutorId] = useState<string | null>(null);
   const [proposeFor, setProposeFor]        = useState<Tutor | null>(null);
   const [weekOffset, setWeekOffset]        = useState(0);
@@ -45,8 +44,6 @@ export function ConsiderRequestClient({ request: r, tutors, holds }: Props) {
     }
     return suggestions.map(s => s.tutor);
   }, [suggestions, activeTutorId]);
-
-  const activeHolds = holds.filter(h => calendarTutors.some(t => t.id === h.tutorId));
 
   function handleProposeSend(name: string) {
     setProposeFor(null);
@@ -171,7 +168,6 @@ export function ConsiderRequestClient({ request: r, tutors, holds }: Props) {
         <WeekView
           tutors={calendarTutors}
           requestTuples={r.tuples}
-          holds={activeHolds}
           weekOffset={weekOffset}
         />
       </main>

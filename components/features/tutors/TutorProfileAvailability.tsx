@@ -1,4 +1,4 @@
-import type { Tutor } from '@/lib/data/dashboard-mock';
+import type { Tutor } from '@/lib/types/domain';
 import { DAY_NAMES } from '@/lib/utils/tutors';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { DrawerCard } from './DrawerCard';

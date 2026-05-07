@@ -1,84 +1,17 @@
-export type SubjectConf = 'HIGH' | 'MEDIUM' | 'UNPROVEN' | 'LOW';
-export type TutorStatus = 'active' | 'onboarding';
-export type RequestSource = 'asana' | 'manual';
-export type RequestStatus = 'open' | 'matched';
-export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired';
-export type AtRiskSeverity = 'high' | 'medium';
+// Mock data for the Simplifi EDU scheduling platform.
+// Types live in @/lib/types/domain — this file only exports value constants.
 
-/** A day-of-week / start-time / end-time availability window (times in 24h decimal). */
-export interface Tuple {
-  day: number;   // 0 = Sun … 6 = Sat
-  start: number; // e.g. 16 = 4 pm
-  end: number;   // e.g. 19 = 7 pm
-}
-
-/** Availability map: day → array of [start, end] windows. */
-export type Availability = Record<number, [number, number][]>;
-
-export interface TutorSubject {
-  id: string;       // subject_id
-  rowId?: string;   // tutor_subjects row id — present when fetched from DB
-  conf: SubjectConf;
-  qualificationNote?: string;
-}
-
-export interface Tutor {
-  id: string;
-  initials: string;
-  name: string;
-  email: string;
-  tz: string;
-  bio: string;
-  personality: string;
-  status: TutorStatus;
-  subjects: TutorSubject[];
-  availability: Availability;
-  hoursCurrent: number;
-  hoursMax: number;
-  hoursMin: number;
-}
-
-export interface TuitionRequest {
-  id: string;
-  source: RequestSource;
-  studentName: string;
-  studentEmail: string;
-  subject: string;
-  subjectId: string;
-  tuples: Tuple[];
-  tz: string;
-  startDate: string;
-  receivedAt: string;
-  notes: string;
-  status: RequestStatus;
-  matchedTutorId?: string;
-}
-
-export interface Invitation {
-  id: string;
-  tutorId: string;
-  requestId?: string;
-  studentName: string;
-  subject: string;
-  sentAt: string;
-  sentBy: string;
-  status: InvitationStatus;
-  declineReason?: string;
-}
-
-export interface AtRiskStudent {
-  name: string;
-  subject: string;
-  tutor: string;
-  reason: string;
-  severity: AtRiskSeverity;
-}
-
-export interface Subject {
-  id: string;
-  name: string;
-  cat: string;
-}
+import type {
+  Subject,
+  Tutor,
+  TuitionRequest,
+  Invitation,
+  TutorEvent,
+  TutorProposal,
+  Coordinator,
+  CoordinatorInvite,
+  AtRiskStudent,
+} from '@/lib/types/domain';
 
 export const SUBJECTS: Subject[] = [
   { id: 'apcalcbc',  name: 'AP Calculus BC',  cat: 'STEM'      },
@@ -161,9 +94,9 @@ export const TUTORS: Tutor[] = [
     bio: 'Robbie is completing his MFA in Creative Writing at Northwestern. He specializes in analytical writing and verbal reasoning, with a track record of dramatically improving student essay scores.',
     personality: 'Socratic — he rarely gives answers directly, instead guiding students to articulate their own reasoning on paper.',
     subjects: [
-      { id: 'writing',   conf: 'HIGH'    },
-      { id: 'apenglang', conf: 'MEDIUM'  },
-      { id: 'satverb',   conf: 'UNPROVEN'},
+      { id: 'writing',   conf: 'HIGH'   },
+      { id: 'apenglang', conf: 'MEDIUM' },
+      { id: 'satverb',   conf: 'MEDIUM' },
     ],
     availability: { 2: [[18,21]], 3: [[18,21]], 6: [[9,13]] },
     hoursCurrent: 4, hoursMax: 18, hoursMin: 6,
@@ -199,9 +132,9 @@ export const TUTORS: Tutor[] = [
     bio: 'Maya is a physics PhD student at Columbia specializing in experimental mechanics. She tutors AP Physics with a lab-science lens — connecting abstract equations to real physical intuition.',
     personality: 'Enthusiastic and visual — she draws a lot of diagrams and loves when a student has an "aha" moment.',
     subjects: [
-      { id: 'apphys1', conf: 'HIGH'    },
-      { id: 'apphysc', conf: 'MEDIUM'  },
-      { id: 'apchem',  conf: 'UNPROVEN'},
+      { id: 'apphys1', conf: 'HIGH'   },
+      { id: 'apphysc', conf: 'MEDIUM' },
+      { id: 'apchem',  conf: 'MEDIUM' },
     ],
     availability: { 0: [[10,14]], 2: [[16,21]], 4: [[16,21]] },
     hoursCurrent: 8, hoursMax: 24, hoursMin: 6,
@@ -305,61 +238,6 @@ export const INVITATIONS: Invitation[] = [
   },
 ];
 
-export interface Hold {
-  id: string;
-  tutorId: string;
-  coordinatorName: string;
-  day: number;   // 0–6
-  start: number; // decimal hour
-  end: number;
-  reason: string;
-}
-
-export const HOLDS: Hold[] = [
-  { id: 'h-1', tutorId: 't-julia', coordinatorName: 'Austin', day: 1, start: 16,   end: 17.5, reason: 'Internal review'    },
-  { id: 'h-2', tutorId: 't-chris', coordinatorName: 'Austin', day: 3, start: 16,   end: 17,   reason: 'Trial session eval'  },
-];
-
-// ── Tutor calendar ────────────────────────────────────────────────────────
-
-export type TutorEventKind = 'session' | 'other';
-export type TutorEventStatus = 'upcoming' | 'completed' | 'cancelled';
-
-export interface TutorEvent {
-  id: string;
-  day: number;             // 0=Sun … 6=Sat (recurring day-of-week)
-  start: number;           // decimal hour, e.g. 15 = 3 PM
-  end: number;
-  title: string;
-  kind: TutorEventKind;
-  status: TutorEventStatus;
-  studentName?: string;
-  studentInitials?: string;
-  subject?: string;
-  recurring?: boolean;
-}
-
-export type TutorProposalStatus = 'pending' | 'accepted' | 'declined';
-
-export interface TutorProposal {
-  id: string;
-  studentName: string;
-  studentEmail: string;
-  subject: string;
-  tuples: Tuple[];
-  startDate: string;
-  hoursPerWeek: number;
-  notes: string;
-  coordinator: string;
-  coordinatorEmail?: string;
-  sentAt: string;
-  status: TutorProposalStatus;
-  declineReason?: string;
-  tz: string;
-  rationale?: string;
-  studentGrade?: string;
-}
-
 export const ME_TUTOR_ID = 't-julia';
 
 // Julia Hering's recurring weekly sessions + one-off events
@@ -417,37 +295,6 @@ export const TUTOR_PROPOSALS: TutorProposal[] = [
     declineReason: 'Schedule conflict — committed hours are full for May.',
   },
 ];
-
-// ── Admin / Coordinator management ────────────────────────────────────────
-
-export interface Coordinator {
-  id: string;
-  initials: string;
-  name: string;
-  email: string;
-  region: string;
-  role: string;
-  status: 'active' | 'inactive';
-  activeTutors: number;
-  activeStudents: number;
-  openRequests: number;
-  lastActive: string;
-  deactivatedAt?: string | null;
-  deactivatedReason?: string | null;
-}
-
-export interface CoordinatorInvite {
-  id: string;
-  name: string;
-  email: string;
-  region: string;
-  invitedBy: string;
-  sentAt: string;
-  expiresIn: string;
-  status: 'pending';
-  message?: string | null;
-  warning?: string | null;
-}
 
 export const COORDINATORS: Coordinator[] = [
   {

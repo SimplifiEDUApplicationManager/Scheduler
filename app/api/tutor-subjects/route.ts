@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireActiveRole } from '@/lib/auth';
 
 /**
  * POST /api/tutor-subjects
@@ -7,26 +7,9 @@ import { createClient } from '@/lib/supabase/server';
  * Body: { subject_id, qualification_note }
  */
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized', status: 401 }, { status: 401 });
-  }
-
-  const { data: caller } = await supabase
-    .from('users')
-    .select('role, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!caller || caller.role !== 'TUTOR') {
-    return NextResponse.json({ error: 'Only tutors can add subjects to their profile', status: 403 }, { status: 403 });
-  }
-
-  if (caller.status !== 'ACTIVE') {
-    return NextResponse.json({ error: 'Account is not active', status: 403 }, { status: 403 });
-  }
+  const auth = await requireActiveRole(['TUTOR']);
+  if (!auth.ok) return auth.response;
+  const { user, supabase } = auth;
 
   const body = await req.json() as Record<string, unknown>;
   const { subject_id, qualification_note } = body;
@@ -46,12 +29,13 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('tutor_subjects')
     .insert({
-      tutor_id:           user.id,
+      tutor_id:               user.id,
       subject_id,
-      confidence:         'UNPROVEN',
-      qualification_note: qualification_note.trim(),
+      tutor_confidence:       'MEDIUM',
+      coordinator_confidence: 'UNPROVEN',
+      qualification_note:     qualification_note.trim(),
     })
-    .select('id, subject_id, confidence, qualification_note')
+    .select('id, subject_id, tutor_confidence, coordinator_confidence, qualification_note')
     .single();
 
   if (error) {

@@ -1,4 +1,4 @@
-import type { TuitionRequest, Tutor } from '@/lib/data/dashboard-mock';
+import type { TuitionRequest, Tutor } from '@/lib/types/domain';
 import { cn } from '@/lib/utils/cn';
 
 interface Props {

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { Tutor, Tuple, Hold } from '@/lib/data/dashboard-mock';
+import type { Tutor, Tuple } from '@/lib/types/domain';
 import { fmtRange, getWeekDays } from '@/lib/utils/tutors';
 import { cn } from '@/lib/utils/cn';
 
@@ -8,7 +8,6 @@ interface Block { start: number; end: number; key: string; free: number[] }
 interface WeekViewProps {
   tutors: Tutor[];
   requestTuples: Tuple[];
-  holds: Hold[];
   weekOffset: number;
 }
 
@@ -18,7 +17,7 @@ const END_H = 21;
 const HOURS = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i);
 const PALETTE = ['#3B82F6','#16A34A','#DB2777','#D97706','#6366F1','#0891B2','#EA580C','#7C3AED'];
 
-export function WeekView({ tutors, requestTuples, holds, weekOffset }: WeekViewProps) {
+export function WeekView({ tutors, requestTuples, weekOffset }: WeekViewProps) {
   const [hoverSlot, setHoverSlot] = useState<{ day: number; start: number; end: number; free: number[] } | null>(null);
   const weekDays = getWeekDays(weekOffset);
 
@@ -70,12 +69,6 @@ export function WeekView({ tutors, requestTuples, holds, weekOffset }: WeekViewP
               Requested
             </span>
           )}
-          {holds.length > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-1 border border-border-default font-semibold text-fg-2">
-              <span style={{ width:12, height:12, borderRadius:3, background:'repeating-linear-gradient(135deg,rgba(24,24,27,.08) 0 4px,rgba(24,24,27,.16) 4px 8px)', border:'1.5px dashed #52525B', display:'inline-block' }} />
-              Hold
-            </span>
-          )}
         </div>
       )}
 
@@ -108,9 +101,8 @@ export function WeekView({ tutors, requestTuples, holds, weekOffset }: WeekViewP
 
           {/* Day columns */}
           {Array.from({ length: 7 }).map((_, di) => {
-            const blocks   = perDay[di];
-            const dayHolds = holds.filter(h => h.day === di);
-            const dayTups  = requestTuples.filter(tp => tp.day === di);
+            const blocks  = perDay[di];
+            const dayTups = requestTuples.filter(tp => tp.day === di);
             return (
               <div key={di} className="border-l border-neutral-100 relative">
                 {HOURS.map(h => <div key={h} style={{ height: ROW_H }} className="border-t border-neutral-100" />)}
@@ -165,17 +157,6 @@ export function WeekView({ tutors, requestTuples, holds, weekOffset }: WeekViewP
                   </div>
                 ))}
 
-                {/* Hold overlays */}
-                {dayHolds.map(hold => (
-                  <div key={hold.id} style={{
-                    position:'absolute', top:(hold.start-START_H)*ROW_H+1, height:(hold.end-hold.start)*ROW_H-2, left:2, right:2,
-                    background:'repeating-linear-gradient(135deg,rgba(24,24,27,.08) 0 5px,rgba(24,24,27,.16) 5px 10px)',
-                    border:'1.5px dashed #52525B', borderRadius:6, pointerEvents:'none', zIndex:5,
-                    display:'flex', alignItems:'flex-start', padding:'3px 5px',
-                  }}>
-                    <span style={{ fontSize:9, fontWeight:700, color:'#3F3F46', background:'rgba(255,255,255,0.85)', padding:'1px 5px', borderRadius:3 }}>Hold · {hold.coordinatorName}</span>
-                  </div>
-                ))}
               </div>
             );
           })}

@@ -2,7 +2,7 @@
 // Unit-tested per spec — see __tests__/timezone.test.ts.
 
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
-import type { Tuple } from '@/lib/data/dashboard-mock';
+import type { Tuple } from '@/lib/types/domain';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

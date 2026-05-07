@@ -1,6 +1,6 @@
 'use client';
 
-import type { TutorProposal, TutorEvent } from '@/lib/data/dashboard-mock';
+import type { TutorProposal, TutorEvent } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { DAY_NAMES } from '@/lib/utils/tutors';
 

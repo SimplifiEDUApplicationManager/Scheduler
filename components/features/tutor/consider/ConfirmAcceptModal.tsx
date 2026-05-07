@@ -1,6 +1,6 @@
 'use client';
 
-import type { TutorProposal, TutorEvent, Tuple } from '@/lib/data/dashboard-mock';
+import type { TutorProposal, TutorEvent, Tuple } from '@/lib/types/domain';
 import { DAY_NAMES } from '@/lib/utils/tutors';
 
 interface ConflictEntry { tp: Tuple; clashes: TutorEvent[] }

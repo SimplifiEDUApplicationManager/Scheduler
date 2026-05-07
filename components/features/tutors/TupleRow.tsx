@@ -1,4 +1,4 @@
-import type { Tuple } from '@/lib/data/dashboard-mock';
+import type { Tuple } from '@/lib/types/domain';
 import { DAY_NAMES, fmtHour } from '@/lib/utils/tutors';
 
 interface TupleRowProps {

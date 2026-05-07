@@ -1,6 +1,6 @@
 'use client';
 
-import type { TutorProposal, TutorEvent, Tuple } from '@/lib/data/dashboard-mock';
+import type { TutorProposal, TutorEvent, Tuple } from '@/lib/types/domain';
 import type { TupleColor } from './tupleColors';
 import { fmtRange, getWeekDays } from '@/lib/utils/tutors';
 

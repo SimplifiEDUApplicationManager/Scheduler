@@ -4,8 +4,8 @@ import {
   REQUESTS,
   INVITATIONS,
   AT_RISK_STUDENTS,
-  SUBJECTS,
-} from '@/lib/data/dashboard-mock';
+} from '@/lib/data/mock';
+import { createClient } from '@/lib/supabase/server';
 import { KpiTile } from '@/components/features/dashboard/KpiTile';
 import { AlertsStrip } from '@/components/features/dashboard/AlertsStrip';
 import { DashCard } from '@/components/features/dashboard/DashCard';
@@ -13,6 +13,7 @@ import { AttentionList } from '@/components/features/dashboard/AttentionList';
 import { AtRiskList } from '@/components/features/dashboard/AtRiskList';
 import { TeamSnapshot } from '@/components/features/dashboard/TeamSnapshot';
 import { PendingReviewList } from '@/components/features/dashboard/PendingReviewList';
+import type { PendingReviewItem } from '@/components/features/dashboard/PendingReviewList';
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -21,7 +22,25 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-export default function DashboardPage() {
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '')).toUpperCase();
+}
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+
+  const { data: reviewRows } = await supabase
+    .from('tutor_subjects')
+    .select('id, subject_id, subjects(name), users!tutor_subjects_tutor_id_fkey(name)')
+    .eq('coordinator_confidence', 'UNPROVEN')
+    .order('created_at');
+
+  const pendingReviewItems: PendingReviewItem[] = (reviewRows ?? []).map(r => {
+    const tutorName  = (r.users as { name: string } | null)?.name ?? 'Unknown';
+    const subjectName = (r.subjects as { name: string } | null)?.name ?? '';
+    return { tutorName, tutorInitials: initials(tutorName), subjectName };
+  });
   const openRequests = REQUESTS.filter(r => r.status === 'open');
   const pending      = INVITATIONS.filter(i => i.status === 'pending');
   const declined     = INVITATIONS.filter(i => i.status === 'declined');
@@ -37,10 +56,7 @@ export default function DashboardPage() {
   const totalMax     = TUTORS.reduce((a, t) => a + t.hoursMax, 0);
   const capacityPct  = Math.round((totalCurrent / totalMax) * 100);
 
-  const pendingReviews = TUTORS.reduce(
-    (a, t) => a + t.subjects.filter(s => s.conf === 'UNPROVEN').length,
-    0,
-  );
+  const pendingReviews = pendingReviewItems.length;
 
   const hasAlerts = declined.length > 0 || expired.length > 0 || pendingReviews > 0;
 
@@ -193,7 +209,7 @@ export default function DashboardPage() {
               </Link>
             }
           >
-            <PendingReviewList tutors={TUTORS} subjects={SUBJECTS} />
+            <PendingReviewList items={pendingReviewItems} />
           </DashCard>
         </div>
 
