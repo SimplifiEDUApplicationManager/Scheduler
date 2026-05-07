@@ -2,9 +2,9 @@
 // Fetch and map Nylas calendar events → TutorEvent[].
 // Server-side only.
 
-import { nylasList, grantPath } from './client';
+import { nylasList, nylasPost, grantPath } from './client';
 import type { TutorEvent, TutorEventKind, TutorEventStatus } from '@/lib/types/domain';
-import { toZonedTime } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 // ── Nylas v3 event shape (subset we care about) ───────────────────────────────
 
@@ -113,6 +113,90 @@ export async function fetchTutorEvents(
   return result.data
     .map(ev => toTutorEvent(ev, tz))
     .filter((ev): ev is TutorEvent => ev !== null);
+}
+
+// ── Week range helper ─────────────────────────────────────────────────────────
+
+// ── Booking creation ──────────────────────────────────────────────────────────
+
+interface NylasEventCreateBody {
+  title: string;
+  when: { object: 'timespan'; start_time: number; end_time: number };
+  participants?: { email: string; name: string; status?: string }[];
+  location?: string;
+}
+
+interface CreatedNylasEvent {
+  id: string;
+}
+
+/**
+ * Convert a day-of-week / decimal-hour availability tuple to absolute Unix seconds.
+ * Finds the next occurrence of `dayOfWeek` on or after `fromDateIso` (defaults to today).
+ * Times are interpreted in `tz`.
+ */
+export function tupleToUnix(
+  dayOfWeek: number,
+  startDecimal: number,
+  endDecimal: number,
+  tz: string,
+  fromDateIso?: string | null,
+): { startUnix: number; endUnix: number } {
+  // Anchor to noon UTC on the from-date to avoid DST edge-cases with midnight.
+  const anchor = fromDateIso ? new Date(`${fromDateIso}T12:00:00Z`) : new Date();
+  const anchorLocal = toZonedTime(anchor, tz);
+
+  const daysUntil = (dayOfWeek - anchorLocal.getDay() + 7) % 7;
+  const sessionLocal = new Date(anchorLocal);
+  sessionLocal.setDate(anchorLocal.getDate() + daysUntil);
+
+  const toUnix = (decimal: number): number => {
+    const h = Math.floor(decimal);
+    const m = Math.round((decimal - h) * 60);
+    const d = new Date(sessionLocal);
+    d.setHours(h, m, 0, 0);
+    return Math.floor(fromZonedTime(d, tz).getTime() / 1000);
+  };
+
+  return { startUnix: toUnix(startDecimal), endUnix: toUnix(endDecimal) };
+}
+
+/**
+ * Create a tutoring session event on the tutor's primary calendar.
+ * Returns the Nylas event ID, or null on failure.
+ *
+ * The event title uses the `[Tutoring]` prefix so it is counted by the
+ * capacity tracker and appears as kind: 'session' in the tutor calendar.
+ */
+export async function createTutoringEvent(
+  grantId: string,
+  params: {
+    studentName: string;
+    studentEmail: string;
+    subject: string;
+    startUnix: number;
+    endUnix: number;
+    meetingLink?: string;
+  },
+): Promise<string | null> {
+  const body: NylasEventCreateBody = {
+    title: `[Tutoring] ${params.studentName} — ${params.subject}`,
+    when: { object: 'timespan', start_time: params.startUnix, end_time: params.endUnix },
+    participants: [{ email: params.studentEmail, name: params.studentName, status: 'noreply' }],
+    ...(params.meetingLink ? { location: params.meetingLink } : {}),
+  };
+
+  const result = await nylasPost<CreatedNylasEvent>(
+    `${grantPath(grantId, 'events')}?calendar_id=primary&notify_participants=true`,
+    body,
+  );
+
+  if (!result.ok) {
+    console.error('[nylas/events] createTutoringEvent failed:', result.error);
+    return null;
+  }
+
+  return result.data.id;
 }
 
 // ── Week range helper ─────────────────────────────────────────────────────────

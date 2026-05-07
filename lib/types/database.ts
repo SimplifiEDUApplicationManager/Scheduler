@@ -48,6 +48,7 @@ export type Database = {
           expires_at: string
           id: string
           notes: string | null
+          nylas_event_id: string | null
           requested_schedule: Json
           resolved_at: string | null
           start_date: string | null
@@ -66,6 +67,7 @@ export type Database = {
           expires_at?: string
           id?: string
           notes?: string | null
+          nylas_event_id?: string | null
           requested_schedule?: Json
           resolved_at?: string | null
           start_date?: string | null
@@ -84,6 +86,7 @@ export type Database = {
           expires_at?: string
           id?: string
           notes?: string | null
+          nylas_event_id?: string | null
           requested_schedule?: Json
           resolved_at?: string | null
           start_date?: string | null
