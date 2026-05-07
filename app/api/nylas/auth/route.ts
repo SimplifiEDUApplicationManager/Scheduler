@@ -1,30 +1,30 @@
-import { NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  // userId comes from the authenticated session — never from the query string.
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.response;
+  const { user, supabase } = auth;
+
   const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-  const email = searchParams.get('email');
+  const emailHint = searchParams.get('email');
 
-  if (!userId) {
-    return NextResponse.json({ error: 'userId is required' }, { status: 400 });
-  }
-
-  const supabase = createServiceClient();
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, email')
-    .eq('id', userId)
-    .single();
-
-  if (error || !user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  // Fetch email for login_hint if not provided by the caller.
+  let loginHint = emailHint;
+  if (!loginHint) {
+    const { data } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', user.id)
+      .single();
+    loginHint = data?.email ?? null;
   }
 
   const clientId = process.env.NYLAS_CLIENT_ID!;
   const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://simplifi-scheduler.vercel.app'}/api/nylas/callback`;
 
-  // Encode userId in state so callback knows which user to update
+  // Encode userId in state so callback knows which user to update.
   const state = Buffer.from(JSON.stringify({ userId: user.id })).toString('base64url');
 
   const params = new URLSearchParams({
@@ -35,8 +35,6 @@ export async function GET(request: Request) {
     state,
   });
 
-  // Pre-fill the Google account if email is provided
-  const loginHint = email ?? user.email;
   if (loginHint) params.set('login_hint', loginHint);
 
   const authUrl = `${process.env.NYLAS_API_URI ?? 'https://api.us.nylas.com'}/v3/connect/auth?${params}`;

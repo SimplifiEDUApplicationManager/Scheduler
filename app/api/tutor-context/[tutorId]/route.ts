@@ -31,8 +31,8 @@ export async function GET(
 
 /**
  * PUT /api/tutor-context/[tutorId]
- * Coordinator upserts the context JSONB for a tutor.
- * Body: { context: Record<string, unknown> }
+ * Coordinator merges context fields for a tutor. Existing fields not present
+ * in the request body are preserved. Body: { context: Record<string, unknown> }
  * Coordinator/SuperAdmin only.
  */
 export async function PUT(
@@ -50,10 +50,22 @@ export async function PUT(
     return NextResponse.json({ error: 'context must be a JSON object', status: 400 }, { status: 400 });
   }
 
+  // Fetch existing context so we can merge rather than replace.
+  const { data: existing } = await supabase
+    .from('tutor_context')
+    .select('context')
+    .eq('tutor_id', tutorId)
+    .single();
+
+  const merged = {
+    ...(existing?.context as Record<string, unknown> | null ?? {}),
+    ...(body.context as Record<string, unknown>),
+  };
+
   const { data, error } = await supabase
     .from('tutor_context')
     .upsert(
-      { tutor_id: tutorId, context: body.context as Json, updated_by: user.id },
+      { tutor_id: tutorId, context: merged as Json, updated_by: user.id },
       { onConflict: 'tutor_id' },
     )
     .select('context')

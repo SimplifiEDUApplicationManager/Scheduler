@@ -57,17 +57,20 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/dashboard?nylas_error=no_grant_id`);
   }
 
-  // Store grant_id on the user row
+  // Store grant_id on the user row and fetch role for the redirect.
   const supabase = createServiceClient();
-  const { error: updateError } = await supabase
+  const { data: updatedUser, error: updateError } = await supabase
     .from('users')
     .update({ nylas_grant_id: grantId, status: 'ACTIVE' })
-    .eq('id', userId);
+    .eq('id', userId)
+    .select('role')
+    .single();
 
   if (updateError) {
     console.error('Failed to save grant_id:', updateError);
     return NextResponse.redirect(`${origin}/dashboard?nylas_error=db_update_failed`);
   }
 
-  return NextResponse.redirect(`${origin}/dashboard?nylas_success=calendar_connected`);
+  const home = updatedUser?.role === 'TUTOR' ? '/tutor/settings' : '/dashboard';
+  return NextResponse.redirect(`${origin}${home}?nylas_success=calendar_connected`);
 }
