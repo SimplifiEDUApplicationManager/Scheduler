@@ -1,8 +1,8 @@
 // Coordinator management operations — state + mutations for the admin panel.
 //
-// Owns coords and invites state. Each mutation returns a human-readable message
-// string so the caller (CoordinatorsPage) can decide whether and how to surface
-// it (e.g. pushToast(sendInvite(data))).
+// Owns coords and invites state. Each mutation awaits the API, updates local
+// state on success, and returns a human-readable message string so the caller
+// (CoordinatorsPage) can decide how to surface it (e.g. pushToast(await sendInvite(data))).
 //
 // UI state — showInvite, confirm dialog, toast visibility — stays in the page
 // component since it has no business logic.
@@ -17,49 +17,88 @@ export function useCoordinators(
   const [coords,  setCoords]  = useState(initialCoords);
   const [invites, setInvites] = useState(initialInvites);
 
-  function sendInvite(data: { email: string; name: string; region: string; message: string }): string {
+  async function sendInvite(data: {
+    email: string;
+    name: string;
+    region: string;
+    message: string;
+  }): Promise<string> {
+    const res = await fetch('/api/coordinators/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to send invite');
+
     const inv: CoordinatorInvite = {
-      id:        `cinv-${Date.now()}`,
-      ...data,
+      id:        json.id,
+      name:      json.name,
+      email:     data.email,
+      region:    data.region,
       invitedBy: 'You',
       sentAt:    'just now',
       expiresIn: '7 days',
       status:    'pending',
     };
     setInvites(prev => [inv, ...prev]);
-    return `Invite sent to ${data.email}`;
+    return json.message as string;
   }
 
-  function resendInvite(id: string): string {
+  async function resendInvite(id: string): Promise<string> {
     const inv = invites.find(i => i.id === id);
+    const res = await fetch(`/api/coordinators/${id}/resend`, { method: 'POST' });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to resend invite');
+
     setInvites(prev => prev.map(i =>
       i.id === id ? { ...i, sentAt: 'just now', expiresIn: '7 days', warning: null } : i,
     ));
-    return `Invite to ${inv?.email} resent`;
+    return json.message ?? `Invite to ${inv?.email} resent`;
   }
 
-  function revokeInvite(id: string): string {
+  async function revokeInvite(id: string): Promise<string> {
     const inv = invites.find(i => i.id === id);
+    const res = await fetch(`/api/coordinators/${id}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to revoke invite');
+
     setInvites(prev => prev.filter(i => i.id !== id));
-    return `Invite to ${inv?.email} revoked`;
+    return json.message ?? `Invite to ${inv?.email} revoked`;
   }
 
-  function deactivate(id: string): string {
+  async function deactivate(id: string): Promise<string> {
     const c = coords.find(x => x.id === id);
+    const res = await fetch(`/api/coordinators/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'DISABLED' }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to deactivate');
+
     setCoords(prev => prev.map(x =>
       x.id === id
         ? { ...x, status: 'inactive', deactivatedAt: 'just now', deactivatedReason: 'Deactivated by admin', activeTutors: 0, activeStudents: 0, openRequests: 0 }
         : x,
     ));
-    return `${c?.name} deactivated`;
+    return json.message ?? `${c?.name} deactivated`;
   }
 
-  function reactivate(id: string): string {
+  async function reactivate(id: string): Promise<string> {
     const c = coords.find(x => x.id === id);
+    const res = await fetch(`/api/coordinators/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ACTIVE' }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to reactivate');
+
     setCoords(prev => prev.map(x =>
       x.id === id ? { ...x, status: 'active', deactivatedAt: null, deactivatedReason: null } : x,
     ));
-    return `${c?.name} reactivated`;
+    return json.message ?? `${c?.name} reactivated`;
   }
 
   return { coords, invites, sendInvite, resendInvite, revokeInvite, deactivate, reactivate };

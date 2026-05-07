@@ -258,7 +258,7 @@ function CoordinatorsPage({
                 key={inv.id}
                 invite={inv}
                 last={i === invites.length - 1}
-                onResend={() => pushToast(resendInvite(inv.id))}
+                onResend={() => resendInvite(inv.id).then(msg => pushToast(msg)).catch(e => pushToast(e.message, 'neutral'))}
                 onRevoke={() => setConfirm({ kind: 'revoke', id: inv.id, name: inv.email })}
               />
             ))}
@@ -286,7 +286,7 @@ function CoordinatorsPage({
               coordinator={c}
               last={i === coords.length - 1}
               onDeactivate={() => setConfirm({ kind: 'deactivate', id: c.id, name: c.name })}
-              onReactivate={() => pushToast(reactivate(c.id))}
+              onReactivate={() => reactivate(c.id).then(msg => pushToast(msg)).catch(e => pushToast(e.message, 'neutral'))}
             />
           ))}
         </div>
@@ -297,8 +297,9 @@ function CoordinatorsPage({
         <InviteModal
           onClose={() => setShowInvite(false)}
           onSend={(data) => {
-            pushToast(sendInvite(data));
-            setShowInvite(false);
+            sendInvite(data)
+              .then(msg => { pushToast(msg); setShowInvite(false); })
+              .catch(e => pushToast(e.message, 'neutral'));
           }}
         />
       )}
@@ -307,8 +308,16 @@ function CoordinatorsPage({
           confirm={confirm}
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
-            if (confirm.kind === 'revoke')     { pushToast(revokeInvite(confirm.id), 'neutral'); setConfirm(null); }
-            if (confirm.kind === 'deactivate') { pushToast(deactivate(confirm.id),   'neutral'); setConfirm(null); }
+            if (confirm.kind === 'revoke') {
+              revokeInvite(confirm.id)
+                .then(msg => { pushToast(msg, 'neutral'); setConfirm(null); })
+                .catch(e => { pushToast(e.message, 'neutral'); setConfirm(null); });
+            }
+            if (confirm.kind === 'deactivate') {
+              deactivate(confirm.id)
+                .then(msg => { pushToast(msg, 'neutral'); setConfirm(null); })
+                .catch(e => { pushToast(e.message, 'neutral'); setConfirm(null); });
+            }
           }}
         />
       )}

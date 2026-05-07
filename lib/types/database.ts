@@ -173,35 +173,35 @@ export type Database = {
       }
       tutor_subjects: {
         Row: {
-          coordinator_confidence: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
+          coordinator_confidence: string
           created_at: string
           graded_by: string | null
           id: string
           qualification_note: string | null
           subject_id: string
-          tutor_confidence: "HIGH" | "MEDIUM" | "LOW"
+          tutor_confidence: string
           tutor_id: string
           updated_at: string
         }
         Insert: {
-          coordinator_confidence?: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
+          coordinator_confidence?: string
           created_at?: string
           graded_by?: string | null
           id?: string
           qualification_note?: string | null
           subject_id: string
-          tutor_confidence?: "HIGH" | "MEDIUM" | "LOW"
+          tutor_confidence?: string
           tutor_id: string
           updated_at?: string
         }
         Update: {
-          coordinator_confidence?: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
+          coordinator_confidence?: string
           created_at?: string
           graded_by?: string | null
           id?: string
           qualification_note?: string | null
           subject_id?: string
-          tutor_confidence?: "HIGH" | "MEDIUM" | "LOW"
+          tutor_confidence?: string
           tutor_id?: string
           updated_at?: string
         }
@@ -245,6 +245,7 @@ export type Database = {
           nylas_grant_id: string | null
           nylas_scheduler_config_id: string | null
           photo_url: string | null
+          region: string | null
           role: Database["public"]["Enums"]["user_role"]
           status: Database["public"]["Enums"]["user_status"]
           timezone: string | null
@@ -265,6 +266,7 @@ export type Database = {
           nylas_grant_id?: string | null
           nylas_scheduler_config_id?: string | null
           photo_url?: string | null
+          region?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
           timezone?: string | null
@@ -285,6 +287,7 @@ export type Database = {
           nylas_grant_id?: string | null
           nylas_scheduler_config_id?: string | null
           photo_url?: string | null
+          region?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
           timezone?: string | null
@@ -312,6 +315,7 @@ export type Database = {
       }
     }
     Enums: {
+      confidence_level: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
       proposal_status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED"
       user_role: "SUPER_ADMIN" | "COORDINATOR" | "TUTOR"
       user_status: "PENDING" | "ACTIVE" | "DISABLED"
@@ -445,6 +449,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      confidence_level: ["HIGH", "MEDIUM", "UNPROVEN", "LOW"],
       proposal_status: ["PENDING", "ACCEPTED", "DECLINED", "EXPIRED"],
       user_role: ["SUPER_ADMIN", "COORDINATOR", "TUTOR"],
       user_status: ["PENDING", "ACTIVE", "DISABLED"],
