@@ -28,25 +28,16 @@ test.describe('Subjects page', () => {
     expect(errors).toHaveLength(0);
   });
 
-  test('shows Pending reviews and Master list sections', async ({ page }) => {
+  test('shows Subjects heading and search input', async ({ page }) => {
     await page.goto('/dashboard/subjects');
-    await expect(page.getByRole('heading', { name: 'Pending reviews' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Master list' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Subjects' })).toBeVisible();
+    await expect(page.getByPlaceholder('Search subjects…')).toBeVisible();
   });
 
-  test('grade dropdown defaults to Unproven', async ({ page }) => {
+  test('Add button opens inline subject form', async ({ page }) => {
     await page.goto('/dashboard/subjects');
-    const select = page.locator('select').first();
-    const count = await select.count();
-    if (count > 0) {
-      await expect(select).toHaveValue('UNPROVEN');
-    }
-  });
-
-  test('Add subject button opens form', async ({ page }) => {
-    await page.goto('/dashboard/subjects');
-    await page.getByRole('button', { name: 'Add subject' }).click();
-    await expect(page.getByPlaceholder('e.g. AP Calculus BC')).toBeVisible();
+    await page.getByRole('button', { name: 'Add' }).first().click();
+    await expect(page.getByPlaceholder('Subject name')).toBeVisible();
   });
 });
 

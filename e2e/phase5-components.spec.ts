@@ -129,16 +129,16 @@ test.describe('Task 5.5 — Requests view', () => {
 test.describe('Task 5.6 — Subjects management', () => {
   test.beforeEach(async ({ page }) => { await page.goto('/dashboard/subjects'); });
 
-  test('Pending reviews section is present', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Pending reviews' })).toBeVisible();
+  test('Subjects heading is present', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Subjects' })).toBeVisible();
   });
 
-  test('Master list section is present', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Master list' })).toBeVisible();
+  test('Search input is present', async ({ page }) => {
+    await expect(page.getByPlaceholder('Search subjects…')).toBeVisible();
   });
 
-  test('Add subject button is visible', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Add subject' })).toBeVisible();
+  test('Add button is visible', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Add' }).first()).toBeVisible();
   });
 
   test('Grade dropdown defaults to Unproven', async ({ page }) => {
@@ -148,9 +148,9 @@ test.describe('Task 5.6 — Subjects management', () => {
     }
   });
 
-  test('clicking Add subject reveals a name input', async ({ page }) => {
-    await page.getByRole('button', { name: 'Add subject' }).click();
-    await expect(page.getByPlaceholder('e.g. AP Calculus BC')).toBeVisible();
+  test('clicking Add reveals subject name input', async ({ page }) => {
+    await page.getByRole('button', { name: 'Add' }).first().click();
+    await expect(page.getByPlaceholder('Subject name')).toBeVisible();
   });
 });
 
