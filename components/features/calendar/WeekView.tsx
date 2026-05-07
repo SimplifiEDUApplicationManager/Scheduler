@@ -80,7 +80,7 @@ export function WeekView({ tutors, requestTuples, weekOffset }: WeekViewProps) {
           {weekDays.map((d, i) => (
             <div key={i} className="py-2.5 text-center border-l border-neutral-100">
               <div className="text-[9px] font-bold text-fg-muted uppercase tracking-[0.06em]">{d.dow}</div>
-              <div className={cn(
+              <div suppressHydrationWarning className={cn(
                 'mt-0.5 mx-auto text-sm font-semibold w-6 h-6 rounded-full flex items-center justify-center',
                 d.today ? 'bg-brand-ink text-fg-on-brand' : 'text-fg-1',
               )}>{d.date}</div>

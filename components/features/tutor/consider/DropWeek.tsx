@@ -47,7 +47,7 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
         {colDays.map((wd, i) => (
           <div key={i} style={{ padding: '10px 8px', textAlign: 'center', borderLeft: '1px solid #F5F5F5' }}>
             <div style={{ fontSize: 10, color: '#A1A1AA', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{wd.dow}</div>
-            <div style={{ marginTop: 2, fontSize: 14, fontWeight: 600, color: wd.today ? '#fff' : '#18181B', background: wd.today ? '#18181B' : 'transparent', borderRadius: 999, width: 24, height: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{wd.date}</div>
+            <div suppressHydrationWarning style={{ marginTop: 2, fontSize: 14, fontWeight: 600, color: wd.today ? '#fff' : '#18181B', background: wd.today ? '#18181B' : 'transparent', borderRadius: 999, width: 24, height: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{wd.date}</div>
           </div>
         ))}
       </div>
