@@ -4,7 +4,7 @@ import {
   formatInTz,
   formatDecimalHour,
 } from '@/lib/utils/timezone';
-import type { Tuple } from '@/lib/data/dashboard-mock';
+import type { Tuple } from '@/lib/types/domain';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 

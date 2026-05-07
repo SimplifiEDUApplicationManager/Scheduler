@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
-import type { Coordinator, CoordinatorInvite } from '@/lib/data/dashboard-mock';
+import type { Coordinator, CoordinatorInvite } from '@/lib/types/domain';
+import { useCoordinators } from './useCoordinators';
 
 // ── Props ──────────────────────────────────────────────────────────────────
 export interface AdminClientProps {
@@ -198,19 +199,17 @@ interface Confirm { kind: 'revoke' | 'deactivate'; id: string; name: string }
 interface ToastState { msg: string; kind: 'success' | 'neutral' }
 
 function CoordinatorsPage({
-  coords,
-  setCoords,
-  invites,
-  setInvites,
+  initialCoords,
+  initialInvites,
 }: {
-  coords: Coordinator[];
-  setCoords: React.Dispatch<React.SetStateAction<Coordinator[]>>;
-  invites: CoordinatorInvite[];
-  setInvites: React.Dispatch<React.SetStateAction<CoordinatorInvite[]>>;
+  initialCoords: Coordinator[];
+  initialInvites: CoordinatorInvite[];
 }) {
-  const [showInvite,  setShowInvite]  = useState(false);
-  const [confirm,     setConfirm]     = useState<Confirm | null>(null);
-  const [toast,       setToast]       = useState<ToastState | null>(null);
+  const { coords, invites, sendInvite, resendInvite, revokeInvite, deactivate, reactivate } =
+    useCoordinators(initialCoords, initialInvites);
+  const [showInvite, setShowInvite] = useState(false);
+  const [confirm,    setConfirm]    = useState<Confirm | null>(null);
+  const [toast,      setToast]      = useState<ToastState | null>(null);
 
   const activeCount  = coords.filter(c => c.status === 'active').length;
   const pendingCount = invites.filter(i => i.status === 'pending').length;
@@ -219,54 +218,6 @@ function CoordinatorsPage({
   const pushToast = (msg: string, kind: 'success' | 'neutral' = 'success') => {
     setToast({ msg, kind });
     setTimeout(() => setToast(null), 3600);
-  };
-
-  const sendInvite = (data: { email: string; name: string; region: string; message: string }) => {
-    const inv: CoordinatorInvite = {
-      id: `cinv-${Date.now()}`,
-      ...data,
-      invitedBy: 'You',
-      sentAt:    'just now',
-      expiresIn: '7 days',
-      status:    'pending',
-    };
-    setInvites(prev => [inv, ...prev]);
-    setShowInvite(false);
-    pushToast(`Invite sent to ${data.email}`);
-  };
-
-  const resendInvite = (id: string) => {
-    const inv = invites.find(i => i.id === id);
-    setInvites(prev => prev.map(i =>
-      i.id === id ? { ...i, sentAt: 'just now', expiresIn: '7 days', warning: null } : i,
-    ));
-    pushToast(`Invite to ${inv?.email} resent`);
-  };
-
-  const revokeInvite = (id: string) => {
-    const inv = invites.find(i => i.id === id);
-    setInvites(prev => prev.filter(i => i.id !== id));
-    pushToast(`Invite to ${inv?.email} revoked`, 'neutral');
-    setConfirm(null);
-  };
-
-  const deactivate = (id: string) => {
-    const c = coords.find(x => x.id === id);
-    setCoords(prev => prev.map(x =>
-      x.id === id
-        ? { ...x, status: 'inactive', deactivatedAt: 'just now', deactivatedReason: 'Deactivated by admin', activeTutors: 0, activeStudents: 0, openRequests: 0 }
-        : x,
-    ));
-    pushToast(`${c?.name} deactivated`, 'neutral');
-    setConfirm(null);
-  };
-
-  const reactivate = (id: string) => {
-    const c = coords.find(x => x.id === id);
-    setCoords(prev => prev.map(x =>
-      x.id === id ? { ...x, status: 'active', deactivatedAt: null, deactivatedReason: null } : x,
-    ));
-    pushToast(`${c?.name} reactivated`);
   };
 
   return (
@@ -307,7 +258,7 @@ function CoordinatorsPage({
                 key={inv.id}
                 invite={inv}
                 last={i === invites.length - 1}
-                onResend={() => resendInvite(inv.id)}
+                onResend={() => pushToast(resendInvite(inv.id))}
                 onRevoke={() => setConfirm({ kind: 'revoke', id: inv.id, name: inv.email })}
               />
             ))}
@@ -335,7 +286,7 @@ function CoordinatorsPage({
               coordinator={c}
               last={i === coords.length - 1}
               onDeactivate={() => setConfirm({ kind: 'deactivate', id: c.id, name: c.name })}
-              onReactivate={() => reactivate(c.id)}
+              onReactivate={() => pushToast(reactivate(c.id))}
             />
           ))}
         </div>
@@ -343,15 +294,21 @@ function CoordinatorsPage({
 
       {/* Modals */}
       {showInvite && (
-        <InviteModal onClose={() => setShowInvite(false)} onSend={sendInvite} />
+        <InviteModal
+          onClose={() => setShowInvite(false)}
+          onSend={(data) => {
+            pushToast(sendInvite(data));
+            setShowInvite(false);
+          }}
+        />
       )}
       {confirm && (
         <ConfirmModal
           confirm={confirm}
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
-            if (confirm.kind === 'revoke')     revokeInvite(confirm.id);
-            if (confirm.kind === 'deactivate') deactivate(confirm.id);
+            if (confirm.kind === 'revoke')     { pushToast(revokeInvite(confirm.id), 'neutral'); setConfirm(null); }
+            if (confirm.kind === 'deactivate') { pushToast(deactivate(confirm.id),   'neutral'); setConfirm(null); }
           }}
         />
       )}
@@ -853,22 +810,15 @@ function GhostButton({
 }
 
 // ── Root export ────────────────────────────────────────────────────────────
-export function AdminClient({ coordinators, invites: initInvites }: AdminClientProps) {
-  const [section,  setSection]  = useState<Section>('coordinators');
-  const [coords,   setCoords]   = useState(coordinators);
-  const [invites,  setInvites]  = useState(initInvites);
+export function AdminClient({ coordinators, invites }: AdminClientProps) {
+  const [section, setSection] = useState<Section>('coordinators');
 
   return (
     <div className="flex flex-1 overflow-hidden min-h-0 bg-surface-2">
       <AdminSidebar section={section} setSection={setSection} />
       <main className="flex-1 overflow-auto min-w-0">
         {section === 'coordinators' && (
-          <CoordinatorsPage
-            coords={coords}
-            setCoords={setCoords}
-            invites={invites}
-            setInvites={setInvites}
-          />
+          <CoordinatorsPage initialCoords={coordinators} initialInvites={invites} />
         )}
       </main>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/data/dashboard-mock';
+import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
 import { AddSubjectModal } from './AddSubjectModal';
 
 interface Props {
@@ -10,10 +10,9 @@ interface Props {
 }
 
 const CONF_META: Record<SubjectConf, { label: string; bg: string; fg: string; bar: string }> = {
-  HIGH:     { label: 'High',     bg: '#DCFCE7', fg: '#166534', bar: '#22C55E' },
-  MEDIUM:   { label: 'Medium',   bg: '#DBEAFE', fg: '#1E40AF', bar: '#3B82F6' },
-  UNPROVEN: { label: 'Unproven', bg: '#FEF3C7', fg: '#92400E', bar: '#F59E0B' },
-  LOW:      { label: 'Low',      bg: '#FEE2E2', fg: '#991B1B', bar: '#EF4444' },
+  HIGH:   { label: 'High',   bg: '#DCFCE7', fg: '#166534', bar: '#22C55E' },
+  MEDIUM: { label: 'Medium', bg: '#DBEAFE', fg: '#1E40AF', bar: '#3B82F6' },
+  LOW:    { label: 'Low',    bg: '#FEE2E2', fg: '#991B1B', bar: '#EF4444' },
 };
 
 function statsFor(subjId: string, tutorId: string) {
@@ -271,8 +270,8 @@ export function SubjectsClient({ me, allSubjects }: Props) {
       return a + st.avgRating * st.reviewCount;
     }, 0) / totalReviews;
 
-  // Sort: HIGH → MEDIUM → UNPROVEN → LOW
-  const ORDER: SubjectConf[] = ['HIGH', 'MEDIUM', 'UNPROVEN', 'LOW'];
+  // Sort: HIGH → MEDIUM → LOW
+  const ORDER: SubjectConf[] = ['HIGH', 'MEDIUM', 'LOW'];
   const sorted = [...mySubjects].sort((a, b) => ORDER.indexOf(a.conf) - ORDER.indexOf(b.conf));
 
   return (

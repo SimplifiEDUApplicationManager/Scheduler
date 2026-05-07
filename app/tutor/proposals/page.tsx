@@ -1,15 +1,9 @@
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import type { Tutor, TutorProposal, SubjectConf } from '@/lib/data/dashboard-mock';
-import { TUTORS, TUTOR_PROPOSALS, TUTOR_EVENTS, ME_TUTOR_ID } from '@/lib/data/dashboard-mock';
+import type { TutorProposal } from '@/lib/types/domain';
+import { TUTORS, TUTOR_PROPOSALS, TUTOR_EVENTS, ME_TUTOR_ID } from '@/lib/data/mock';
 import { ProposalsClient } from '@/components/features/tutor/ProposalsClient';
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? '';
-  const last  = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
-  return (first + last).toUpperCase();
-}
+import { fetchTutor } from '@/lib/data/tutors';
 
 /** Format ISO date "2026-05-10" → "May 10" */
 function formatDate(iso: string | null): string {
@@ -41,42 +35,16 @@ export default async function TutorProposalsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Fetch tutor profile
-  const { data: meRow, error: meError } = await supabase
-    .from('users')
-    .select('id, name, email, timezone, bio, max_weekly_hours, min_weekly_hours, tutor_subjects!tutor_subjects_tutor_id_fkey(subject_id, confidence, qualification_note)')
-    .eq('id', user.id)
-    .single();
+  const [me, { data: proposalRows, error: proposalsError }] = await Promise.all([
+    fetchTutor(user.id, supabase),
+    supabase
+      .from('proposals')
+      .select('*, coordinator:users!proposals_coordinator_id_fkey(name, email)')
+      .eq('tutor_id', user.id)
+      .order('created_at', { ascending: false }),
+  ]);
 
-  if (meError || !meRow) redirect('/login');
-
-  const me: Tutor = {
-    id:           meRow.id,
-    initials:     initials(meRow.name),
-    name:         meRow.name,
-    email:        meRow.email,
-    tz:           meRow.timezone ?? 'America/New_York',
-    bio:          meRow.bio ?? '',
-    personality:  '',
-    status:       'active',
-    subjects:     (meRow.tutor_subjects ?? []).map(ts => ({
-      id:                ts.subject_id,
-      conf:              ts.confidence as SubjectConf,
-      qualificationNote: ts.qualification_note ?? undefined,
-    })),
-    availability: {},
-    hoursCurrent: 0,
-    hoursMax:     meRow.max_weekly_hours,
-    hoursMin:     meRow.min_weekly_hours,
-  };
-
-  // Fetch proposals addressed to this tutor, joined with coordinator name/email
-  const { data: proposalRows, error: proposalsError } = await supabase
-    .from('proposals')
-    .select('*, coordinator:users!proposals_coordinator_id_fkey(name, email)')
-    .eq('tutor_id', user.id)
-    .order('created_at', { ascending: false });
-
+  if (!me) redirect('/login');
   if (proposalsError) throw proposalsError;
 
   const proposals: TutorProposal[] = (proposalRows ?? []).map(row => {

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { TutorProposal, TutorEvent, Tutor, Tuple, SubjectConf } from '@/lib/data/dashboard-mock';
-import { SUBJECTS } from '@/lib/data/dashboard-mock';
+import type { TutorProposal, TutorEvent, Tutor, Tuple, SubjectConf } from '@/lib/types/domain';
+import { SUBJECTS } from '@/lib/data/mock';
 import { ReviewStep } from './ReviewStep';
 import { ScheduleStep } from './ScheduleStep';
 

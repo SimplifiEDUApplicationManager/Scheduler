@@ -1,6 +1,6 @@
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils/cn';
-import { AtRiskStudent } from '@/lib/data/dashboard-mock';
+import type { AtRiskStudent } from '@/lib/types/domain';
 
 interface AtRiskListProps {
   items: AtRiskStudent[];

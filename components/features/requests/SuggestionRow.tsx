@@ -1,5 +1,4 @@
-import type { Tutor } from '@/lib/data/dashboard-mock';
-import type { SubjectConf } from '@/lib/data/dashboard-mock';
+import type { Tutor, SubjectConf } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Tutor, TuitionRequest } from '@/lib/data/dashboard-mock';
+import type { Tutor, TuitionRequest } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { overlapsTuple, DAY_NAMES_FULL, fmtRange } from '@/lib/utils/tutors';

@@ -1,4 +1,4 @@
-import { INVITATIONS, TUTORS, REQUESTS } from '@/lib/data/dashboard-mock';
+import { INVITATIONS, TUTORS, REQUESTS } from '@/lib/data/mock';
 import { ProposalsClient } from '@/components/features/proposals/ProposalsClient';
 
 export default function ProposalsPage() {

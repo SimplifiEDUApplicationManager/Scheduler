@@ -39,66 +39,13 @@ export type Database = {
   }
   public: {
     Tables: {
-      holds: {
-        Row: {
-          coordinator_id: string | null
-          created_at: string
-          end_utc: string
-          expires_at: string
-          id: string
-          nylas_event_id: string | null
-          reason: string
-          start_utc: string
-          status: Database["public"]["Enums"]["hold_status"]
-          tutor_id: string | null
-        }
-        Insert: {
-          coordinator_id?: string | null
-          created_at?: string
-          end_utc: string
-          expires_at?: string
-          id?: string
-          nylas_event_id?: string | null
-          reason: string
-          start_utc: string
-          status?: Database["public"]["Enums"]["hold_status"]
-          tutor_id?: string | null
-        }
-        Update: {
-          coordinator_id?: string | null
-          created_at?: string
-          end_utc?: string
-          expires_at?: string
-          id?: string
-          nylas_event_id?: string | null
-          reason?: string
-          start_utc?: string
-          status?: Database["public"]["Enums"]["hold_status"]
-          tutor_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "holds_coordinator_id_fkey"
-            columns: ["coordinator_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "holds_tutor_id_fkey"
-            columns: ["tutor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       proposals: {
         Row: {
           asana_task_id: string | null
           coordinator_id: string | null
           created_at: string
           decline_reason: string | null
+          expires_at: string
           id: string
           notes: string | null
           requested_schedule: Json
@@ -116,6 +63,7 @@ export type Database = {
           coordinator_id?: string | null
           created_at?: string
           decline_reason?: string | null
+          expires_at?: string
           id?: string
           notes?: string | null
           requested_schedule?: Json
@@ -133,6 +81,7 @@ export type Database = {
           coordinator_id?: string | null
           created_at?: string
           decline_reason?: string | null
+          expires_at?: string
           id?: string
           notes?: string | null
           requested_schedule?: Json
@@ -224,32 +173,35 @@ export type Database = {
       }
       tutor_subjects: {
         Row: {
-          confidence: Database["public"]["Enums"]["confidence_level"]
+          coordinator_confidence: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
           created_at: string
           graded_by: string | null
           id: string
           qualification_note: string | null
           subject_id: string
+          tutor_confidence: "HIGH" | "MEDIUM" | "LOW"
           tutor_id: string
           updated_at: string
         }
         Insert: {
-          confidence?: Database["public"]["Enums"]["confidence_level"]
+          coordinator_confidence?: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
           created_at?: string
           graded_by?: string | null
           id?: string
           qualification_note?: string | null
           subject_id: string
+          tutor_confidence?: "HIGH" | "MEDIUM" | "LOW"
           tutor_id: string
           updated_at?: string
         }
         Update: {
-          confidence?: Database["public"]["Enums"]["confidence_level"]
+          coordinator_confidence?: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
           created_at?: string
           graded_by?: string | null
           id?: string
           qualification_note?: string | null
           subject_id?: string
+          tutor_confidence?: "HIGH" | "MEDIUM" | "LOW"
           tutor_id?: string
           updated_at?: string
         }
@@ -360,9 +312,7 @@ export type Database = {
       }
     }
     Enums: {
-      confidence_level: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
-      hold_status: "ACTIVE" | "CONVERTED" | "EXPIRED" | "RELEASED"
-      proposal_status: "PENDING" | "ACCEPTED" | "DECLINED"
+      proposal_status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED"
       user_role: "SUPER_ADMIN" | "COORDINATOR" | "TUTOR"
       user_status: "PENDING" | "ACTIVE" | "DISABLED"
     }
@@ -495,9 +445,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      confidence_level: ["HIGH", "MEDIUM", "UNPROVEN", "LOW"],
-      hold_status: ["ACTIVE", "CONVERTED", "EXPIRED", "RELEASED"],
-      proposal_status: ["PENDING", "ACCEPTED", "DECLINED"],
+      proposal_status: ["PENDING", "ACCEPTED", "DECLINED", "EXPIRED"],
       user_role: ["SUPER_ADMIN", "COORDINATOR", "TUTOR"],
       user_status: ["PENDING", "ACTIVE", "DISABLED"],
     },

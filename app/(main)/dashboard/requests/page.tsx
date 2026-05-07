@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { TUTORS, REQUESTS, INVITATIONS } from '@/lib/data/dashboard-mock';
+import { TUTORS, REQUESTS, INVITATIONS } from '@/lib/data/mock';
 import { RequestsClient } from '@/components/features/requests/RequestsClient';
 
 export default function RequestsPage() {

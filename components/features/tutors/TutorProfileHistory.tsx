@@ -1,4 +1,4 @@
-import type { Tutor, Invitation, InvitationStatus } from '@/lib/data/dashboard-mock';
+import type { Tutor, Invitation, InvitationStatus } from '@/lib/types/domain';
 
 const STATUS_COLOR: Record<InvitationStatus, string> = {
   pending:  '#F59E0B',

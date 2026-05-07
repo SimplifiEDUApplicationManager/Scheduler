@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import type { Tutor, Subject, Invitation } from '@/lib/data/dashboard-mock';
+import type { Tutor, Subject, Invitation } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { TutorProfileOverview } from './TutorProfileOverview';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Tutor, TutorEvent, TutorProposal } from '@/lib/data/dashboard-mock';
+import type { Tutor, TutorEvent, TutorProposal, TutorEventKind, TutorEventStatus } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { ProposalCard } from './ProposalCard';
@@ -11,7 +11,6 @@ import { TutorWeekView } from './TutorWeekView';
 import { TutorMonthView } from './TutorMonthView';
 import { getWeekLabel, getMonthLabel } from '@/lib/utils/tutors';
 import { ConsiderModal } from './consider/ConsiderModal';
-import type { TutorEventKind, TutorEventStatus } from '@/lib/data/dashboard-mock';
 
 type CalView = 'week' | 'month';
 

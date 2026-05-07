@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Avatar } from '@/components/ui/Avatar';
-import { Invitation, Tutor } from '@/lib/data/dashboard-mock';
+import type { Invitation, Tutor } from '@/lib/types/domain';
 
 interface AttentionItem {
   kind: 'pending' | 'declined' | 'expired';

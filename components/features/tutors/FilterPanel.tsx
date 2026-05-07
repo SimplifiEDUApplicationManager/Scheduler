@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Subject, Tuple } from '@/lib/data/dashboard-mock';
+import type { Subject, Tuple } from '@/lib/types/domain';
 import type { FilterState } from '@/lib/utils/tutors';
 import { TupleRow } from './TupleRow';
 

@@ -1,4 +1,4 @@
-import { TUTORS, TUTOR_EVENTS, TUTOR_PROPOSALS, ME_TUTOR_ID } from '@/lib/data/dashboard-mock';
+import { TUTORS, TUTOR_EVENTS, TUTOR_PROPOSALS, ME_TUTOR_ID } from '@/lib/data/mock';
 import { notFound } from 'next/navigation';
 import { TutorCalendarClient } from '@/components/features/tutor/TutorCalendarClient';
 

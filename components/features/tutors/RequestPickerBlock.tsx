@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { TuitionRequest } from '@/lib/data/dashboard-mock';
+import type { TuitionRequest } from '@/lib/types/domain';
 
 interface RequestPickerBlockProps {
   requests: TuitionRequest[];

@@ -1,6 +1,6 @@
 'use client';
 
-import type { TutorEvent, TutorProposal } from '@/lib/data/dashboard-mock';
+import type { TutorEvent, TutorProposal } from '@/lib/types/domain';
 import { getMonthDays, getMonthLabel, DAY_NAMES } from '@/lib/utils/tutors';
 import { cn } from '@/lib/utils/cn';
 

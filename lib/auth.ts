@@ -1,6 +1,75 @@
 import { redirect } from 'next/navigation';
+import { NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@/lib/supabase/server';
-import type { Tables } from '@/lib/types/database';
+import type { Tables, Database } from '@/lib/types/database';
+
+// ── Route auth helpers ───────────────────────────────────────────────────────
+//
+// Two helpers for API routes:
+//   requireAuth()             — verifies the session only (no DB round-trip).
+//                               Use for reads open to any authenticated user.
+//   requireActiveRole(roles)  — verifies session + fetches caller row + enforces
+//                               role membership and ACTIVE status.
+//                               Use for writes and role-gated operations.
+//
+// Both helpers create the Supabase client internally. The same instance is
+// returned in the success branch for use in subsequent queries.
+
+type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
+
+export type Role = 'TUTOR' | 'COORDINATOR' | 'SUPER_ADMIN';
+
+export type AuthOk = {
+  ok: true;
+  user: { id: string };
+  supabase: SupabaseInstance;
+};
+
+export type CallerOk = AuthOk & { role: Role };
+
+type AuthFail = { ok: false; response: NextResponse };
+
+/** Verify the session only. No DB round-trip to fetch the caller row. */
+export async function requireAuth(): Promise<AuthOk | AuthFail> {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) {
+    return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+  return { ok: true, user: { id: user.id }, supabase };
+}
+
+/**
+ * Verify the session, fetch the caller row, and enforce role + ACTIVE status.
+ * Returns a typed CallerOk (with role) on success so routes can branch on role
+ * for fine-grained ownership checks without a second DB query.
+ */
+export async function requireActiveRole(roles: readonly Role[]): Promise<CallerOk | AuthFail> {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) {
+    return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+
+  const { data: caller } = await supabase
+    .from('users')
+    .select('role, status')
+    .eq('id', user.id)
+    .single();
+
+  if (!caller || !(roles as readonly string[]).includes(caller.role)) {
+    return { ok: false, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  }
+
+  if (caller.status !== 'ACTIVE') {
+    return { ok: false, response: NextResponse.json({ error: 'Account is not active' }, { status: 403 }) };
+  }
+
+  return { ok: true, user: { id: user.id }, role: caller.role as Role, supabase };
+}
+
+// ── Server Component auth helper ─────────────────────────────────────────────
 
 export type ActiveUser = Pick<Tables<'users'>, 'id' | 'email' | 'name' | 'role' | 'status'>;
 

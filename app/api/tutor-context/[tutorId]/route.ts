@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireAuth, requireActiveRole } from '@/lib/auth';
 import type { Json } from '@/lib/types/database';
 
 type Params = { params: Promise<{ tutorId: string }> };
@@ -13,12 +13,9 @@ export async function GET(
   _req: NextRequest,
   { params }: Params,
 ) {
-  const supabase = await createClient();
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized', status: 401 }, { status: 401 });
-  }
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.response;
+  const { supabase } = auth;
 
   const { tutorId } = await params;
 
@@ -34,34 +31,17 @@ export async function GET(
 
 /**
  * PUT /api/tutor-context/[tutorId]
- * Coordinator upserts the context JSONB for a tutor.
- * Body: { context: Record<string, unknown> }
+ * Coordinator merges context fields for a tutor. Existing fields not present
+ * in the request body are preserved. Body: { context: Record<string, unknown> }
  * Coordinator/SuperAdmin only.
  */
 export async function PUT(
   req: NextRequest,
   { params }: Params,
 ) {
-  const supabase = await createClient();
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized', status: 401 }, { status: 401 });
-  }
-
-  const { data: caller } = await supabase
-    .from('users')
-    .select('role, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!caller || !['COORDINATOR', 'SUPER_ADMIN'].includes(caller.role)) {
-    return NextResponse.json({ error: 'Only coordinators can update tutor context', status: 403 }, { status: 403 });
-  }
-
-  if (caller.status !== 'ACTIVE') {
-    return NextResponse.json({ error: 'Account is not active', status: 403 }, { status: 403 });
-  }
+  const auth = await requireActiveRole(['COORDINATOR', 'SUPER_ADMIN']);
+  if (!auth.ok) return auth.response;
+  const { user, supabase } = auth;
 
   const { tutorId } = await params;
   const body = await req.json() as Record<string, unknown>;
@@ -70,10 +50,22 @@ export async function PUT(
     return NextResponse.json({ error: 'context must be a JSON object', status: 400 }, { status: 400 });
   }
 
+  // Fetch existing context so we can merge rather than replace.
+  const { data: existing } = await supabase
+    .from('tutor_context')
+    .select('context')
+    .eq('tutor_id', tutorId)
+    .single();
+
+  const merged = {
+    ...(existing?.context as Record<string, unknown> | null ?? {}),
+    ...(body.context as Record<string, unknown>),
+  };
+
   const { data, error } = await supabase
     .from('tutor_context')
     .upsert(
-      { tutor_id: tutorId, context: body.context as Json, updated_by: user.id },
+      { tutor_id: tutorId, context: merged as Json, updated_by: user.id },
       { onConflict: 'tutor_id' },
     )
     .select('context')

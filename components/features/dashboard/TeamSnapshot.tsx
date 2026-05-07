@@ -1,7 +1,7 @@
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { capacityStatus } from '@/lib/utils/capacity';
-import { Tutor } from '@/lib/data/dashboard-mock';
+import type { Tutor } from '@/lib/types/domain';
 
 interface TeamSnapshotProps {
   tutors: Tutor[];

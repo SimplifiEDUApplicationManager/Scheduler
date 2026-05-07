@@ -1,4 +1,4 @@
-import type { Tutor, Subject, Tuple } from '@/lib/data/dashboard-mock';
+import type { Tutor, Subject, Tuple } from '@/lib/types/domain';
 import { overlapHours } from '@/lib/utils/tutors';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';

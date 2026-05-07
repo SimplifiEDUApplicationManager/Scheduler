@@ -66,16 +66,6 @@ test.describe('Task 3.2/3.3 — API routes reflect database tables', () => {
     expect(res.status()).toBe(401);
   });
 
-  test('POST /api/holds without auth returns 401', async ({ request }) => {
-    const res = await request.post('/api/holds', {
-      data: {
-        tutor_id: '00000000-0000-0000-0000-000000000001',
-        start_utc: '2026-06-01T10:00:00Z',
-        end_utc: '2026-06-01T11:00:00Z',
-      },
-    });
-    expect(res.status()).toBe(401);
-  });
 });
 
 // ─── Task 3.4 — RLS policies active ──────────────────────────────────────────
@@ -105,17 +95,6 @@ test.describe('Task 3.4 — Row Level Security', () => {
     expect(res.status()).not.toBe(201);
   });
 
-  test('holds endpoint enforces auth (no anonymous write)', async ({ request }) => {
-    const res = await request.post('/api/holds', {
-      data: {
-        tutor_id: '00000000-0000-0000-0000-000000000001',
-        start_utc: '2026-06-01T10:00:00Z',
-        end_utc: '2026-06-01T11:00:00Z',
-      },
-    });
-    expect(res.status()).not.toBe(200);
-    expect(res.status()).not.toBe(201);
-  });
 });
 
 // ─── Task 3.5 — Seed data present ────────────────────────────────────────────

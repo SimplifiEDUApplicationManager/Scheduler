@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { TuitionRequest, Invitation, Tutor } from '@/lib/data/dashboard-mock';
+import type { TuitionRequest, Invitation, Tutor } from '@/lib/types/domain';
 import { overlapsTuple, DAY_NAMES_FULL, fmtRange } from '@/lib/utils/tutors';
 import { RequestDetailCard } from './RequestDetailCard';
 import { RequestTimeline } from './RequestTimeline';

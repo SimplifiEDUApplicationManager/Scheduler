@@ -1,4 +1,4 @@
-import type { Availability, Tuple } from '@/lib/data/dashboard-mock';
+import type { Availability, Tuple } from '@/lib/types/domain';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

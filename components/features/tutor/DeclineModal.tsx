@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { TutorProposal } from '@/lib/data/dashboard-mock';
+import type { TutorProposal } from '@/lib/types/domain';
 
 const SUGGESTIONS = [
   "Schedule conflict I can't adjust",
