@@ -42,7 +42,7 @@ export function TutorMonthView({ events, proposal, monthOffset, onOpenSession }:
                 !cell.inMonth && 'bg-surface-2',
               )}
             >
-              <div className={cn(
+              <div suppressHydrationWarning className={cn(
                 'text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center mb-1',
                 cell.today    ? 'bg-brand-ink text-white' : '',
                 !cell.inMonth ? 'text-fg-muted' : 'text-fg-2',

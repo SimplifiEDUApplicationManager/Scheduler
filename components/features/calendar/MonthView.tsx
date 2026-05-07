@@ -48,7 +48,7 @@ export function MonthView({ tutors, requestTuples, monthOffset }: MonthViewProps
                 !cell.inMonth && 'bg-surface-2',
               )}
             >
-              <div className={cn(
+              <div suppressHydrationWarning className={cn(
                 'text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center',
                 cell.today   ? 'bg-brand-ink text-fg-on-brand' : '',
                 !cell.inMonth ? 'text-fg-muted' : 'text-fg-2',
