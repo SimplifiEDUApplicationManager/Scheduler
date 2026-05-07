@@ -8,8 +8,13 @@ export async function GET(request: Request) {
   const state      = searchParams.get('state');
   const errorParam = searchParams.get('error');
 
-  const errRedirect = (reason: string) =>
-    NextResponse.redirect(`${origin}/dashboard?nylas_error=${encodeURIComponent(reason)}`);
+  // Redirect to role-appropriate page on failure.
+  // We don't know the role until after we decode state + query the DB, so we
+  // fall back to /dashboard; the tutor-specific error page is set after lookup.
+  const errRedirect = (reason: string, role?: string) => {
+    const base = role === 'TUTOR' ? '/tutor/settings' : '/dashboard';
+    return NextResponse.redirect(`${origin}${base}?nylas_error=${encodeURIComponent(reason)}`);
+  };
 
   if (errorParam)      return errRedirect(errorParam);
   if (!code || !state) return errRedirect('missing_params');
@@ -29,10 +34,11 @@ export async function GET(request: Request) {
     .single();
 
   if (updateError) {
-    console.error('Failed to save grant_id:', updateError);
+    console.error('[nylas/oauth/callback] Failed to save grant_id:', updateError);
     return errRedirect('db_update_failed');
   }
 
-  const home = updatedUser?.role === 'TUTOR' ? '/tutor/settings' : '/dashboard';
+  const role = updatedUser?.role as string | undefined;
+  const home = role === 'TUTOR' ? '/tutor/settings' : '/dashboard';
   return NextResponse.redirect(`${origin}${home}?nylas_success=calendar_connected`);
 }

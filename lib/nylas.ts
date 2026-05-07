@@ -1,4 +1,4 @@
-// Nylas OAuth helpers — shared by /api/nylas/auth and /api/nylas/callback.
+// Nylas OAuth helpers — shared by /api/nylas/auth and /api/nylas/oauth/callback.
 //
 // Owns the three things both routes need:
 //   1. Shared config (callback URI, API base URI) — defined once, can't drift.
@@ -9,7 +9,7 @@
 
 /** The OAuth redirect URI Nylas will call after the user authorises. */
 export function nylasCallbackUri(): string {
-  return `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://simplifi-scheduler.vercel.app'}/api/nylas/callback`;
+  return `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://simplifi-scheduler.vercel.app'}/api/nylas/oauth/callback`;
 }
 
 /** The Nylas API base URL (region-specific). */
