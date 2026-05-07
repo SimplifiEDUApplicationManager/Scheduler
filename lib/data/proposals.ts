@@ -1,5 +1,5 @@
-// Proposal repository — state transitions for the Proposal lifecycle.
-// All routes that mutate proposal status call these functions instead of writing inline queries.
+// Proposal repository — reads and state transitions for the Proposal lifecycle.
+// All routes that read or mutate proposals go through this module.
 //
 // Valid transitions:
 //   PENDING → ACCEPTED   (tutor accepts)
@@ -17,9 +17,69 @@
 
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/lib/types/database';
+import type { TutorProposal } from '@/lib/types/domain';
 import { findExpiredProposals } from '@/lib/utils/expire-proposals';
 
 type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
+
+// ── Private helpers ──────────────────────────────────────────────────────────
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function sentAgo(iso: string): string {
+  const diff  = Date.now() - new Date(iso).getTime();
+  const mins  = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days  = Math.floor(diff / 86_400_000);
+  if (mins  < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
+
+// ── Read ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Fetch all proposals for a tutor, newest first, mapped to TutorProposal.
+ * Ownership is enforced by the .eq('tutor_id', tutorId) filter — a tutor can
+ * only ever see their own proposals.
+ */
+export async function getTutorProposals(
+  tutorId: string,
+  supabase: SupabaseInstance,
+): Promise<TutorProposal[]> {
+  const { data: rows, error } = await supabase
+    .from('proposals')
+    .select('*, coordinator:users!proposals_coordinator_id_fkey(name, email)')
+    .eq('tutor_id', tutorId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (rows ?? []).map(row => {
+    const coord    = row.coordinator as { name: string; email: string } | null;
+    const schedule = (row.requested_schedule ?? []) as { day: number; start: number; end: number }[];
+    return {
+      id:               row.id,
+      studentName:      row.student_name,
+      studentEmail:     row.student_email,
+      subject:          row.subject,
+      tuples:           schedule,
+      tz:               row.timezone,
+      startDate:        formatDate(row.start_date),
+      hoursPerWeek:     0,
+      notes:            row.notes ?? '',
+      coordinator:      coord?.name ?? 'Coordinator',
+      coordinatorEmail: coord?.email ?? undefined,
+      sentAt:           sentAgo(row.created_at),
+      status:           row.status.toLowerCase() as TutorProposal['status'],
+      declineReason:    row.decline_reason ?? undefined,
+    };
+  });
+}
 
 export type TransitionResult =
   | { ok: true }
