@@ -4,6 +4,7 @@ import { SettingsClient } from '@/components/features/tutor/SettingsClient';
 import type { Subject } from '@/lib/types/domain';
 import { TUTORS, SUBJECTS, ME_TUTOR_ID } from '@/lib/data/mock';
 import { fetchTutor } from '@/lib/data/tutors';
+import { fetchSchedulerSummary, type SchedulerSummary } from '@/lib/nylas/scheduler';
 import { DEV_BYPASS } from '@/lib/env';
 
 export default async function TutorSettingsPage() {
@@ -11,7 +12,7 @@ export default async function TutorSettingsPage() {
     const me = TUTORS.find(t => t.id === ME_TUTOR_ID);
     if (!me) return notFound();
     const allSubjects: Subject[] = SUBJECTS.map(s => ({ id: s.id, name: s.name, cat: s.cat }));
-    return <SettingsClient me={me} allSubjects={allSubjects} />;
+    return <SettingsClient me={me} allSubjects={allSubjects} schedulerSummary={null} />;
   }
 
   const supabase = await createClient();
@@ -32,5 +33,11 @@ export default async function TutorSettingsPage() {
     cat:  s.category,
   }));
 
-  return <SettingsClient me={me} allSubjects={allSubjects} />;
+  // Fetch the Nylas Scheduler config for the read-only summary card.
+  // If the tutor hasn't linked a config yet, pass null — the card shows a prompt.
+  const schedulerSummary: SchedulerSummary | null = me.nylasSchedulerConfigId
+    ? await fetchSchedulerSummary(me.nylasSchedulerConfigId)
+    : null;
+
+  return <SettingsClient me={me} allSubjects={allSubjects} schedulerSummary={schedulerSummary} />;
 }

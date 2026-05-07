@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
 import type { Tutor, Subject, TutorSubject } from '@/lib/types/domain';
+import type { SchedulerSummary } from '@/lib/nylas/scheduler';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { AddSubjectModal } from './AddSubjectModal';
 import { BookingPagePreview } from './BookingPagePreview';
 
-interface Props { me: Tutor; allSubjects: Subject[] }
+interface Props { me: Tutor; allSubjects: Subject[]; schedulerSummary: SchedulerSummary | null }
 
 const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'];
 
@@ -22,7 +23,7 @@ const NAV = [
 ] as const;
 type SectionId = typeof NAV[number][0];
 
-export function SettingsClient({ me, allSubjects }: Props) {
+export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const [name, setName]           = useState(me.name);
   const [tz, setTz]               = useState(me.tz);
   const [meetingLink, setLink]    = useState(me.meetingLink ?? '');
@@ -37,9 +38,24 @@ export function SettingsClient({ me, allSubjects }: Props) {
   const [pauseOpen, setPauseOpen] = useState(false);
   const [toast, setToast]         = useState<string | null>(null);
   const [activeSection, setActive] = useState<SectionId>('profile');
+  const [editingScheduler, setEditingScheduler] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const touch = () => setDirty(true);
+
+  const openSchedulerEdit = useCallback(async () => {
+    setEditingScheduler(true);
+    try {
+      const res = await fetch('/api/nylas/scheduler-edit-link', { method: 'POST' });
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok || !data.url) { showToast(data.error ?? 'Could not open scheduler'); return; }
+      window.open(data.url, '_blank', 'noreferrer');
+    } catch {
+      showToast('Could not open scheduler');
+    } finally {
+      setEditingScheduler(false);
+    }
+  }, []);
   const maxError = maxHours < 6 || maxHours > 40;
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
@@ -201,23 +217,27 @@ export function SettingsClient({ me, allSubjects }: Props) {
                 </div>
               </div>
             </Row>
-            <div style={{ padding: 14, background: '#FAFAFA', borderRadius: 10, display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 12 }}>
-              <PrefRow label="Working hours" value="Mon–Fri · 9 am–9 pm" />
-              <PrefRow label="Exceptions" value="2 active · May 3 & 10" />
-              <PrefRow label="Break between sessions" value="15 minutes" />
-              <PrefRow label="Max sessions per day" value="5 sessions" />
-            </div>
-            {bookingUrl ? (
-              <a href={bookingUrl} target="_blank" rel="noreferrer" style={{ ...btn('primary'), textDecoration: 'none' }}>
-                <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" aria-hidden><rect x={1.5} y={2.5} width={10} height={9} rx={1.5} /><path d="M1.5 5.5h10M4.5 1v3M8.5 1v3" /></svg>
-                Edit on Nylas Scheduler
-              </a>
+            {schedulerSummary ? (
+              <div style={{ padding: 14, background: '#FAFAFA', borderRadius: 10, display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 12 }}>
+                <PrefRow label="Working hours" value={schedulerSummary.workingHours} />
+                <PrefRow label="Exceptions to my upcoming availability" value={schedulerSummary.exceptions} />
+                <PrefRow label="Break between sessions" value={schedulerSummary.breakDuration} />
+              </div>
             ) : (
-              <button disabled style={{ ...btn('primary'), opacity: 0.5, cursor: 'not-allowed' }}>
-                <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" aria-hidden><rect x={1.5} y={2.5} width={10} height={9} rx={1.5} /><path d="M1.5 5.5h10M4.5 1v3M8.5 1v3" /></svg>
-                Edit on Nylas Scheduler
-              </button>
+              <div style={{ padding: 14, background: '#FAFAFA', borderRadius: 10, fontSize: 12, color: '#A1A1AA', marginBottom: 12 }}>
+                {me.nylasSchedulerConfigId
+                  ? 'Could not load scheduling preferences — try again later.'
+                  : 'No scheduling preferences configured yet. Click "Edit scheduling preferences" to set them up on Nylas.'}
+              </div>
             )}
+            <button
+              onClick={openSchedulerEdit}
+              disabled={!me.nylasSchedulerConfigId || editingScheduler}
+              style={{ ...btn('primary'), opacity: (!me.nylasSchedulerConfigId || editingScheduler) ? 0.5 : 1, cursor: (!me.nylasSchedulerConfigId || editingScheduler) ? 'not-allowed' : 'pointer' }}
+            >
+              <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" aria-hidden><rect x={1.5} y={2.5} width={10} height={9} rx={1.5} /><path d="M1.5 5.5h10M4.5 1v3M8.5 1v3" /></svg>
+              {editingScheduler ? 'Opening…' : 'Edit scheduling preferences'}
+            </button>
           </Card>
 
           {/* Calendar connection & booking page */}

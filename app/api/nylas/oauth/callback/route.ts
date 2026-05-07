@@ -22,23 +22,28 @@ export async function GET(request: Request) {
   const decoded = decodeOAuthState(state);
   if (!decoded.ok) return errRedirect('invalid_state');
 
-  const exchange = await exchangeCodeForGrant(code);
-  if (!exchange.ok) return errRedirect(exchange.error);
-
+  // Look up the user's role now so all remaining error redirects are role-aware.
   const supabase = createServiceClient();
-  const { data: updatedUser, error: updateError } = await supabase
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', decoded.userId)
+    .single();
+  const role = userRow?.role as string | undefined;
+
+  const exchange = await exchangeCodeForGrant(code);
+  if (!exchange.ok) return errRedirect(exchange.error, role);
+
+  const { error: updateError } = await supabase
     .from('users')
     .update({ nylas_grant_id: exchange.grantId, status: 'ACTIVE' })
-    .eq('id', decoded.userId)
-    .select('role')
-    .single();
+    .eq('id', decoded.userId);
 
   if (updateError) {
     console.error('[nylas/oauth/callback] Failed to save grant_id:', updateError);
-    return errRedirect('db_update_failed');
+    return errRedirect('db_update_failed', role);
   }
 
-  const role = updatedUser?.role as string | undefined;
   const home = role === 'TUTOR' ? '/tutor/settings' : '/dashboard';
   return NextResponse.redirect(`${origin}${home}?nylas_success=calendar_connected`);
 }
