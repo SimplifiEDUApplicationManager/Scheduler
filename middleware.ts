@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/lib/types/database';
+import { DEV_BYPASS } from '@/lib/env';
 
 type UserRole = Database['public']['Enums']['user_role'];
 
@@ -18,7 +19,7 @@ export async function middleware(request: NextRequest) {
   // Skip auth entirely in local development so magic-link issues don't block
   // UI work. Remove this block (or set NEXT_PUBLIC_DEV_BYPASS=false) before
   // deploying to staging/production.
-  if (process.env.NEXT_PUBLIC_DEV_BYPASS === 'true') {
+  if (DEV_BYPASS) {
     return NextResponse.next({ request });
   }
 

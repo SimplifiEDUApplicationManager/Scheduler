@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { DEV_BYPASS } from '@/lib/env';
 
 export default async function Home({
   searchParams,
 }: {
   searchParams: Promise<{ code?: string }>;
 }) {
-  if (process.env.NEXT_PUBLIC_DEV_BYPASS === 'true') {
+  if (DEV_BYPASS) {
     redirect('/dashboard');
   }
 

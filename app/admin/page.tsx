@@ -1,8 +1,7 @@
 import { COORDINATORS, COORDINATOR_INVITES } from '@/lib/data/mock';
 import { getCoordinators } from '@/lib/data/coordinators';
 import { AdminClient } from '@/components/features/admin/AdminClient';
-
-const DEV_BYPASS = process.env.NEXT_PUBLIC_DEV_BYPASS === 'true';
+import { DEV_BYPASS } from '@/lib/env';
 
 export default async function AdminPage() {
   if (DEV_BYPASS) {

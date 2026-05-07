@@ -4,9 +4,10 @@ import { TUTORS, TUTOR_PROPOSALS, TUTOR_EVENTS, ME_TUTOR_ID } from '@/lib/data/m
 import { ProposalsClient } from '@/components/features/tutor/ProposalsClient';
 import { fetchTutor } from '@/lib/data/tutors';
 import { getTutorProposals } from '@/lib/data/proposals';
+import { DEV_BYPASS } from '@/lib/env';
 
 export default async function TutorProposalsPage() {
-  if (process.env.NEXT_PUBLIC_DEV_BYPASS === 'true') {
+  if (DEV_BYPASS) {
     const me = TUTORS.find(t => t.id === ME_TUTOR_ID);
     if (!me) return notFound();
     return <ProposalsClient me={me} initialEvents={TUTOR_EVENTS} initialProposals={TUTOR_PROPOSALS} />;
