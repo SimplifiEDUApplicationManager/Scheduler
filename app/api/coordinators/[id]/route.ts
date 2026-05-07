@@ -15,9 +15,20 @@ export async function DELETE(
 
   const { data: userRow } = await supabase
     .from('users')
-    .select('email')
+    .select('email, status')
     .eq('id', id)
     .single();
+
+  if (!userRow) {
+    return NextResponse.json({ error: 'Coordinator not found' }, { status: 404 });
+  }
+
+  if (userRow.status !== 'PENDING') {
+    return NextResponse.json(
+      { error: 'Only pending invites can be revoked — use deactivate for active coordinators' },
+      { status: 400 },
+    );
+  }
 
   const { error } = await supabase.auth.admin.deleteUser(id);
   if (error) {
