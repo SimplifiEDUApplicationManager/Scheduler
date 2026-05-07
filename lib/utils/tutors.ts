@@ -1,4 +1,4 @@
-import type { Availability, Tuple } from '@/lib/types/domain';
+import type { Availability, Tuple, Tutor } from '@/lib/types/domain';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -42,6 +42,31 @@ export function fmtRange(start: number, end: number): string {
   const [eTime, ePeriod] = e.split(' ');
   if (sPeriod === ePeriod) return `${sTime}–${eTime} ${ePeriod}`;
   return `${s}–${e}`;
+}
+
+// ── Filter predicate ───────────────────────────────────────────────────────
+
+/**
+ * Apply FilterState to a list of tutors and return the matching subset.
+ * Pure function — no React, no Supabase. Safe to call from both the client
+ * component (useMemo) and server-side skills (/filter).
+ */
+export function filterTutors(tutors: Tutor[], filters: FilterState): Tutor[] {
+  return tutors.filter(t => {
+    if (filters.q && !t.name.toLowerCase().includes(filters.q.toLowerCase())) return false;
+    if (filters.hideAtCap && t.hoursCurrent >= t.hoursMax) return false;
+    if (filters.subjects.length > 0) {
+      const hasMatch = t.subjects.some(
+        ts => filters.subjects.includes(ts.id) && filters.conf.includes(ts.conf),
+      );
+      if (!hasMatch) return false;
+    }
+    if (filters.tuples.length > 0) {
+      const anyMatch = filters.tuples.some(tp => overlapsTuple(t.availability, tp));
+      if (!anyMatch) return false;
+    }
+    return true;
+  });
 }
 
 // ── URL param serialization ────────────────────────────────────────────────

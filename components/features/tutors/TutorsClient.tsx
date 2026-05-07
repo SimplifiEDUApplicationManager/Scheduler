@@ -6,7 +6,7 @@ import type { Tutor, TuitionRequest, Subject, Invitation } from '@/lib/types/dom
 import {
   parseFilters,
   filtersToParams,
-  overlapsTuple,
+  filterTutors,
   getWeekLabel,
   type FilterState,
 } from '@/lib/utils/tutors';
@@ -64,24 +64,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
     setFilters({ ...filters, reqId: null, subjects: [], tuples: [] });
   }
 
-  // Client-side filter logic
-  const filtered = useMemo(() => {
-    return tutors.filter(t => {
-      if (filters.q && !t.name.toLowerCase().includes(filters.q.toLowerCase())) return false;
-      if (filters.hideAtCap && t.hoursCurrent >= t.hoursMax) return false;
-      if (filters.subjects.length > 0) {
-        const hasMatch = t.subjects.some(
-          ts => filters.subjects.includes(ts.id) && filters.conf.includes(ts.conf),
-        );
-        if (!hasMatch) return false;
-      }
-      if (filters.tuples.length > 0) {
-        const anyMatch = filters.tuples.some(tp => overlapsTuple(t.availability, tp));
-        if (!anyMatch) return false;
-      }
-      return true;
-    });
-  }, [tutors, filters]);
+  const filtered = useMemo(() => filterTutors(tutors, filters), [tutors, filters]);
 
   function handleProposeSend(tutorName: string) {
     setProposeFor(null);
