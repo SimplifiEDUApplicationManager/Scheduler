@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Tutor, TutorEvent, TutorProposal, TutorEventKind, TutorEventStatus } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
@@ -24,6 +24,10 @@ interface Props {
 
 export function TutorCalendarClient({ me, initialEvents, initialProposals }: Props) {
   const [events, setEvents]           = useState<TutorEvent[]>(initialEvents);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  // Track which week the current events slice belongs to so we can refetch
+  // when the user navigates. Ref avoids stale closure in the effect.
+  const loadedWeek = useRef<number>(0);
   const [proposals, setProposals]     = useState<TutorProposal[]>(initialProposals);
   const [hoveredId, setHoveredId]     = useState<string | null>(null);
   const [declineFor, setDeclineFor]   = useState<TutorProposal | null>(null);
@@ -33,6 +37,20 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
   const [monthOffset, setMonthOffset] = useState(0);
   const [toast, setToast]             = useState<Toast | null>(null);
   const [consideringId, setConsideringId] = useState<string | null>(null);
+
+  // Refetch events from Nylas whenever the user navigates to a different week.
+  useEffect(() => {
+    if (weekOffset === loadedWeek.current) return;
+    loadedWeek.current = weekOffset;
+    let cancelled = false;
+    setEventsLoading(true);
+    fetch(`/api/nylas/events?weekOffset=${weekOffset}`)
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then((data: TutorEvent[]) => { if (!cancelled) setEvents(data); })
+      .catch(() => { /* keep showing stale events on error */ })
+      .finally(() => { if (!cancelled) setEventsLoading(false); });
+    return () => { cancelled = true; };
+  }, [weekOffset]);
 
   // The active proposal to overlay on calendar: hovered one, or first pending by default
   const activeProposal = proposals.find(p =>
@@ -153,7 +171,10 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
         {/* Toolbar */}
         <div className="px-5 py-3 border-b border-border-default flex items-center gap-3 shrink-0 bg-white">
           <div className="min-w-0">
-            <div className="text-[15px] font-semibold text-fg-1">My calendar · {calLabel}</div>
+            <div className="text-[15px] font-semibold text-fg-1">
+              My calendar · {calLabel}
+              {eventsLoading && <span className="ml-2 text-[11px] font-normal text-fg-muted">Loading…</span>}
+            </div>
             <div className="text-[11px] text-fg-muted mt-0.5">
               {activeProposal?.status === 'pending' ? (
                 <>
