@@ -11,9 +11,9 @@ interface Props {
 }
 
 const CONF_OPTIONS: { value: SubjectConf; label: string; desc: string }[] = [
-  { value: 'HIGH',   label: 'High',   desc: 'I teach this confidently' },
-  { value: 'MEDIUM', label: 'Medium', desc: 'I can teach this comfortably' },
-  { value: 'LOW',    label: 'Low',    desc: 'I can teach this with some preparation' },
+  { value: 'HIGH',   label: 'High',   desc: 'Can teach confidently' },
+  { value: 'MEDIUM', label: 'Medium', desc: 'Can teach with a little preparation' },
+  { value: 'LOW',    label: 'Low',    desc: 'Can teach with a lot of preparation' },
 ];
 
 export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props) {
