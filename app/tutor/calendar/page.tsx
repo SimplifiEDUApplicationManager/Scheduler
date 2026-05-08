@@ -18,7 +18,6 @@ export default async function TutorCalendarPage() {
     );
   }
 
-
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
