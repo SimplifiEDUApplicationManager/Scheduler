@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
+import type { Tutor, Subject, TutorSubject, CoordConf } from '@/lib/types/domain';
+import { DEV_BYPASS } from '@/lib/env';
 import { AddSubjectModal } from './AddSubjectModal';
 
 interface Props {
@@ -9,10 +10,11 @@ interface Props {
   allSubjects: Subject[];
 }
 
-const CONF_META: Record<SubjectConf, { label: string; bg: string; fg: string; bar: string }> = {
-  HIGH:   { label: 'High',   bg: '#DCFCE7', fg: '#166534', bar: '#22C55E' },
-  MEDIUM: { label: 'Medium', bg: '#DBEAFE', fg: '#1E40AF', bar: '#3B82F6' },
-  LOW:    { label: 'Low',    bg: '#FEE2E2', fg: '#991B1B', bar: '#EF4444' },
+const CONF_META: Record<CoordConf, { label: string; bg: string; fg: string; bar: string }> = {
+  HIGH:    { label: 'High',     bg: '#DCFCE7', fg: '#166534', bar: '#22C55E' },
+  MEDIUM:  { label: 'Medium',   bg: '#DBEAFE', fg: '#1E40AF', bar: '#3B82F6' },
+  LOW:     { label: 'Low',      bg: '#FEE2E2', fg: '#991B1B', bar: '#EF4444' },
+  UNPROVEN:{ label: 'Unproven', bg: '#F4F4F5', fg: '#71717A', bar: '#A1A1AA' },
 };
 
 function statsFor(subjId: string, tutorId: string) {
@@ -99,7 +101,7 @@ function SubjectCard({ ts, subject, tutorId, expanded, onToggle, onRemove }: {
   ts: TutorSubject; subject: Subject; tutorId: string;
   expanded: boolean; onToggle: () => void; onRemove: () => void;
 }) {
-  const meta  = CONF_META[ts.conf];
+  const meta  = CONF_META[ts.coordConf ?? 'UNPROVEN'];
   const stats = statsFor(ts.id, tutorId);
   const seed  = (ts.id + tutorId).length;
 
@@ -230,6 +232,13 @@ export function SubjectsClient({ me, allSubjects }: Props) {
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
 
   async function handleAdd(ts: TutorSubject) {
+    const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
+    if (DEV_BYPASS) {
+      setMySubjects(prev => [...prev, { ...ts, rowId: `dev-${ts.id}`, coordConf: 'UNPROVEN' }]);
+      setAddOpen(false);
+      showToast(`${name} added · confidence set to Unproven`);
+      return;
+    }
     const res = await fetch('/api/tutor-subjects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -241,14 +250,19 @@ export function SubjectsClient({ me, allSubjects }: Props) {
       return;
     }
     const row = await res.json() as { id: string; subject_id: string };
-    setMySubjects(prev => [...prev, { ...ts, rowId: row.id }]);
+    setMySubjects(prev => [...prev, { ...ts, rowId: row.id, coordConf: 'UNPROVEN' }]);
     setAddOpen(false);
-    showToast(`${allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject'} added · pending coordinator review`);
+    showToast(`${name} added · confidence set to Unproven`);
   }
 
   async function handleRemove(ts: TutorSubject) {
     if (!ts.rowId) {
       showToast('Cannot remove: subject has no row ID');
+      return;
+    }
+    if (DEV_BYPASS) {
+      setMySubjects(prev => prev.filter(x => x.id !== ts.id));
+      showToast('Subject removed');
       return;
     }
     const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, { method: 'DELETE' });
@@ -270,9 +284,11 @@ export function SubjectsClient({ me, allSubjects }: Props) {
       return a + st.avgRating * st.reviewCount;
     }, 0) / totalReviews;
 
-  // Sort: HIGH → MEDIUM → LOW
-  const ORDER: SubjectConf[] = ['HIGH', 'MEDIUM', 'LOW'];
-  const sorted = [...mySubjects].sort((a, b) => ORDER.indexOf(a.conf) - ORDER.indexOf(b.conf));
+  // Sort by coordinator confidence: HIGH → MEDIUM → LOW → UNPROVEN
+  const ORDER: CoordConf[] = ['HIGH', 'MEDIUM', 'LOW', 'UNPROVEN'];
+  const sorted = [...mySubjects].sort((a, b) =>
+    ORDER.indexOf(a.coordConf ?? 'UNPROVEN') - ORDER.indexOf(b.coordConf ?? 'UNPROVEN'),
+  );
 
   return (
     <div style={{ flex: 1, overflow: 'auto', background: '#FAFAFA' }}>
@@ -322,6 +338,7 @@ export function SubjectsClient({ me, allSubjects }: Props) {
               </div>
             );
           })}
+
           <div style={{ marginLeft: 'auto', fontSize: 10, color: '#A1A1AA', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <svg width={10} height={10} viewBox="0 0 10 10" fill="none" stroke="#A1A1AA" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
               <rect x={2} y={4} width={6} height={5} rx={1} /><path d="M3.5 4V3a2.5 2.5 0 015 0v1" />

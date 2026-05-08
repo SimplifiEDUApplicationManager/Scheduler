@@ -125,7 +125,7 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
               )}
 
               <div style={{ marginTop: 14, padding: '10px 12px', borderRadius: 8, background: '#F4F4F5', border: '1px solid #E4E4E7', fontSize: 12, color: '#52525B', lineHeight: 1.5 }}>
-                This subject will be added with <b>Unproven</b> confidence until your coordinator reviews it. You won&apos;t be matched on it until they grade it.
+                This subject will be added with <b>Unproven</b> confidence. Your coordinator will update this as you work with students in this subject.
               </div>
             </div>
 
