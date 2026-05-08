@@ -140,7 +140,7 @@ On decline: the coordinator is notified and the request returns to the unassigne
 The primary coordinator tool. A panel (sidebar or top bar) with filters:
 
 - **Subject area** — one or more subjects (e.g. "AP Physics C", "AP Calculus BC"). Filters against the *coordinator-approved* subject list, not the tutor's self-reported list.
-- **Confidence level** — filter by coordinator-graded confidence (HIGH, MEDIUM, UNPROVEN, LOW). Default: HIGH + MEDIUM.
+- **Confidence level** — filter by coordinator-graded confidence. The filter UI shows **HIGH, MEDIUM, LOW only** — UNPROVEN is a coordinator-internal state and is never exposed as a filter option. Default: HIGH + MEDIUM.
 - **Availability** — up to 4 day-of-week / start-time / end-time tuples (OR logic). Mirrors how client requests come in.
 - **Start date** — when the student wants to begin. "Start ASAP" toggle sets to today.
 - **Request timezone** — the student's timezone. Tuples are interpreted in this timezone.
@@ -412,7 +412,7 @@ Coordinators can also enter a request manually (student name, email, subject, sc
    - **UNPROVEN** — tutor claims the subject but hasn't been tested/observed
    - **LOW** — not recommended for this subject
 
-3. **Filtering uses coordinator confidence**, not the tutor's self-report. A tutor with `confidence: LOW` on AP Physics won't appear when a coordinator filters for AP Physics (unless they explicitly include LOW).
+3. **Filtering uses tutor self-reported confidence** (`conf` on `TutorSubject`). The coordinator confidence (`coordConf`) is displayed in the UI (e.g. corner badge on TutorCard) but is not used for filter matching. A tutor with self-reported confidence `LOW` on AP Physics won't appear when a coordinator filters for HIGH/MEDIUM (unless they explicitly include LOW).
 
 4. **Subject approval flow:** When a tutor adds a new subject, it appears in the coordinator dashboard under "Pending Subject Reviews" with the tutor's qualification note. The coordinator grades it, and the confidence level is set.
 
