@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
 import { DEV_BYPASS } from '@/lib/env';
 import { AddSubjectModal } from './AddSubjectModal';
+import { EditSubjectModal } from './EditSubjectModal';
 
 interface Props {
   me: Tutor;
@@ -17,8 +18,8 @@ const CONF_META: Record<SubjectConf, { label: string; bg: string; fg: string; ba
 };
 
 
-function SubjectCard({ ts, subject, onRemove }: {
-  ts: TutorSubject; subject: Subject; onRemove: () => void;
+function SubjectCard({ ts, subject, onEdit, onRemove }: {
+  ts: TutorSubject; subject: Subject; onEdit: () => void; onRemove: () => void;
 }) {
   const meta = CONF_META[ts.conf];
 
@@ -29,7 +30,7 @@ function SubjectCard({ ts, subject, onRemove }: {
 
       <div style={{ padding: '16px 16px 16px 18px' }}>
         {/* Header row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', color: '#18181B' }}>{subject.name}</div>
             <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 2 }}>{subject.cat}</div>
@@ -39,6 +40,11 @@ function SubjectCard({ ts, subject, onRemove }: {
             <span style={{ width: 6, height: 6, borderRadius: 999, background: meta.bar, flexShrink: 0 }} />
             {meta.label}
           </span>
+          <button onClick={onEdit} title="Edit confidence" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid #E4E4E7', background: '#fff', color: '#71717A', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
+              <path d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z" />
+            </svg>
+          </button>
           <button onClick={onRemove} title="Remove subject" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid #FECACA', background: '#fff', color: '#DC2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M2 2l8 8M10 2l-8 8" /></svg>
           </button>
@@ -51,8 +57,9 @@ function SubjectCard({ ts, subject, onRemove }: {
 
 export function SubjectsClient({ me, allSubjects }: Props) {
   const [mySubjects, setMySubjects] = useState<TutorSubject[]>(me.subjects);
-  const [addOpen, setAddOpen]       = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [addOpen, setAddOpen]         = useState(false);
+  const [editingTs, setEditingTs]     = useState<TutorSubject | null>(null);
+  const [toast, setToast]             = useState<string | null>(null);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
 
@@ -81,13 +88,13 @@ export function SubjectsClient({ me, allSubjects }: Props) {
   }
 
   async function handleRemove(ts: TutorSubject) {
-    if (!ts.rowId) {
-      showToast('Cannot remove: subject has no row ID');
-      return;
-    }
     if (DEV_BYPASS) {
       setMySubjects(prev => prev.filter(x => x.id !== ts.id));
       showToast('Subject removed');
+      return;
+    }
+    if (!ts.rowId) {
+      showToast('Cannot remove: subject has no row ID');
       return;
     }
     const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, { method: 'DELETE' });
@@ -100,6 +107,33 @@ export function SubjectsClient({ me, allSubjects }: Props) {
     showToast('Subject removed');
   }
 
+
+  async function handleEdit(ts: TutorSubject, updated: Pick<TutorSubject, 'conf' | 'qualificationNote'>) {
+    const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
+    if (DEV_BYPASS) {
+      setMySubjects(prev => prev.map(x => x.id === ts.id ? { ...x, conf: updated.conf, qualificationNote: updated.qualificationNote } : x));
+      setEditingTs(null);
+      showToast(`${name} updated · coordinator notified`);
+      return;
+    }
+    if (!ts.rowId) {
+      showToast('Cannot edit: subject has no row ID');
+      return;
+    }
+    const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tutor_confidence: updated.conf, qualification_note: updated.qualificationNote }),
+    });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to update subject'}`);
+      return;
+    }
+    setMySubjects(prev => prev.map(x => x.id === ts.id ? { ...x, conf: updated.conf, qualificationNote: updated.qualificationNote } : x));
+    setEditingTs(null);
+    showToast(`${name} updated · coordinator notified`);
+  }
 
   // Sort by tutor self-confidence: HIGH → MEDIUM → LOW
   const ORDER: SubjectConf[] = ['HIGH', 'MEDIUM', 'LOW'];
@@ -169,6 +203,7 @@ export function SubjectsClient({ me, allSubjects }: Props) {
                   key={ts.id}
                   ts={ts}
                   subject={subject}
+                  onEdit={() => setEditingTs(ts)}
                   onRemove={() => handleRemove(ts)}
                 />
               );
@@ -185,6 +220,18 @@ export function SubjectsClient({ me, allSubjects }: Props) {
           onAdd={handleAdd}
         />
       )}
+
+      {editingTs && (() => {
+        const subject = allSubjects.find(s => s.id === editingTs.id);
+        return subject ? (
+          <EditSubjectModal
+            ts={editingTs}
+            subject={subject}
+            onClose={() => setEditingTs(null)}
+            onSave={updated => handleEdit(editingTs, updated)}
+          />
+        ) : null;
+      })()}
 
       {toast && (
         <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 60, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#18181B', color: '#fff', borderRadius: 10, boxShadow: '0 10px 24px rgba(22,32,51,0.18)', fontSize: 13, fontWeight: 500 }}>

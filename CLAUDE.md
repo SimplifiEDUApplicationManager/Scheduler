@@ -179,8 +179,8 @@ Same as V1: email + name + role → Supabase Auth `inviteUserByEmail()`. Pending
 Coordinators can:
 - **Add new subjects** to the system (name + category, e.g. "STEM", "Humanities", "Languages")
 - **Remove subjects** (with warning if tutors are assigned)
-- **Grade tutor confidence** for any subject on a tutor's list: `HIGH`, `MEDIUM`, `UNPROVEN`, `LOW`
-- **View Unproven subjects** — subjects tutors have added but not yet been graded by a coordinator. These show with `UNPROVEN` confidence and can be upgraded as the tutor works with students
+- **Grade tutor confidence** for any subject on a tutor's list: `HIGH`, `MEDIUM`, `UNPROVEN`, `LOW` — done via the `/dashboard/subjects` page
+- **View subjects pending review** — all subjects where `coordinator_confidence = UNPROVEN`, shown at `/dashboard/subjects`. This includes newly added subjects and any subjects where the tutor has updated their self-reported confidence. Coordinators set their assessment from this queue.
 
 ### AI Mode (Future — documented but not V2 launch)
 An assistant panel in the coordinator dashboard that uses tutor personality context + current filters to suggest the best match. This is the web-app equivalent of `/filter`'s AI ranking step. Documented in the spec for architectural planning but not required for V2 launch.
@@ -406,15 +406,17 @@ Coordinators can also enter a request manually (student name, email, subject, sc
 
 1. **Tutor's claimed subjects** — the tutor adds subjects they feel comfortable teaching. Each addition includes a qualification note and the tutor's self-reported confidence level (HIGH, MEDIUM, or LOW). The `coordinator_confidence` defaults to `UNPROVEN` on creation — tutors never see this field.
 
-2. **Coordinator confidence grading** — coordinators grade each tutor-subject pair:
+2. **Editing confidence** — tutors can edit their self-reported confidence on any existing subject. They must provide a new explanation note (10+ chars) describing what changed. On save, `coordinator_confidence` resets to `UNPROVEN` so the coordinator sees the change in their subjects review queue. The API endpoint is `PATCH /api/tutor-subjects/[id]`.
+
+3. **Coordinator confidence grading** — coordinators grade each tutor-subject pair on the subjects page (`/dashboard/subjects`):
    - **HIGH** — proven, reliable, would recommend without hesitation
    - **MEDIUM** — capable but less experienced or less consistent
-   - **UNPROVEN** — tutor claims the subject but hasn't been tested/observed
+   - **UNPROVEN** — tutor claims the subject but hasn't been tested/observed; also the state after a tutor edits their confidence
    - **LOW** — not recommended for this subject
 
-3. **Filtering uses tutor self-reported confidence** (`conf` on `TutorSubject`). The coordinator confidence (`coordConf`) is displayed in the UI (e.g. corner badge on TutorCard) but is not used for filter matching. A tutor with self-reported confidence `LOW` on AP Physics won't appear when a coordinator filters for HIGH/MEDIUM (unless they explicitly include LOW).
+4. **Filtering uses tutor self-reported confidence** (`conf` on `TutorSubject`). The coordinator confidence (`coordConf`) is displayed in the coordinator UI but is not used for filter matching. A tutor with self-reported confidence `LOW` on AP Physics won't appear when a coordinator filters for HIGH/MEDIUM (unless they explicitly include LOW).
 
-4. **Subject confidence flow:** When a tutor adds a new subject, it is created immediately with `coordinator_confidence: UNPROVEN`. There is no "pending" state — the subject is active from the moment it is added. The coordinator updates the confidence level over time as the tutor works with students in that subject.
+5. **Subject confidence flow:** When a tutor adds or edits a subject, `coordinator_confidence` is set to `UNPROVEN`. There is no "pending" state — the subject is active immediately. The coordinator reviews UNPROVEN subjects at `/dashboard/subjects` and sets their assessment over time.
 
 The `subjects` table is the master list — tutors select from it, they don't create free-text entries. Coordinators can add new subjects to the master list.
 
