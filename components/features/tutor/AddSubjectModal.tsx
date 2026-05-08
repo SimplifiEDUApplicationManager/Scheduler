@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Subject, TutorSubject } from '@/lib/types/domain';
+import type { Subject, SubjectConf, TutorSubject } from '@/lib/types/domain';
 
 interface Props {
   allSubjects: Subject[];
@@ -10,17 +10,24 @@ interface Props {
   onAdd: (ts: TutorSubject) => void;
 }
 
+const CONF_OPTIONS: { value: SubjectConf; label: string; desc: string }[] = [
+  { value: 'HIGH',   label: 'High',   desc: 'I teach this confidently' },
+  { value: 'MEDIUM', label: 'Medium', desc: 'I can teach this comfortably' },
+  { value: 'LOW',    label: 'Low',    desc: 'I can teach this with some preparation' },
+];
+
 export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props) {
-  const [query, setQuery]     = useState('');
+  const [query, setQuery]       = useState('');
   const [pickedId, setPickedId] = useState<string | null>(null);
-  const [note, setNote]       = useState('');
+  const [note, setNote]         = useState('');
+  const [conf, setConf]         = useState<SubjectConf | null>(null);
 
   const available = allSubjects.filter(s =>
     !existing.includes(s.id) &&
     (!query || s.name.toLowerCase().includes(query.toLowerCase())),
   );
   const picked = allSubjects.find(s => s.id === pickedId);
-  const canAdd = !!picked && note.trim().length >= 10;
+  const canAdd = !!picked && note.trim().length >= 10 && !!conf;
 
   return (
     <div
@@ -36,7 +43,7 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Add a subject</h3>
             <p style={{ fontSize: 12, color: '#71717A', margin: '2px 0 0' }}>
-              {!pickedId ? 'Choose a subject from the list.' : 'Tell your coordinator about your experience.'}
+              {!pickedId ? 'Choose a subject from the list.' : 'Describe your experience and set your confidence level.'}
             </p>
           </div>
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #E4E4E7', background: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -110,7 +117,7 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
                 Describe your experience teaching {picked!.name}
               </label>
               <p style={{ fontSize: 11, color: '#71717A', margin: '0 0 10px', lineHeight: 1.55 }}>
-                Your coordinator will review this and set a confidence level. Be specific — scores, years of experience, or student outcomes all help.
+                Be specific — scores, years of experience, or student outcomes all help.
               </p>
               <textarea
                 autoFocus
@@ -124,8 +131,30 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
                 <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Please add a bit more detail.</div>
               )}
 
-              <div style={{ marginTop: 14, padding: '10px 12px', borderRadius: 8, background: '#F4F4F5', border: '1px solid #E4E4E7', fontSize: 12, color: '#52525B', lineHeight: 1.5 }}>
-                This subject will be added with <b>Unproven</b> confidence. Your coordinator will update this as you work with students in this subject.
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#18181B', margin: '16px 0 8px' }}>
+                My confidence level
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {CONF_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setConf(opt.value)}
+                    style={{
+                      flex: 1,
+                      padding: '10px 8px',
+                      borderRadius: 8,
+                      border: conf === opt.value ? '2px solid #18181B' : '1px solid #E4E4E7',
+                      background: conf === opt.value ? '#18181B' : '#fff',
+                      color: conf === opt.value ? '#fff' : '#3F3F46',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>{opt.label}</div>
+                    <div style={{ fontSize: 10, marginTop: 2, opacity: 0.75 }}>{opt.desc}</div>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -134,7 +163,7 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
                 Cancel
               </button>
               <button
-                onClick={() => onAdd({ id: picked!.id, conf: 'MEDIUM', qualificationNote: note.trim() })}
+                onClick={() => onAdd({ id: picked!.id, conf: conf!, qualificationNote: note.trim() })}
                 disabled={!canAdd}
                 style={{ height: 34, padding: '0 16px', borderRadius: 7, border: 'none', background: canAdd ? '#18181B' : '#E4E4E7', color: canAdd ? '#fff' : '#A1A1AA', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: canAdd ? 'pointer' : 'default' }}
               >

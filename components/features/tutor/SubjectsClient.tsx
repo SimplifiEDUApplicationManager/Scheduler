@@ -241,7 +241,7 @@ export function SubjectsClient({ me, allSubjects }: Props) {
     const res = await fetch('/api/tutor-subjects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject_id: ts.id, qualification_note: ts.qualificationNote }),
+      body: JSON.stringify({ subject_id: ts.id, qualification_note: ts.qualificationNote, tutor_confidence: ts.conf }),
     });
     if (!res.ok) {
       const body = await res.json() as { error?: string };

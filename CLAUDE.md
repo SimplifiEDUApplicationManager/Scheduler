@@ -105,9 +105,9 @@ The web app *displays* a read-only summary of the tutor's current settings (pull
 - Break times use **fixed denominations: 5, 10, 15, 20 minutes** (Calendly pattern)
 
 ### Subject / Class List
-The tutor can view and edit the list of subjects they feel comfortable teaching. Adding a new subject opens a dialog where they explain their qualifications (free text). The entry is created with `confidence: UNPROVEN` and the coordinator team can later grade it.
+The tutor can view and edit the list of subjects they feel comfortable teaching. Adding a new subject opens a dialog where they explain their qualifications (free text) and choose their own confidence level (HIGH, MEDIUM, or LOW). The entry is created with `coordinator_confidence: UNPROVEN`; the coordinator grades over time.
 
-Tutors can see both their "claimed" subjects and the coordinator-assigned confidence level for each, but cannot change the confidence level themselves.
+Tutors set and see their own self-reported confidence (`conf`). They cannot see the coordinator confidence (`coordConf`) at all.
 
 ### Incoming Proposals
 When a coordinator proposes a new client (via `/propose` or the coordinator dashboard), it appears here as a card showing:
@@ -404,7 +404,7 @@ Coordinators can also enter a request manually (student name, email, subject, sc
 
 **Two-tier system:**
 
-1. **Tutor's claimed subjects** — the tutor adds subjects they feel comfortable teaching. Each addition includes a qualification note ("I tutored AP Physics C for 3 years and scored a 5 on the exam"). New entries default to `confidence: UNPROVEN`.
+1. **Tutor's claimed subjects** — the tutor adds subjects they feel comfortable teaching. Each addition includes a qualification note and the tutor's self-reported confidence level (HIGH, MEDIUM, or LOW). The `coordinator_confidence` defaults to `UNPROVEN` on creation — tutors never see this field.
 
 2. **Coordinator confidence grading** — coordinators grade each tutor-subject pair:
    - **HIGH** — proven, reliable, would recommend without hesitation
