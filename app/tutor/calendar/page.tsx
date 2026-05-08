@@ -2,10 +2,22 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { TutorCalendarClient } from '@/components/features/tutor/TutorCalendarClient';
 import { fetchTutorEvents, weekRange } from '@/lib/nylas/events';
-import { TUTOR_PROPOSALS } from '@/lib/data/mock';
+import { TUTORS, TUTOR_EVENTS, TUTOR_PROPOSALS, ME_TUTOR_ID } from '@/lib/data/mock';
+import { DEV_BYPASS } from '@/lib/env';
 import type { Tutor } from '@/lib/types/domain';
 
 export default async function TutorCalendarPage() {
+  if (DEV_BYPASS) {
+    const me = TUTORS.find(t => t.id === ME_TUTOR_ID) ?? TUTORS[0];
+    return (
+      <TutorCalendarClient
+        me={me}
+        initialEvents={TUTOR_EVENTS}
+        initialProposals={TUTOR_PROPOSALS}
+      />
+    );
+  }
+
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
