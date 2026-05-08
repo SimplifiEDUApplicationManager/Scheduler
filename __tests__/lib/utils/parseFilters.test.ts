@@ -93,22 +93,28 @@ describe('parseFilters — invalid tuples dropped', () => {
   });
 });
 
-// ── Behaviors 3 & 4: conf default omission and non-default round-trip ─────
+// ── Behaviors 3 & 4: conf serialization ──────────────────────────────────
 
 describe('filtersToParams — conf', () => {
-  it('omits conf params when conf matches the default', () => {
+  it('writes conf params even when conf matches the default', () => {
     const params = filtersToParams({ q: '', subjects: [], conf: ['HIGH', 'MEDIUM'], tuples: [], hideAtCap: true, reqId: null });
-    expect(params.getAll('conf')).toHaveLength(0);
+    expect(params.getAll('conf')).toEqual(['HIGH', 'MEDIUM']);
   });
 
-  it('omits conf params even when default values are in different order', () => {
+  it('writes conf params regardless of value order', () => {
     const params = filtersToParams({ q: '', subjects: [], conf: ['MEDIUM', 'HIGH'], tuples: [], hideAtCap: true, reqId: null });
-    expect(params.getAll('conf')).toHaveLength(0);
+    expect(params.getAll('conf')).toEqual(['MEDIUM', 'HIGH']);
   });
 
   it('writes conf params when they differ from the default', () => {
     const params = filtersToParams({ q: '', subjects: [], conf: ['HIGH'], tuples: [], hideAtCap: true, reqId: null });
     expect(params.getAll('conf')).toEqual(['HIGH']);
+  });
+
+  it('writes an empty sentinel when conf is empty so deselect-all round-trips correctly', () => {
+    const params = filtersToParams({ q: '', subjects: [], conf: [], tuples: [], hideAtCap: true, reqId: null });
+    expect(params.has('conf')).toBe(true);
+    expect(params.getAll('conf').filter(Boolean)).toHaveLength(0);
   });
 });
 
@@ -120,6 +126,11 @@ describe('parseFilters — conf', () => {
   it('returns the explicit conf values when present', () => {
     const params = new URLSearchParams('conf=HIGH&conf=LOW');
     expect(parseFilters(params).conf).toEqual(['HIGH', 'LOW']);
+  });
+
+  it('returns empty array when conf sentinel is present (deselect-all round-trip)', () => {
+    const state = { q: '', subjects: [], conf: [], tuples: [], hideAtCap: true, reqId: null };
+    expect(parseFilters(filtersToParams(state)).conf).toEqual([]);
   });
 });
 

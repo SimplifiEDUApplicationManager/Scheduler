@@ -3,9 +3,9 @@ import type { Subject, Tuple } from '@/lib/types/domain';
 import type { FilterState } from '@/lib/utils/tutors';
 import { TupleRow } from './TupleRow';
 
-const CONF_LEVELS = ['HIGH', 'MEDIUM', 'UNPROVEN', 'LOW'] as const;
+const CONF_LEVELS = ['HIGH', 'MEDIUM', 'LOW'] as const;
 const CONF_LABEL: Record<string, string> = {
-  HIGH: 'High', MEDIUM: 'Med', UNPROVEN: 'Unprov', LOW: 'Low',
+  HIGH: 'High', MEDIUM: 'Med', LOW: 'Low',
 };
 
 interface FilterPanelProps {

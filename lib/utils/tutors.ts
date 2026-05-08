@@ -87,7 +87,7 @@ export function parseFilters(params: URLSearchParams): FilterState {
   return {
     q:         params.get('q') ?? '',
     subjects:  params.getAll('subject'),
-    conf:      confRaw.length > 0 ? confRaw : DEFAULT_CONF,
+    conf:      params.has('conf') ? confRaw.filter(Boolean) : DEFAULT_CONF,
     tuples:    params.getAll('tuple').map(parseTuple).filter((t): t is Tuple => t !== null),
     hideAtCap: params.get('cap') !== '0',
     reqId:     params.get('req'),
@@ -98,11 +98,10 @@ export function filtersToParams(f: FilterState): URLSearchParams {
   const p = new URLSearchParams();
   if (f.q) p.set('q', f.q);
   f.subjects.forEach(s => p.append('subject', s));
-  // Only write conf if it differs from default
-  const sortedConf = [...f.conf].sort().join(',');
-  const sortedDefault = [...DEFAULT_CONF].sort().join(',');
-  if (sortedConf !== sortedDefault) {
+  if (f.conf.length > 0) {
     f.conf.forEach(c => p.append('conf', c));
+  } else {
+    p.set('conf', ''); // sentinel: conf explicitly cleared (deselect-all)
   }
   f.tuples.forEach(t => p.append('tuple', `${t.day}:${t.start}:${t.end}`));
   if (!f.hideAtCap) p.set('cap', '0');
