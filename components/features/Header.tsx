@@ -41,6 +41,11 @@ export function Header() {
   const tabs = NAV_TABS[role];
   const user = ROLE_DEMO_USER[role];
 
+  // Most-specific match wins: /dashboard/tutors beats /dashboard
+  const activeHref = tabs
+    .filter(t => pathname === t.href || (t.href !== '/' && pathname.startsWith(t.href + '/')))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+
   return (
     <header className="h-14 bg-surface-1 border-b border-border-default flex items-center px-5 gap-4 shrink-0 z-40">
       {/* Logo */}
@@ -70,7 +75,7 @@ export function Header() {
       {/* Nav tabs */}
       <nav className="flex items-center gap-0.5 ml-3">
         {tabs.map(({ label, href }) => {
-          const isActive = pathname === href || (href !== '/' && pathname.startsWith(href + '/'));
+          const isActive = href === activeHref;
           return (
             <Link
               key={href}

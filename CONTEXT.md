@@ -75,8 +75,12 @@ The coordinator's historical assessment of a tutor's performance on a given subj
 _Avoid_: tutor confidence, self-rating
 
 **Qualification Note**:
-Free text a tutor writes when adding a subject, explaining their experience or qualifications.
+Free text a tutor writes when adding or editing a subject, explaining their experience or qualifications. Required on both add and edit. When editing, the note explains what changed. The most recent note is stored on the `tutor_subjects` row and shown to coordinators on the subjects review page.
 _Avoid_: bio, description
+
+**Subject Pending Review**:
+A tutor-subject entry where `coordinator_confidence = UNPROVEN`. This state is set automatically when a tutor adds a new subject or edits their self-reported confidence. Coordinators review these at `/dashboard/subjects` and set their assessment. There is no separate "pending" status — UNPROVEN is the indicator.
+_Avoid_: pending subject, unapproved subject
 
 ### Tutor profile
 
