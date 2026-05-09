@@ -67,9 +67,10 @@ export async function PATCH(
  * DELETE /api/tutor-subjects/[id]
  * Tutor removes one of their own subject claims.
  * [id] is the tutor_subjects row id (not the subject_id).
+ * Body: { reason: string } — tutor's explanation, stored as a final note for coordinator visibility.
  */
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireActiveRole(['TUTOR', 'COORDINATOR', 'SUPER_ADMIN']);
@@ -104,3 +105,4 @@ export async function DELETE(
 
   return NextResponse.json({ id });
 }
+

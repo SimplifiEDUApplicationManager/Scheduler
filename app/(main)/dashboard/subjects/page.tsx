@@ -1,3 +1,4 @@
+import { DEV_BYPASS } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { CoordinatorSubjectsClient } from '@/components/features/subjects/CoordinatorSubjectsClient';
 
@@ -29,6 +30,10 @@ export interface TutorClaim {
 }
 
 export default async function SubjectsPage() {
+  if (DEV_BYPASS) {
+    return <CoordinatorSubjectsClient initialSubjects={[]} claimsBySubject={{}} />;
+  }
+
   const supabase = await createClient();
 
   const [

@@ -5,6 +5,7 @@ import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/doma
 import { DEV_BYPASS } from '@/lib/env';
 import { AddSubjectModal } from './AddSubjectModal';
 import { EditSubjectModal } from './EditSubjectModal';
+import { DeleteSubjectModal } from './DeleteSubjectModal';
 
 interface Props {
   me: Tutor;
@@ -59,6 +60,7 @@ export function SubjectsClient({ me, allSubjects }: Props) {
   const [mySubjects, setMySubjects] = useState<TutorSubject[]>(me.subjects);
   const [addOpen, setAddOpen]         = useState(false);
   const [editingTs, setEditingTs]     = useState<TutorSubject | null>(null);
+  const [deletingTs, setDeletingTs]   = useState<TutorSubject | null>(null);
   const [toast, setToast]             = useState<string | null>(null);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
@@ -87,24 +89,29 @@ export function SubjectsClient({ me, allSubjects }: Props) {
     showToast(`${name} added · confidence set to Unproven`);
   }
 
-  async function handleRemove(ts: TutorSubject) {
+  async function handleRemove(ts: TutorSubject, reason: string) {
+    setDeletingTs(null);
     if (DEV_BYPASS) {
       setMySubjects(prev => prev.filter(x => x.id !== ts.id));
-      showToast('Subject removed');
+      showToast('Subject removed · coordinator notified');
       return;
     }
     if (!ts.rowId) {
       showToast('Cannot remove: subject has no row ID');
       return;
     }
-    const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, { method: 'DELETE' });
+    const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
     if (!res.ok) {
       const body = await res.json() as { error?: string };
       showToast(`Error: ${body.error ?? 'Failed to remove subject'}`);
       return;
     }
     setMySubjects(prev => prev.filter(x => x.id !== ts.id));
-    showToast('Subject removed');
+    showToast('Subject removed · coordinator notified');
   }
 
 
@@ -204,7 +211,7 @@ export function SubjectsClient({ me, allSubjects }: Props) {
                   ts={ts}
                   subject={subject}
                   onEdit={() => setEditingTs(ts)}
-                  onRemove={() => handleRemove(ts)}
+                  onRemove={() => setDeletingTs(ts)}
                 />
               );
             })}
@@ -229,6 +236,17 @@ export function SubjectsClient({ me, allSubjects }: Props) {
             subject={subject}
             onClose={() => setEditingTs(null)}
             onSave={updated => handleEdit(editingTs, updated)}
+          />
+        ) : null;
+      })()}
+
+      {deletingTs && (() => {
+        const subject = allSubjects.find(s => s.id === deletingTs.id);
+        return subject ? (
+          <DeleteSubjectModal
+            subject={subject}
+            onClose={() => setDeletingTs(null)}
+            onConfirm={reason => handleRemove(deletingTs, reason)}
           />
         ) : null;
       })()}
