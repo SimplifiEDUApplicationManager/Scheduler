@@ -48,8 +48,8 @@ export async function PATCH(
   const { data, error } = await supabase
     .from('tutor_subjects')
     .update({
-      tutor_confidence,
-      qualification_note: qualification_note.trim(),
+      tutor_confidence: tutor_confidence as string,
+      qualification_note: (qualification_note as string).trim(),
       coordinator_confidence: 'UNPROVEN',
     })
     .eq('id', id)
