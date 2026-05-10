@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
 import type { SchedulerSummary } from '@/lib/nylas/scheduler';
 import { Avatar } from '@/components/ui/Avatar';
@@ -52,6 +53,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const [activeSection, setActive] = useState<SectionId>('profile');
   const [editingScheduler, setEditingScheduler] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
 
   const touch = () => setDirty(true);
 
@@ -72,6 +74,10 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
 
+  async function safeJson(res: Response): Promise<Record<string, unknown>> {
+    try { return await res.json() as Record<string, unknown>; } catch { return {}; }
+  }
+
   async function handleAdd(ts: TutorSubject) {
     const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
     if (DEV_BYPASS) {
@@ -80,20 +86,20 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
       showToast(`${name} added · confidence set to Unproven`);
       return;
     }
-    const res = await fetch('/api/tutor-subjects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject_id: ts.id, qualification_note: ts.qualificationNote, tutor_confidence: ts.conf }),
-    });
-    if (!res.ok) {
-      const body = await res.json() as { error?: string };
-      showToast(`Error: ${body.error ?? 'Failed to add subject'}`);
-      return;
+    try {
+      const res = await fetch('/api/tutor-subjects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject_id: ts.id, qualification_note: ts.qualificationNote, tutor_confidence: ts.conf }),
+      });
+      const body = await safeJson(res);
+      if (!res.ok) { showToast(`Error: ${String(body.error ?? 'Failed to add subject')}`); return; }
+      setSubjects(prev => [...prev, { ...ts, rowId: String(body.id ?? ''), coordConf: 'UNPROVEN' }]);
+      setAddOpen(false);
+      showToast(`${name} added · confidence set to Unproven`);
+    } catch {
+      showToast('Failed to add subject — check your connection and try again');
     }
-    const row = await res.json() as { id: string; subject_id: string };
-    setSubjects(prev => [...prev, { ...ts, rowId: row.id, coordConf: 'UNPROVEN' }]);
-    setAddOpen(false);
-    showToast(`${name} added · confidence set to Unproven`);
   }
 
   async function handleEdit(ts: TutorSubject, updated: Pick<TutorSubject, 'conf' | 'qualificationNote'>) {
@@ -105,41 +111,44 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
       return;
     }
     if (!ts.rowId) { showToast('Cannot edit: subject has no row ID'); return; }
-    const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tutor_confidence: updated.conf, qualification_note: updated.qualificationNote }),
-    });
-    if (!res.ok) {
-      const body = await res.json() as { error?: string };
-      showToast(`Error: ${body.error ?? 'Failed to update subject'}`);
-      return;
+    try {
+      const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tutor_confidence: updated.conf, qualification_note: updated.qualificationNote }),
+      });
+      const body = await safeJson(res);
+      if (!res.ok) { showToast(`Error: ${String(body.error ?? 'Failed to update subject')}`); return; }
+      setSubjects(prev => prev.map(x => x.id === ts.id ? { ...x, conf: updated.conf, qualificationNote: updated.qualificationNote } : x));
+      setEditingTs(null);
+      showToast(`${name} updated · coordinator notified`);
+    } catch {
+      showToast('Failed to update subject — check your connection and try again');
     }
-    setSubjects(prev => prev.map(x => x.id === ts.id ? { ...x, conf: updated.conf, qualificationNote: updated.qualificationNote } : x));
-    setEditingTs(null);
-    showToast(`${name} updated · coordinator notified`);
   }
 
   async function handleRemove(ts: TutorSubject, reason: string) {
-    setDeletingTs(null);
     if (DEV_BYPASS) {
+      setDeletingTs(null);
       setSubjects(prev => prev.filter(x => x.id !== ts.id));
       showToast('Subject removed · coordinator notified');
       return;
     }
-    if (!ts.rowId) { showToast('Cannot remove: subject has no row ID'); return; }
-    const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason }),
-    });
-    if (!res.ok) {
-      const body = await res.json() as { error?: string };
-      showToast(`Error: ${body.error ?? 'Failed to remove subject'}`);
-      return;
+    if (!ts.rowId) { setDeletingTs(null); showToast('Cannot remove: subject has no row ID'); return; }
+    try {
+      const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      const body = await safeJson(res);
+      if (!res.ok) { showToast(`Error: ${String(body.error ?? 'Failed to remove subject')}`); return; }
+      setDeletingTs(null);
+      setSubjects(prev => prev.filter(x => x.id !== ts.id));
+      showToast('Subject removed · coordinator notified');
+    } catch {
+      showToast('Failed to remove subject — check your connection and try again');
     }
-    setSubjects(prev => prev.filter(x => x.id !== ts.id));
-    showToast('Subject removed · coordinator notified');
   }
 
   async function save(msg: string) {
@@ -167,6 +176,16 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
     setDirty(false);
     showToast(msg);
   }
+
+  // Scroll to section from ?section= query param on initial mount
+  useEffect(() => {
+    const section = searchParams.get('section') as SectionId | null;
+    if (!section) return;
+    const root = scrollRef.current;
+    const el = root?.querySelector<HTMLElement>(`#sec-${section}`);
+    if (root && el) root.scrollTo({ top: el.offsetTop - 20, behavior: 'smooth' });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Scrollspy
   useEffect(() => {
