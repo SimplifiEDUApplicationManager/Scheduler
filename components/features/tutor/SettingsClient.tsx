@@ -1,21 +1,31 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
-import type { Tutor, Subject, TutorSubject } from '@/lib/types/domain';
+import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
 import type { SchedulerSummary } from '@/lib/nylas/scheduler';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { AddSubjectModal } from './AddSubjectModal';
+import { EditSubjectModal } from './EditSubjectModal';
+import { DeleteSubjectModal } from './DeleteSubjectModal';
 import { BookingPagePreview } from './BookingPagePreview';
+import { DEV_BYPASS } from '@/lib/env';
 
 interface Props { me: Tutor; allSubjects: Subject[]; schedulerSummary: SchedulerSummary | null }
 
 const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'];
 
+const CONF_META: Record<SubjectConf, { label: string; bg: string; fg: string; bar: string }> = {
+  HIGH:   { label: 'High',   bg: '#DCFCE7', fg: '#166534', bar: '#22C55E' },
+  MEDIUM: { label: 'Medium', bg: '#DBEAFE', fg: '#1E40AF', bar: '#3B82F6' },
+  LOW:    { label: 'Low',    bg: '#FEE2E2', fg: '#991B1B', bar: '#EF4444' },
+};
+const CONF_ORDER: SubjectConf[] = ['HIGH', 'MEDIUM', 'LOW'];
 
 const NAV = [
   ['profile',       'Profile'],
   ['capacity',      'Capacity'],
+  ['subjects',      'My subjects'],
   ['hours',         'Working hours'],
   ['calendar',      'Calendar'],
   ['notifications', 'Notifications'],
@@ -34,8 +44,10 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const [notifs, setNotifs]       = useState({ newRequest: true, reminders: true, coordMessages: true, cancellations: true, weeklySummary: false });
   const [dirty, setDirty]         = useState(false);
   const [isPaused, setIsPaused]   = useState(false);
-  const [addOpen, setAddOpen]     = useState(false);
-  const [pauseOpen, setPauseOpen] = useState(false);
+  const [addOpen, setAddOpen]       = useState(false);
+  const [editingTs, setEditingTs]   = useState<TutorSubject | null>(null);
+  const [deletingTs, setDeletingTs] = useState<TutorSubject | null>(null);
+  const [pauseOpen, setPauseOpen]   = useState(false);
   const [toast, setToast]         = useState<string | null>(null);
   const [activeSection, setActive] = useState<SectionId>('profile');
   const [editingScheduler, setEditingScheduler] = useState(false);
@@ -59,6 +71,76 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const maxError = maxHours < 6 || maxHours > 40;
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
+
+  async function handleAdd(ts: TutorSubject) {
+    const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
+    if (DEV_BYPASS) {
+      setSubjects(prev => [...prev, { ...ts, rowId: `dev-${ts.id}`, coordConf: 'UNPROVEN' }]);
+      setAddOpen(false);
+      showToast(`${name} added · confidence set to Unproven`);
+      return;
+    }
+    const res = await fetch('/api/tutor-subjects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject_id: ts.id, qualification_note: ts.qualificationNote, tutor_confidence: ts.conf }),
+    });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to add subject'}`);
+      return;
+    }
+    const row = await res.json() as { id: string; subject_id: string };
+    setSubjects(prev => [...prev, { ...ts, rowId: row.id, coordConf: 'UNPROVEN' }]);
+    setAddOpen(false);
+    showToast(`${name} added · confidence set to Unproven`);
+  }
+
+  async function handleEdit(ts: TutorSubject, updated: Pick<TutorSubject, 'conf' | 'qualificationNote'>) {
+    const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
+    if (DEV_BYPASS) {
+      setSubjects(prev => prev.map(x => x.id === ts.id ? { ...x, conf: updated.conf, qualificationNote: updated.qualificationNote } : x));
+      setEditingTs(null);
+      showToast(`${name} updated · coordinator notified`);
+      return;
+    }
+    if (!ts.rowId) { showToast('Cannot edit: subject has no row ID'); return; }
+    const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tutor_confidence: updated.conf, qualification_note: updated.qualificationNote }),
+    });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to update subject'}`);
+      return;
+    }
+    setSubjects(prev => prev.map(x => x.id === ts.id ? { ...x, conf: updated.conf, qualificationNote: updated.qualificationNote } : x));
+    setEditingTs(null);
+    showToast(`${name} updated · coordinator notified`);
+  }
+
+  async function handleRemove(ts: TutorSubject, reason: string) {
+    setDeletingTs(null);
+    if (DEV_BYPASS) {
+      setSubjects(prev => prev.filter(x => x.id !== ts.id));
+      showToast('Subject removed · coordinator notified');
+      return;
+    }
+    if (!ts.rowId) { showToast('Cannot remove: subject has no row ID'); return; }
+    const res = await fetch(`/api/tutor-subjects/${ts.rowId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to remove subject'}`);
+      return;
+    }
+    setSubjects(prev => prev.filter(x => x.id !== ts.id));
+    showToast('Subject removed · coordinator notified');
+  }
 
   async function save(msg: string) {
     try {
@@ -205,6 +287,68 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
             </div>
           </Card>
 
+          {/* My subjects */}
+          <Card id="subjects" title="My subjects" subtitle="The subjects you teach. Coordinators see your confidence level when filtering tutors.">
+            {/* Confidence legend */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 14, padding: '10px 14px', background: '#FAFAFA', borderRadius: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#52525B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>My confidence</span>
+              {CONF_ORDER.map(k => {
+                const m = CONF_META[k];
+                return (
+                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 3, background: m.bar }} />
+                    <span style={{ fontSize: 11, color: '#52525B', fontWeight: 600 }}>{m.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Cards grid */}
+            {mySubjects.length === 0 ? (
+              <div style={{ padding: '28px 16px', border: '2px dashed #E4E4E7', borderRadius: 10, textAlign: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#18181B' }}>No subjects yet</div>
+                <p style={{ fontSize: 12, color: '#71717A', margin: '4px 0 0' }}>Add the subjects you&apos;re comfortable teaching.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 12 }}>
+                {[...mySubjects].sort((a, b) => CONF_ORDER.indexOf(a.conf) - CONF_ORDER.indexOf(b.conf)).map(ts => {
+                  const subject = allSubjects.find(s => s.id === ts.id);
+                  if (!subject) return null;
+                  const meta = CONF_META[ts.conf];
+                  return (
+                    <div key={ts.id} style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, overflow: 'hidden', position: 'relative' }}>
+                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: meta.bar }} />
+                      <div style={{ padding: '12px 12px 12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#18181B' }}>{subject.name}</div>
+                          <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 1 }}>{subject.cat}</div>
+                        </div>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, background: meta.bg, color: meta.fg, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                          <span style={{ width: 5, height: 5, borderRadius: 999, background: meta.bar }} />
+                          {meta.label}
+                        </span>
+                        <button onClick={() => setEditingTs(ts)} title="Edit confidence" style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #E4E4E7', background: '#fff', color: '#71717A', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden><path d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z" /></svg>
+                        </button>
+                        <button onClick={() => setDeletingTs(ts)} title="Remove subject" style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #FECACA', background: '#fff', color: '#DC2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M2 2l8 8M10 2l-8 8" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <button
+              onClick={() => setAddOpen(true)}
+              style={{ height: 34, padding: '0 14px', borderRadius: 8, border: 'none', background: '#18181B', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <svg width={12} height={12} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" aria-hidden><path d="M6.5 2v9M2 6.5h9" /></svg>
+              Add a subject
+            </button>
+          </Card>
+
           {/* Working hours & meeting link */}
           <Card id="hours" title="Working hours & meeting link" subtitle="Working hours and exceptions are managed on Nylas. Your permanent meeting link auto-populates in all calendar invites.">
             <Row label="Permanent meeting link" sub="Pasted into every confirmed session invite. Use a link that doesn't expire (e.g. Google Meet personal room or Zoom PMI).">
@@ -328,9 +472,32 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           allSubjects={allSubjects}
           existing={mySubjects.map(s => s.id)}
           onClose={() => setAddOpen(false)}
-          onAdd={ts => { setSubjects(prev => [...prev, ts]); setAddOpen(false); save('Subject added · pending coordinator review'); touch(); }}
+          onAdd={handleAdd}
         />
       )}
+
+      {editingTs && (() => {
+        const subject = allSubjects.find(s => s.id === editingTs.id);
+        return subject ? (
+          <EditSubjectModal
+            ts={editingTs}
+            subject={subject}
+            onClose={() => setEditingTs(null)}
+            onSave={updated => handleEdit(editingTs, updated)}
+          />
+        ) : null;
+      })()}
+
+      {deletingTs && (() => {
+        const subject = allSubjects.find(s => s.id === deletingTs.id);
+        return subject ? (
+          <DeleteSubjectModal
+            subject={subject}
+            onClose={() => setDeletingTs(null)}
+            onConfirm={reason => handleRemove(deletingTs, reason)}
+          />
+        ) : null;
+      })()}
 
       {pauseOpen && (
         <PauseModal
