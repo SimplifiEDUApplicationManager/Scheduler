@@ -169,7 +169,7 @@ export function AsanaConnectionClient({ connected: initialConnected, projectName
             </button>
           )}
 
-          {step === 'picking' && (
+          {(step === 'picking' || step === 'connecting') && (
             <div style={{ marginTop: 12 }}>
               <label style={labelStyle()}>Choose your Asana project</label>
               <div style={{ display: 'flex', gap: 8 }}>
