@@ -148,7 +148,7 @@ export function AsanaConnectionClient({ connected: initialConnected, projectName
           </p>
 
           <div style={{ marginBottom: 12 }}>
-            <label style={labelStyle}>Personal Access Token</label>
+            <label style={labelStyle()}>Personal Access Token</label>
             <input
               type="password"
               value={pat}
@@ -171,7 +171,7 @@ export function AsanaConnectionClient({ connected: initialConnected, projectName
 
           {step === 'picking' && (
             <div style={{ marginTop: 12 }}>
-              <label style={labelStyle}>Choose your Asana project</label>
+              <label style={labelStyle()}>Choose your Asana project</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <select
                   value={selectedGid}
