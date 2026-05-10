@@ -19,7 +19,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   const { data: row } = await supabase
     .from('users')
-    .select('name, email')
+    .select('name, email, role')
     .eq('id', user.id)
     .single();
 
@@ -27,7 +27,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   return (
     <>
-      <Header authUser={{ name: row.name, email: row.email, navRole: 'coordinator' }} />
+      <Header authUser={{ name: row.name, email: row.email, navRole: 'coordinator', dbRole: row.role }} />
       <main className="flex-1 overflow-auto">{children}</main>
     </>
   );

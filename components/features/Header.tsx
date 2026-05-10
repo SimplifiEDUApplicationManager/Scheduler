@@ -21,6 +21,8 @@ export interface AuthUser {
   email: string;
   /** Which nav set to render — determined by the layout, not the DB role. */
   navRole: UserRole;
+  /** Raw DB role — used to surface the Admin link for SUPER_ADMIN. */
+  dbRole: 'SUPER_ADMIN' | 'COORDINATOR' | 'TUTOR';
 }
 
 const ROLES: UserRole[] = ['coordinator', 'tutor', 'admin'];
@@ -105,6 +107,20 @@ export function Header({ authUser }: { authUser?: AuthUser }) {
             </Link>
           );
         })}
+        {/* Admin link — shown for SUPER_ADMIN in production */}
+        {!DEV_BYPASS && authUser?.dbRole === 'SUPER_ADMIN' && (
+          <Link
+            href="/admin"
+            className={cn(
+              'px-2.5 py-1.5 rounded-md text-sm transition-colors',
+              pathname.startsWith('/admin')
+                ? 'bg-surface-3 text-fg-1 font-semibold'
+                : 'text-fg-3 font-medium hover:text-fg-2 hover:bg-surface-3',
+            )}
+          >
+            Admin
+          </Link>
+        )}
       </nav>
 
       {/* User info + logout */}
