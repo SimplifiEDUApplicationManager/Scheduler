@@ -49,11 +49,11 @@ export interface NylasErrorResponse {
 
 export type NylasResult<T> =
   | { ok: true; data: T; requestId: string }
-  | { ok: false; error: string; requestId: string };
+  | { ok: false; error: string; statusCode: number; requestId: string };
 
 export type NylasListResult<T> =
   | { ok: true; data: T[]; requestId: string; nextCursor?: string }
-  | { ok: false; error: string; requestId: string };
+  | { ok: false; error: string; statusCode: number; requestId: string };
 
 // ── Base request ──────────────────────────────────────────────────────────────
 
@@ -83,10 +83,10 @@ async function nylasRequest<T>(
   return { raw, status: res.status, requestId };
 }
 
-function extractError(raw: unknown, requestId: string): { ok: false; error: string; requestId: string } {
+function extractError(raw: unknown, requestId: string, statusCode: number): { ok: false; error: string; statusCode: number; requestId: string } {
   const errorBody = raw as Partial<NylasErrorResponse> | null;
   const msg = errorBody?.error?.message ?? `Nylas API error`;
-  return { ok: false, error: msg, requestId };
+  return { ok: false, error: msg, statusCode, requestId };
 }
 
 // ── Public helpers ────────────────────────────────────────────────────────────
@@ -94,14 +94,14 @@ function extractError(raw: unknown, requestId: string): { ok: false; error: stri
 /** GET a single resource. */
 export async function nylasGet<T>(path: string): Promise<NylasResult<T>> {
   const { raw, status, requestId } = await nylasRequest('GET', path);
-  if (status >= 400) return extractError(raw, requestId);
+  if (status >= 400) return extractError(raw, requestId, status);
   return { ok: true, data: (raw as NylasSingleResponse<T>).data, requestId };
 }
 
 /** GET a list resource (supports pagination via next_cursor). */
 export async function nylasList<T>(path: string): Promise<NylasListResult<T>> {
   const { raw, status, requestId } = await nylasRequest('GET', path);
-  if (status >= 400) return extractError(raw, requestId);
+  if (status >= 400) return extractError(raw, requestId, status);
   const typed = raw as NylasListResponse<T>;
   return { ok: true, data: typed.data, requestId, nextCursor: typed.next_cursor };
 }
@@ -109,21 +109,21 @@ export async function nylasList<T>(path: string): Promise<NylasListResult<T>> {
 /** POST a resource. */
 export async function nylasPost<T>(path: string, body: unknown): Promise<NylasResult<T>> {
   const { raw, status, requestId } = await nylasRequest('POST', path, body);
-  if (status >= 400) return extractError(raw, requestId);
+  if (status >= 400) return extractError(raw, requestId, status);
   return { ok: true, data: (raw as NylasSingleResponse<T>).data, requestId };
 }
 
 /** PUT a resource. */
 export async function nylasPut<T>(path: string, body: unknown): Promise<NylasResult<T>> {
   const { raw, status, requestId } = await nylasRequest('PUT', path, body);
-  if (status >= 400) return extractError(raw, requestId);
+  if (status >= 400) return extractError(raw, requestId, status);
   return { ok: true, data: (raw as NylasSingleResponse<T>).data, requestId };
 }
 
 /** DELETE a resource. Returns ok:true with data:null on 204. */
 export async function nylasDelete(path: string): Promise<NylasResult<null>> {
   const { raw, status, requestId } = await nylasRequest('DELETE', path);
-  if (status >= 400) return extractError(raw, requestId);
+  if (status >= 400) return extractError(raw, requestId, status);
   return { ok: true, data: null, requestId };
 }
 

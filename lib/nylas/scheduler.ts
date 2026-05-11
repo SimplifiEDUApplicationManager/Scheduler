@@ -158,18 +158,66 @@ interface SchedulingSession {
   url: string;
 }
 
+interface CreatedConfig {
+  id: string;
+}
+
 /**
  * Mint a short-lived Nylas Scheduler edit session for the given configuration.
- * Returns the edit URL, or null on failure.
+ * Returns { url } on success or { url: null, error } on failure.
  */
-export async function mintSchedulerEditUrl(configId: string): Promise<string | null> {
+export async function mintSchedulerEditUrl(
+  configId: string,
+): Promise<{ url: string } | { url: null; error: string; configGone: boolean }> {
   const result = await nylasPost<SchedulingSession>(
     '/v3/scheduling/sessions',
     { configuration_id: configId },
   );
   if (!result.ok) {
     console.error('[nylas/scheduler] Failed to mint session:', result.error);
+    return { url: null, error: result.error, configGone: result.statusCode === 404 };
+  }
+  return { url: result.data.url };
+}
+
+/**
+ * Create a minimal Nylas Scheduler configuration for a tutor.
+ * Returns { configId, bookingUrl } on success or null on failure.
+ *
+ * The tutor can customise working hours, capacity, etc. through the hosted
+ * editor once the configuration exists.
+ */
+export async function createSchedulerConfig(params: {
+  tutorName: string;
+  tutorEmail: string;
+  timezone: string;
+  meetingLink?: string;
+}): Promise<{ configId: string; bookingUrl: string } | null> {
+  const apiUri = process.env.NYLAS_API_URI ?? 'https://api.us.nylas.com';
+  const region = apiUri.includes('.eu.') ? 'eu' : 'us';
+
+  const result = await nylasPost<CreatedConfig>('/v3/scheduling/configurations', {
+    requires_session_auth: false,
+    participants: [{
+      name: params.tutorName,
+      email: params.tutorEmail,
+      is_organizer: true,
+      availability: { calendar_ids: ['primary'] },
+      booking:      { calendar_id: 'primary' },
+    }],
+    availability: { duration_minutes: 60 },
+    event_booking: {
+      title: 'Tutoring Session',
+      timezone: params.timezone || 'America/New_York',
+      ...(params.meetingLink ? { location: params.meetingLink } : {}),
+    },
+  });
+
+  if (!result.ok) {
+    console.error('[nylas/scheduler] Failed to create config:', result.error);
     return null;
   }
-  return result.data.url;
+
+  const configId = result.data.id;
+  return { configId, bookingUrl: `https://book.nylas.com/${region}/${configId}` };
 }
