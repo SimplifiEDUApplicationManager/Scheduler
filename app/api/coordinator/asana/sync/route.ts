@@ -45,14 +45,14 @@ export async function POST() {
     asana_task_id:   t.gid,
     asana_task_url:  t.permalink_url,
     source:          'asana' as const,
-    status:          'open',
+    // status intentionally omitted — never overwrite on re-sync so matched requests stay matched
     student_name:    t.name || 'Unnamed request',
     notes:           t.notes || null,
     start_date:      t.due_on || null,
   }));
 
   // Upsert on asana_task_id; only update mutable fields (not coordinator_id or status).
-  const { error, count } = await supabase
+  const { error, data: upserted } = await supabase
     .from('requests')
     .upsert(rows, {
       onConflict: 'asana_task_id',
@@ -64,5 +64,5 @@ export async function POST() {
     return NextResponse.json({ error: error.message, status: 500 }, { status: 500 });
   }
 
-  return NextResponse.json({ synced: count ?? rows.length });
+  return NextResponse.json({ synced: upserted?.length ?? rows.length });
 }
