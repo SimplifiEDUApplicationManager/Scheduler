@@ -78,6 +78,7 @@ export interface TuitionRequest {
   notes: string;
   status: RequestStatus;
   matchedTutorId?: string;
+  asanaTaskId?: string;
 }
 
 // ── Invitation (system onboarding — not a Proposal) ────────────────────────

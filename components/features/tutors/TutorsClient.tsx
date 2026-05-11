@@ -181,6 +181,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
           request={activeReq}
           onClose={() => setProposeFor(null)}
           onSend={() => handleProposeSend(proposeFor.name)}
+          asanaTaskId={activeReq?.asanaTaskId}
         />
       )}
 
