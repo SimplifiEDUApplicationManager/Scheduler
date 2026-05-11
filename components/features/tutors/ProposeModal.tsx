@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import type { Tutor, TuitionRequest } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
@@ -8,11 +10,46 @@ interface ProposeModalProps {
   tutor: Tutor;
   request: TuitionRequest | null;
   onClose: () => void;
-  onSend: () => void;
+  /** Called with the tutor's name on successful submission. */
+  onSend: (tutorName: string) => void;
 }
 
 export function ProposeModal({ tutor, request, onClose, onSend }: ProposeModalProps) {
-  const [notes, setNotes] = useState(request?.notes ?? '');
+  const [notes,      setNotes]      = useState(request?.notes ?? '');
+  const [submitting, setSubmitting] = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+
+  async function handleSend() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/proposals', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tutor_id:           tutor.id,
+          student_name:       request?.studentName  ?? '',
+          student_email:      request?.studentEmail ?? '',
+          subject:            request?.subject      ?? '',
+          requested_schedule: request?.tuples       ?? [],
+          timezone:           request?.tz           ?? 'America/New_York',
+          start_date:         request?.startDate !== '—' ? request?.startDate : null,
+          notes:              notes.trim() || null,
+          asana_task_id:      null,
+        }),
+      });
+      const body = await res.json() as { id?: string; error?: string };
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to send proposal');
+        return;
+      }
+      onSend(tutor.name);
+    } catch {
+      setError('Network error — please try again');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     /* Backdrop */
@@ -37,7 +74,7 @@ export function ProposeModal({ tutor, request, onClose, onSend }: ProposeModalPr
         </div>
 
         {/* Requested windows */}
-        {request && (
+        {request && request.tuples.length > 0 && (
           <div className="bg-surface-2 rounded-lg p-3 mb-4 text-xs text-fg-2">
             <p className="text-[9px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-2">
               Requested windows
@@ -70,10 +107,18 @@ export function ProposeModal({ tutor, request, onClose, onSend }: ProposeModalPr
           placeholder="Any context for the tutor…"
         />
 
+        {error && (
+          <div className="mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-[12px] text-red-700">
+            {error}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-2 justify-end mt-5">
-          <Button variant="secondary" size="md" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" size="md" onClick={onSend}>Send proposal</Button>
+          <Button variant="secondary" size="md" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button variant="primary"   size="md" onClick={handleSend} disabled={submitting}>
+            {submitting ? 'Sending…' : 'Send proposal'}
+          </Button>
         </div>
       </div>
     </div>

@@ -40,6 +40,66 @@ async function asanaGet<T>(path: string, pat: string): Promise<AsanaResult<T>> {
   }
 }
 
+async function asanaPost<T>(path: string, pat: string, body: unknown): Promise<AsanaResult<T>> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${pat}`,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: body }),
+      cache: 'no-store',
+    });
+  } catch {
+    return { ok: false, error: 'Network error reaching Asana' };
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    return { ok: false, error: `Asana error ${res.status}${text ? `: ${text.slice(0, 120)}` : ''}` };
+  }
+
+  try {
+    const json = await res.json() as { data: T };
+    return { ok: true, data: json.data };
+  } catch {
+    return { ok: false, error: 'Unexpected response from Asana' };
+  }
+}
+
+async function asanaPut<T>(path: string, pat: string, body: unknown): Promise<AsanaResult<T>> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${pat}`,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: body }),
+      cache: 'no-store',
+    });
+  } catch {
+    return { ok: false, error: 'Network error reaching Asana' };
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    return { ok: false, error: `Asana error ${res.status}${text ? `: ${text.slice(0, 120)}` : ''}` };
+  }
+
+  try {
+    const json = await res.json() as { data: T };
+    return { ok: true, data: json.data };
+  } catch {
+    return { ok: false, error: 'Unexpected response from Asana' };
+  }
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface AsanaWorkspace {
@@ -53,10 +113,25 @@ export interface AsanaProject {
   workspace: { gid: string };
 }
 
+export interface AsanaTask {
+  gid: string;
+  name: string;
+  notes: string;
+  due_on: string | null;
+  completed: boolean;
+  created_at: string;
+  permalink_url: string;
+}
+
 interface AsanaMe {
   gid: string;
   name: string;
   workspaces: AsanaWorkspace[];
+}
+
+interface AsanaComment {
+  gid: string;
+  text: string;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
@@ -91,4 +166,44 @@ export async function getAsanaProject(
   projectGid: string,
 ): Promise<AsanaResult<AsanaProject>> {
   return asanaGet<AsanaProject>(`/projects/${projectGid}?opt_fields=gid,name,workspace.gid`, pat);
+}
+
+/**
+ * List incomplete tasks in a project.
+ * Returns up to 100 tasks ordered by creation date (newest first).
+ */
+export async function listAsanaTasks(
+  pat: string,
+  projectGid: string,
+): Promise<AsanaResult<AsanaTask[]>> {
+  const fields = 'gid,name,notes,due_on,completed,created_at,permalink_url';
+  return asanaGet<AsanaTask[]>(
+    `/tasks?project=${projectGid}&completed_since=now&opt_fields=${fields}&limit=100`,
+    pat,
+  );
+}
+
+/**
+ * Add a comment to a task. Returns the story GID on success.
+ */
+export async function addAsanaComment(
+  pat: string,
+  taskGid: string,
+  text: string,
+): Promise<AsanaResult<AsanaComment>> {
+  return asanaPost<AsanaComment>(`/tasks/${taskGid}/stories`, pat, { text });
+}
+
+/**
+ * Mark a task as complete.
+ */
+export async function completeAsanaTask(
+  pat: string,
+  taskGid: string,
+): Promise<AsanaResult<{ gid: string; completed: boolean }>> {
+  return asanaPut<{ gid: string; completed: boolean }>(
+    `/tasks/${taskGid}`,
+    pat,
+    { completed: true },
+  );
 }

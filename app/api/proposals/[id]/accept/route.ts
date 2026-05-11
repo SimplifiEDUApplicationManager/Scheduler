@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { requireActiveRole } from '@/lib/auth';
 import { acceptProposal, transitionHttpStatus } from '@/lib/data/proposals';
 import { createTutoringEvent, tupleToUnix } from '@/lib/nylas/events';
+import { addAsanaComment, completeAsanaTask } from '@/lib/asana/client';
 import type { Database } from '@/lib/types/database';
 
 type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
@@ -10,11 +11,11 @@ type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
 /**
  * POST /api/proposals/[id]/accept
  * Tutor accepts a pending proposal addressed to them.
- * On success, creates a Nylas calendar event (best-effort — the accept
- * is never blocked by Nylas availability or errors).
+ * On success:
+ *   1. Creates a Nylas calendar event (best-effort).
+ *   2. If the proposal has an asana_task_id, adds a comment + marks the Asana task complete (best-effort).
  *
- * DB migration required to persist the event ID:
- *   ALTER TABLE proposals ADD COLUMN nylas_event_id text;
+ * Neither the Nylas nor Asana side-effects block the accept — failures are logged only.
  */
 export async function POST(
   _req: NextRequest,
@@ -33,11 +34,15 @@ export async function POST(
     );
   }
 
-  // Create a Nylas calendar event for the first session. This runs after the
-  // accept is committed so a Nylas failure never blocks the tutor's response.
-  await createBookingEvent(id, auth.user.id, auth.supabase).catch(err => {
-    console.error('[proposals/accept] Nylas booking failed:', err);
-  });
+  // Side-effects run after the accept is committed; failures never block the response.
+  await Promise.allSettled([
+    createBookingEvent(id, auth.user.id, auth.supabase).catch(err => {
+      console.error('[proposals/accept] Nylas booking failed:', err);
+    }),
+    updateAsanaTask(id, auth.supabase).catch(err => {
+      console.error('[proposals/accept] Asana update failed:', err);
+    }),
+  ]);
 
   return NextResponse.json({ id });
 }
@@ -89,4 +94,41 @@ async function createBookingEvent(
       .update({ nylas_event_id: nylasEventId })
       .eq('id', proposalId);
   }
+}
+
+async function updateAsanaTask(
+  proposalId: string,
+  supabase: SupabaseInstance,
+): Promise<void> {
+  // Fetch proposal + tutor name + coordinator PAT in one round.
+  const { data: proposal } = await supabase
+    .from('proposals')
+    .select('asana_task_id, coordinator_id, student_name, subject, tutor_id')
+    .eq('id', proposalId)
+    .single();
+
+  if (!proposal?.asana_task_id || !proposal.coordinator_id) return;
+
+  const [{ data: coordinator }, { data: tutor }] = await Promise.all([
+    supabase
+      .from('users')
+      .select('asana_access_token')
+      .eq('id', proposal.coordinator_id)
+      .single(),
+    supabase
+      .from('users')
+      .select('name')
+      .eq('id', proposal.tutor_id ?? '')
+      .single(),
+  ]);
+
+  const pat = coordinator?.asana_access_token;
+  if (!pat) return;
+
+  const tutorName = tutor?.name ?? 'a tutor';
+  const comment = `Matched: ${proposal.student_name} assigned to ${tutorName} for ${proposal.subject ?? 'tutoring'}.`;
+
+  // Add comment (fire-and-forget the complete so a failure on one doesn't kill the other).
+  await addAsanaComment(pat, proposal.asana_task_id, comment);
+  await completeAsanaTask(pat, proposal.asana_task_id);
 }

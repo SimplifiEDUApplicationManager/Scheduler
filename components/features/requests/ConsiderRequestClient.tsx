@@ -178,7 +178,7 @@ export function ConsiderRequestClient({ request: r, tutors }: Props) {
           tutor={proposeFor}
           request={r}
           onClose={() => setProposeFor(null)}
-          onSend={() => handleProposeSend(proposeFor.name)}
+          onSend={handleProposeSend}
         />
       )}
 

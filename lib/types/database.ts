@@ -39,6 +39,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      requests: {
+        Row: {
+          id: string
+          coordinator_id: string
+          asana_task_id: string | null
+          asana_task_url: string | null
+          source: string
+          status: string
+          student_name: string
+          student_email: string
+          subject: string | null
+          requested_schedule: Json | null
+          timezone: string | null
+          start_date: string | null
+          notes: string | null
+          matched_proposal_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          coordinator_id: string
+          asana_task_id?: string | null
+          asana_task_url?: string | null
+          source?: string
+          status?: string
+          student_name: string
+          student_email?: string
+          subject?: string | null
+          requested_schedule?: Json | null
+          timezone?: string | null
+          start_date?: string | null
+          notes?: string | null
+          matched_proposal_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          coordinator_id?: string
+          asana_task_id?: string | null
+          asana_task_url?: string | null
+          source?: string
+          status?: string
+          student_name?: string
+          student_email?: string
+          subject?: string | null
+          requested_schedule?: Json | null
+          timezone?: string | null
+          start_date?: string | null
+          notes?: string | null
+          matched_proposal_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_coordinator_id_fkey"
+            columns: ["coordinator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_matched_proposal_id_fkey"
+            columns: ["matched_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           asana_task_id: string | null
