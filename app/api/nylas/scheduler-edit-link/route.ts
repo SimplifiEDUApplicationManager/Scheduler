@@ -14,14 +14,19 @@ export async function POST() {
     .single();
 
   if (error || !row) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    return NextResponse.json({ error: 'User not found', status: 404 }, { status: 404 });
   }
 
   // Try the existing config first (fast path).
   if (row.nylas_scheduler_config_id) {
     const mint = await mintSchedulerEditUrl(row.nylas_scheduler_config_id);
     if (mint.url) return NextResponse.json({ url: mint.url });
-    // Config is gone in Nylas — fall through to recreate it.
+    // Only fall through to recreate if Nylas confirmed the config is gone (404).
+    // Any other error (rate limit, server error) should surface immediately so
+    // we don't orphan a config the tutor has already customised.
+    if (!mint.configGone) {
+      return NextResponse.json({ error: mint.error, status: 502 }, { status: 502 });
+    }
   }
 
   // Create a fresh Scheduler configuration and persist it.
@@ -33,17 +38,21 @@ export async function POST() {
   });
 
   if (!created) {
-    return NextResponse.json({ error: 'Failed to create scheduler configuration' }, { status: 502 });
+    return NextResponse.json({ error: 'Failed to create scheduler configuration', status: 502 }, { status: 502 });
   }
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('users')
     .update({ nylas_scheduler_config_id: created.configId, booking_page_url: created.bookingUrl })
     .eq('id', user.id);
 
+  if (updateError) {
+    return NextResponse.json({ error: 'Failed to persist scheduler configuration', status: 502 }, { status: 502 });
+  }
+
   const mint = await mintSchedulerEditUrl(created.configId);
   if (!mint.url) {
-    return NextResponse.json({ error: mint.error }, { status: 502 });
+    return NextResponse.json({ error: mint.error, status: 502 }, { status: 502 });
   }
 
   return NextResponse.json({ url: mint.url });

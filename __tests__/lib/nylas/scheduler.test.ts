@@ -31,14 +31,25 @@ describe('mintSchedulerEditUrl', () => {
     expect(result).toEqual({ url: 'https://scheduler.nylas.com/edit?session=sid_1' });
   });
 
-  it('returns { url: null, error } when the config does not exist in Nylas', async () => {
+  it('returns { url: null, configGone: true } on a 404 from Nylas', async () => {
     mockFetch(404, {
       error: { type: 'not_found', message: 'Configuration not found' },
       request_id: 'r2',
     });
     const result = await mintSchedulerEditUrl('cfg-stale');
     expect(result.url).toBeNull();
-    expect(result.error).toBe('Configuration not found');
+    expect((result as { error: string; configGone: boolean }).error).toBe('Configuration not found');
+    expect((result as { configGone: boolean }).configGone).toBe(true);
+  });
+
+  it('returns { url: null, configGone: false } on a transient 500 from Nylas', async () => {
+    mockFetch(500, {
+      error: { type: 'server_error', message: 'Internal server error' },
+      request_id: 'r2b',
+    });
+    const result = await mintSchedulerEditUrl('cfg-ok');
+    expect(result.url).toBeNull();
+    expect((result as { configGone: boolean }).configGone).toBe(false);
   });
 });
 

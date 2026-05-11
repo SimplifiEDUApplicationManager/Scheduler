@@ -168,14 +168,14 @@ interface CreatedConfig {
  */
 export async function mintSchedulerEditUrl(
   configId: string,
-): Promise<{ url: string; error?: never } | { url: null; error: string }> {
+): Promise<{ url: string } | { url: null; error: string; configGone: boolean }> {
   const result = await nylasPost<SchedulingSession>(
     '/v3/scheduling/sessions',
     { configuration_id: configId },
   );
   if (!result.ok) {
     console.error('[nylas/scheduler] Failed to mint session:', result.error);
-    return { url: null, error: result.error };
+    return { url: null, error: result.error, configGone: result.statusCode === 404 };
   }
   return { url: result.data.url };
 }
