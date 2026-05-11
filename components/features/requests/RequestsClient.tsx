@@ -141,6 +141,7 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
           request={proposeFor.request}
           onClose={() => setProposeFor(null)}
           onSend={handleProposeSend}
+          asanaTaskId={proposeFor.request.asanaTaskId}
         />
       )}
 

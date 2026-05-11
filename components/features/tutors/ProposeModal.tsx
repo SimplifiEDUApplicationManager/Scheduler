@@ -12,9 +12,10 @@ interface ProposeModalProps {
   onClose: () => void;
   /** Called with the tutor's name on successful submission. */
   onSend: (tutorName: string) => void;
+  asanaTaskId?: string;
 }
 
-export function ProposeModal({ tutor, request, onClose, onSend }: ProposeModalProps) {
+export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: ProposeModalProps) {
   const [notes,      setNotes]      = useState(request?.notes ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error,      setError]      = useState<string | null>(null);
@@ -35,7 +36,7 @@ export function ProposeModal({ tutor, request, onClose, onSend }: ProposeModalPr
           timezone:           request?.tz           ?? 'America/New_York',
           start_date:         request?.startDate !== '—' ? request?.startDate : null,
           notes:              notes.trim() || null,
-          asana_task_id:      null,
+          asana_task_id:      asanaTaskId ?? null,
         }),
       });
       const body = await res.json() as { id?: string; error?: string };

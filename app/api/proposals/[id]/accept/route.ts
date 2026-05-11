@@ -4,6 +4,7 @@ import { requireActiveRole } from '@/lib/auth';
 import { acceptProposal, transitionHttpStatus } from '@/lib/data/proposals';
 import { createTutoringEvent, tupleToUnix } from '@/lib/nylas/events';
 import { addAsanaComment, completeAsanaTask } from '@/lib/asana/client';
+import { createServiceClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/types/database';
 
 type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
@@ -100,7 +101,7 @@ async function updateAsanaTask(
   proposalId: string,
   supabase: SupabaseInstance,
 ): Promise<void> {
-  // Fetch proposal + tutor name + coordinator PAT in one round.
+  // Fetch proposal + tutor name using the tutor's session (proposals are readable by the tutor).
   const { data: proposal } = await supabase
     .from('proposals')
     .select('asana_task_id, coordinator_id, student_name, subject, tutor_id')
@@ -109,13 +110,16 @@ async function updateAsanaTask(
 
   if (!proposal?.asana_task_id || !proposal.coordinator_id) return;
 
+  // Use the service-role client to read the coordinator's PAT — the tutor's
+  // RLS session cannot read another user's row.
+  const admin = createServiceClient();
   const [{ data: coordinator }, { data: tutor }] = await Promise.all([
-    supabase
+    admin
       .from('users')
       .select('asana_access_token')
       .eq('id', proposal.coordinator_id)
       .single(),
-    supabase
+    admin
       .from('users')
       .select('name')
       .eq('id', proposal.tutor_id ?? '')
@@ -128,7 +132,9 @@ async function updateAsanaTask(
   const tutorName = tutor?.name ?? 'a tutor';
   const comment = `Matched: ${proposal.student_name} assigned to ${tutorName} for ${proposal.subject ?? 'tutoring'}.`;
 
-  // Add comment (fire-and-forget the complete so a failure on one doesn't kill the other).
-  await addAsanaComment(pat, proposal.asana_task_id, comment);
-  await completeAsanaTask(pat, proposal.asana_task_id);
+  // Run comment + complete in parallel so a failure on one doesn't block the other.
+  await Promise.allSettled([
+    addAsanaComment(pat, proposal.asana_task_id, comment),
+    completeAsanaTask(pat, proposal.asana_task_id),
+  ]);
 }

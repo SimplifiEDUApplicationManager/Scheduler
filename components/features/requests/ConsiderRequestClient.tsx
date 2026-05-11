@@ -179,6 +179,7 @@ export function ConsiderRequestClient({ request: r, tutors }: Props) {
           request={r}
           onClose={() => setProposeFor(null)}
           onSend={handleProposeSend}
+          asanaTaskId={r.asanaTaskId}
         />
       )}
 

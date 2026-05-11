@@ -25,6 +25,7 @@ function rowToRequest(row: RequestRow): TuitionRequest {
     startDate:    row.start_date ?? '—',
     notes:        row.notes ?? '',
     receivedAt:   '',
+    asanaTaskId:  row.asana_task_id ?? undefined,
   };
 }
 
