@@ -20,7 +20,7 @@ export async function POST() {
   // Try the existing config first (fast path).
   if (row.nylas_scheduler_config_id) {
     const mint = await mintSchedulerEditUrl(row.nylas_scheduler_config_id);
-    if (mint.url) return NextResponse.json({ url: mint.url });
+    if (mint.url !== null) return NextResponse.json({ url: mint.url });
     // Only fall through to recreate if Nylas confirmed the config is gone (404).
     // Any other error (rate limit, server error) should surface immediately so
     // we don't orphan a config the tutor has already customised.
@@ -51,7 +51,7 @@ export async function POST() {
   }
 
   const mint = await mintSchedulerEditUrl(created.configId);
-  if (!mint.url) {
+  if (mint.url === null) {
     return NextResponse.json({ error: mint.error, status: 502 }, { status: 502 });
   }
 
