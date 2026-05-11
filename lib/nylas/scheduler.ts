@@ -197,7 +197,7 @@ export async function createSchedulerConfig(params: {
   const region = apiUri.includes('.eu.') ? 'eu' : 'us';
 
   const result = await nylasPost<CreatedConfig>('/v3/scheduling/configurations', {
-    requires_session_auth: false,
+    requires_session_auth: true,
     participants: [{
       name: params.tutorName,
       email: params.tutorEmail,
