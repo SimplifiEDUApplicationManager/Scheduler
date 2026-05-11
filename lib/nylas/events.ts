@@ -79,10 +79,68 @@ function toTutorEvent(ev: NylasEvent, tz: string): TutorEvent | null {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+/** Nylas calendar shape (subset). */
+interface NylasCalendar {
+  id: string;
+  read_only: boolean;
+}
+
+/**
+ * Fetch all writable calendar IDs for a grant.
+ * Falls back to ['primary'] on error so callers always get something.
+ */
+async function fetchCalendarIds(grantId: string): Promise<string[]> {
+  const result = await nylasList<NylasCalendar>(
+    `${grantPath(grantId, 'calendars')}?limit=50`,
+  );
+  if (!result.ok) {
+    console.error('[nylas/events] fetchCalendarIds failed:', result.error);
+    return ['primary'];
+  }
+  const ids = result.data.filter(c => !c.read_only).map(c => c.id);
+  return ids.length > 0 ? ids : ['primary'];
+}
+
+/**
+ * Fetch all events for a single calendar, following next_cursor pagination.
+ */
+async function fetchEventsForCalendar(
+  grantId: string,
+  calendarId: string,
+  startUnix: number,
+  endUnix: number,
+): Promise<NylasEvent[]> {
+  const baseParams = new URLSearchParams({
+    calendar_id:      calendarId,
+    start:            String(startUnix),
+    end:              String(endUnix),
+    expand_recurring: 'true',
+    limit:            '200',
+  });
+
+  const events: NylasEvent[] = [];
+  let url = `${grantPath(grantId, 'events')}?${baseParams}`;
+
+  while (url) {
+    const result = await nylasList<NylasEvent>(url);
+    if (!result.ok) {
+      console.error(`[nylas/events] fetchEventsForCalendar(${calendarId}) failed:`, result.error);
+      break;
+    }
+    events.push(...result.data);
+    url = result.nextCursor
+      ? `${grantPath(grantId, 'events')}?${baseParams}&page_token=${result.nextCursor}`
+      : '';
+  }
+
+  return events;
+}
+
 /**
  * Fetch events for a grant within [startUnix, endUnix) and map to TutorEvent[].
+ * Queries all writable calendars and deduplicates by event ID.
  *
- * @param grantId  Nylas grant_id for the tutor's connected calendar.
+ * @param grantId    Nylas grant_id for the tutor's connected calendar.
  * @param startUnix  Week start in Unix seconds (inclusive).
  * @param endUnix    Week end in Unix seconds (exclusive).
  * @param tz         Tutor's IANA timezone (e.g. "America/New_York").
@@ -93,24 +151,25 @@ export async function fetchTutorEvents(
   endUnix: number,
   tz: string,
 ): Promise<TutorEvent[]> {
-  const params = new URLSearchParams({
-    calendar_id:       'primary',
-    start:             String(startUnix),
-    end:               String(endUnix),
-    expand_recurring:  'true',
-    limit:             '200',
-  });
+  const calendarIds = await fetchCalendarIds(grantId);
 
-  const result = await nylasList<NylasEvent>(
-    `${grantPath(grantId, 'events')}?${params}`,
+  const perCalendar = await Promise.all(
+    calendarIds.map(id => fetchEventsForCalendar(grantId, id, startUnix, endUnix)),
   );
 
-  if (!result.ok) {
-    console.error('[nylas/events] fetchTutorEvents failed:', result.error);
-    return [];
+  // Flatten and deduplicate by event ID (same event can appear in multiple calendars)
+  const seen = new Set<string>();
+  const allEvents: NylasEvent[] = [];
+  for (const batch of perCalendar) {
+    for (const ev of batch) {
+      if (!seen.has(ev.id)) {
+        seen.add(ev.id);
+        allEvents.push(ev);
+      }
+    }
   }
 
-  return result.data
+  return allEvents
     .map(ev => toTutorEvent(ev, tz))
     .filter((ev): ev is TutorEvent => ev !== null);
 }
@@ -207,15 +266,16 @@ export async function createTutoringEvent(
  */
 export function weekRange(weekOffset: number): { startUnix: number; endUnix: number } {
   const now = new Date();
-  const sunday = new Date(now);
-  sunday.setDate(now.getDate() - now.getDay() + weekOffset * 7);
-  sunday.setHours(0, 0, 0, 0);
-
-  const nextSunday = new Date(sunday);
-  nextSunday.setDate(sunday.getDate() + 7);
+  // Use UTC date components so the week boundary is consistent regardless of
+  // the server's local timezone (Vercel runs in UTC, but this makes it explicit).
+  const dayOfWeek = now.getUTCDay(); // 0=Sun
+  const sundayMs =
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    - dayOfWeek * 86_400_000
+    + weekOffset * 7 * 86_400_000;
 
   return {
-    startUnix: Math.floor(sunday.getTime()     / 1000),
-    endUnix:   Math.floor(nextSunday.getTime() / 1000),
+    startUnix: Math.floor(sundayMs / 1000),
+    endUnix:   Math.floor(sundayMs / 1000) + 7 * 86_400,
   };
 }
