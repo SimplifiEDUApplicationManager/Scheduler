@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { TuitionRequest, Invitation, Tutor } from '@/lib/types/domain';
 import { RequestListItem } from './RequestListItem';
@@ -26,6 +26,11 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
       ? reqParam
       : (initialRequests[0]?.id ?? ''),
   );
+
+  // Sync state when the server re-fetches after router.refresh() (e.g. post-sync).
+  useEffect(() => {
+    setRequests(initialRequests);
+  }, [initialRequests]);
   const [proposeFor, setProposeFor]   = useState<{ tutor: Tutor; request: TuitionRequest } | null>(null);
   const [toastMsg, setToastMsg]       = useState<string | null>(null);
   const [syncing, setSyncing]         = useState(false);
