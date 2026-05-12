@@ -15,7 +15,7 @@ export function PendingReviewList({ items }: PendingReviewListProps) {
   if (items.length === 0) {
     return (
       <div className="py-5 text-center">
-        <p className="text-xs font-semibold text-fg-muted mt-1.5">All graded</p>
+        <p className="text-xs font-semibold text-fg-muted mt-1.5">No pending changes</p>
       </div>
     );
   }
@@ -29,7 +29,7 @@ export function PendingReviewList({ items }: PendingReviewListProps) {
             <div className="text-xs font-semibold text-fg-1">{p.tutorName.split(' ')[0]}</div>
             <div className="text-[10px] text-fg-3 mt-px">{p.subjectName}</div>
           </div>
-          <Badge variant="UNPROVEN" size="xs">Unproven</Badge>
+          <Badge variant="warning" size="xs">Pending</Badge>
         </div>
       ))}
       {items.length > 4 && (

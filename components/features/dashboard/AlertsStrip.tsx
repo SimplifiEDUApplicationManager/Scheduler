@@ -30,8 +30,8 @@ export function AlertsStrip({ declined, expired, pendingReviews }: AlertsStripPr
   });
   if (pendingReviews > 0) alerts.push({
     tone: 'info',
-    text: `${pendingReviews} tutor subject claim${pendingReviews === 1 ? '' : 's'} need${pendingReviews === 1 ? 's' : ''} grading`,
-    action: 'Grade',
+    text: `${pendingReviews} subject change request${pendingReviews === 1 ? '' : 's'} awaiting approval`,
+    action: 'Review',
     href: '/dashboard/subjects',
   });
 
