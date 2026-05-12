@@ -2,11 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
-import type { SubjectRow, TutorClaim } from '@/app/(main)/dashboard/subjects/page';
+import type { SubjectRow, TutorClaim, PendingChange } from '@/app/(main)/dashboard/subjects/page';
 
 interface Props {
   initialSubjects: SubjectRow[];
   claimsBySubject: Record<string, TutorClaim[]>;
+  pendingChanges: PendingChange[];
 }
 
 const CONF_OPTIONS = ['HIGH', 'MEDIUM', 'UNPROVEN', 'LOW'] as const;
@@ -45,10 +46,20 @@ const SELF_CONF_BADGE: Record<SelfConf, string> = {
 const AVATAR_TONES = ['brand', 'cream', 'dark', 'neutral'] as const;
 function avatarTone(idx: number) { return AVATAR_TONES[idx % AVATAR_TONES.length]; }
 
-export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: Props) {
+const SELF_CONF_LABEL: Record<string, string> = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' };
+const CHANGE_TYPE_LABEL: Record<string, string> = { ADD: 'Add subject', EDIT: 'Edit confidence', REMOVE: 'Remove subject' };
+const CHANGE_TYPE_COLOR: Record<string, { bg: string; fg: string; dot: string }> = {
+  ADD:    { bg: '#DCFCE7', fg: '#166534', dot: '#22C55E' },
+  EDIT:   { bg: '#DBEAFE', fg: '#1E40AF', dot: '#3B82F6' },
+  REMOVE: { bg: '#FEE2E2', fg: '#991B1B', dot: '#EF4444' },
+};
+
+export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pendingChanges: initialPending }: Props) {
   const [subjects, setSubjects]   = useState<SubjectRow[]>(initialSubjects);
   // Live claims map — mutated as coordinator grades
   const [claims, setClaims]       = useState<Record<string, TutorClaim[]>>(claimsBySubject);
+  const [pending, setPending]     = useState<PendingChange[]>(initialPending);
+  const [busyChanges, setBusyChanges] = useState<Record<string, boolean>>({});
   const [selectedId, setSelectedId] = useState<string | null>(
     initialSubjects[0]?.id ?? null,
   );
@@ -112,6 +123,70 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
     }));
 
     showToast(`Graded as ${CONF_LABEL[confidence]}`);
+  }
+
+  // ── Approve a pending change ──────────────────────────────────────────────
+
+  async function handleApprove(change: PendingChange) {
+    setBusyChanges(prev => ({ ...prev, [change.changeId]: true }));
+    const res = await fetch(`/api/tutor-subject-changes/${change.changeId}/approve`, { method: 'POST' });
+    setBusyChanges(prev => ({ ...prev, [change.changeId]: false }));
+
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to approve'}`);
+      return;
+    }
+
+    // Remove from pending list
+    setPending(prev => prev.filter(c => c.changeId !== change.changeId));
+
+    // Update the claims map to reflect the approved change
+    if (change.changeType === 'ADD') {
+      // The tutor now has an approved claim — they'll appear on next full page reload.
+      // For now, bump the tutorCount on the subject row.
+      setSubjects(prev => prev.map(s =>
+        s.id === change.subjectId ? { ...s, tutorCount: s.tutorCount + 1 } : s,
+      ));
+    }
+    if (change.changeType === 'REMOVE') {
+      setClaims(prev => ({
+        ...prev,
+        [change.subjectId]: (prev[change.subjectId] ?? []).filter(c => c.tutorId !== change.tutorId),
+      }));
+      setSubjects(prev => prev.map(s =>
+        s.id === change.subjectId ? { ...s, tutorCount: Math.max(0, s.tutorCount - 1) } : s,
+      ));
+    }
+    if (change.changeType === 'EDIT' && change.requestedConf) {
+      setClaims(prev => ({
+        ...prev,
+        [change.subjectId]: (prev[change.subjectId] ?? []).map(c =>
+          c.tutorId === change.tutorId
+            ? { ...c, selfConfidence: change.requestedConf!, coordConfidence: 'UNPROVEN', gradedBy: null, qualificationNote: change.requestedNote ?? c.qualificationNote }
+            : c,
+        ),
+      }));
+    }
+
+    showToast('Change approved');
+  }
+
+  // ── Decline a pending change ──────────────────────────────────────────────
+
+  async function handleDecline(change: PendingChange) {
+    setBusyChanges(prev => ({ ...prev, [change.changeId]: true }));
+    const res = await fetch(`/api/tutor-subject-changes/${change.changeId}/decline`, { method: 'POST' });
+    setBusyChanges(prev => ({ ...prev, [change.changeId]: false }));
+
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to decline'}`);
+      return;
+    }
+
+    setPending(prev => prev.filter(c => c.changeId !== change.changeId));
+    showToast('Change declined');
   }
 
   // ── Add subject ───────────────────────────────────────────────────────────
@@ -289,6 +364,81 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
 
       {/* ── Right panel: subject detail ───────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto bg-surface-2">
+
+        {/* ── Pending changes review queue ────────────────────────────────── */}
+        {pending.length > 0 && (
+          <div className="max-w-[820px] mx-auto px-8 pt-8 pb-2">
+            <div className="bg-surface-1 border border-border-default rounded-xl overflow-hidden mb-6">
+              <div className="px-5 py-3 border-b border-border-default bg-amber-50 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                <span className="text-[12px] font-bold text-amber-800 uppercase tracking-[0.07em]">
+                  Pending review · {pending.length} {pending.length === 1 ? 'change' : 'changes'}
+                </span>
+              </div>
+
+              {pending.map((change, idx) => {
+                const busy = busyChanges[change.changeId] ?? false;
+                const typeColor = CHANGE_TYPE_COLOR[change.changeType] ?? CHANGE_TYPE_COLOR.EDIT;
+                return (
+                  <div
+                    key={change.changeId}
+                    className={['flex items-start gap-4 px-5 py-4', idx > 0 ? 'border-t border-border-default' : ''].join(' ')}
+                  >
+                    <Avatar initials={change.tutorInitials} tone="brand" size="md" />
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[13px] font-bold text-fg-1">{change.tutorName}</span>
+                        <span className={['text-[10px] font-bold px-1.5 py-px rounded uppercase tracking-wide'].join(' ')}
+                          style={{ background: typeColor.bg, color: typeColor.fg }}>
+                          {CHANGE_TYPE_LABEL[change.changeType]}
+                        </span>
+                        <span className="text-[11px] text-fg-3 font-semibold">{change.subjectName}</span>
+                      </div>
+
+                      <div className="text-[11px] text-fg-3 mt-1">
+                        {change.changeType === 'EDIT' && change.currentConf && change.requestedConf && (
+                          <span>
+                            Confidence: <span className="font-semibold">{SELF_CONF_LABEL[change.currentConf]}</span>
+                            {' → '}
+                            <span className="font-semibold">{SELF_CONF_LABEL[change.requestedConf]}</span>
+                          </span>
+                        )}
+                        {change.changeType === 'ADD' && change.requestedConf && (
+                          <span>Self-confidence: <span className="font-semibold">{SELF_CONF_LABEL[change.requestedConf]}</span></span>
+                        )}
+                        {change.changeType === 'REMOVE' && (
+                          <span className="text-danger font-semibold">Requesting removal</span>
+                        )}
+                      </div>
+
+                      {change.requestedNote && (
+                        <div className="text-[11px] text-fg-3 mt-1 italic truncate">&ldquo;{change.requestedNote}&rdquo;</div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleDecline(change)}
+                        disabled={busy}
+                        className="h-7 px-3 rounded-md text-[11px] font-semibold border border-border-default text-fg-2 hover:bg-danger-bg hover:text-danger hover:border-danger transition-colors disabled:opacity-50 font-[inherit]"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        onClick={() => handleApprove(change)}
+                        disabled={busy}
+                        className="h-7 px-3 rounded-md text-[11px] font-bold bg-fg-1 text-fg-on-brand hover:opacity-80 transition-opacity disabled:opacity-50 font-[inherit]"
+                      >
+                        {busy ? '…' : 'Approve'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {!selectedSubject ? (
           <div className="flex items-center justify-center h-full text-fg-muted text-sm">
             Select a subject to view tutors

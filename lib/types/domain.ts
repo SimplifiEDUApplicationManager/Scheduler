@@ -4,8 +4,10 @@
 
 // ── Primitives ──────────────────────────────────────────────────────────────
 
-export type SubjectConf    = 'HIGH' | 'MEDIUM' | 'LOW';
-export type CoordConf      = 'HIGH' | 'MEDIUM' | 'UNPROVEN' | 'LOW';
+export type SubjectConf        = 'HIGH' | 'MEDIUM' | 'LOW';
+export type CoordConf          = 'HIGH' | 'MEDIUM' | 'UNPROVEN' | 'LOW';
+export type SubjectChangeType   = 'ADD' | 'EDIT' | 'REMOVE';
+export type SubjectChangeStatus = 'PENDING' | 'APPROVED' | 'DECLINED';
 export type TutorStatus    = 'active' | 'onboarding';
 export type RequestSource  = 'asana' | 'manual';
 export type RequestStatus  = 'open' | 'matched';
@@ -32,12 +34,28 @@ export interface Subject {
   cat: string;
 }
 
+/** A pending or recently-declined change request from a tutor for one of their subjects. */
+export interface TutorSubjectChange {
+  id: string;
+  tutorId: string;
+  subjectId: string;
+  tutorSubjectId?: string;          // present for EDIT / REMOVE
+  changeType: SubjectChangeType;
+  requestedConf?: SubjectConf;      // absent for REMOVE
+  requestedNote?: string;           // absent for REMOVE
+  status: SubjectChangeStatus;
+  declineReason?: string;
+  createdAt: string;
+}
+
 export interface TutorSubject {
   id: string;       // subject_id
   rowId?: string;   // tutor_subjects row id — present when fetched from DB
   conf: SubjectConf;
   coordConf?: CoordConf;
   qualificationNote?: string;
+  /** Active PENDING change for this subject, or most-recent DECLINED change. */
+  pendingChange?: TutorSubjectChange;
 }
 
 // ── Tutor ───────────────────────────────────────────────────────────────────

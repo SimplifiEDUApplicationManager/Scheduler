@@ -8,7 +8,7 @@
 
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/lib/types/database';
-import type { Tutor, TutorSubject, SubjectConf, CoordConf } from '@/lib/types/domain';
+import type { Tutor, TutorSubject, TutorSubjectChange, SubjectConf, CoordConf, SubjectChangeType, SubjectChangeStatus } from '@/lib/types/domain';
 
 type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
 
@@ -55,14 +55,60 @@ type RawTutorRow = {
   }[] | null;
 };
 
-function rowToTutor(row: RawTutorRow): Tutor {
+type RawChangeRow = {
+  id: string;
+  tutor_id: string;
+  subject_id: string;
+  tutor_subject_id: string | null;
+  change_type: string;
+  requested_confidence: string | null;
+  requested_note: string | null;
+  status: string;
+  decline_reason: string | null;
+  created_at: string;
+};
+
+function rowToChange(row: RawChangeRow): TutorSubjectChange {
+  return {
+    id:              row.id,
+    tutorId:         row.tutor_id,
+    subjectId:       row.subject_id,
+    tutorSubjectId:  row.tutor_subject_id ?? undefined,
+    changeType:      row.change_type as SubjectChangeType,
+    requestedConf:   row.requested_confidence ? (row.requested_confidence as SubjectConf) : undefined,
+    requestedNote:   row.requested_note ?? undefined,
+    status:          row.status as SubjectChangeStatus,
+    declineReason:   row.decline_reason ?? undefined,
+    createdAt:       row.created_at,
+  };
+}
+
+function rowToTutor(row: RawTutorRow, pendingChanges: RawChangeRow[]): Tutor {
+  // Build a map of subjectId → pending change for quick lookup
+  const changeBySubjectId = new Map<string, TutorSubjectChange>();
+  for (const c of pendingChanges) {
+    changeBySubjectId.set(c.subject_id, rowToChange(c));
+  }
+
   const subjects: TutorSubject[] = (row.tutor_subjects ?? []).map(ts => ({
     id:                ts.subject_id,
     rowId:             ts.id,
     conf:              ts.tutor_confidence as SubjectConf,
     coordConf:         ts.coordinator_confidence as CoordConf,
     qualificationNote: ts.qualification_note ?? undefined,
+    pendingChange:     changeBySubjectId.get(ts.subject_id),
   }));
+
+  // Append pending ADD changes as subjects that don't have an approved row yet
+  for (const c of pendingChanges) {
+    if (c.change_type === 'ADD' && !subjects.some(s => s.id === c.subject_id)) {
+      subjects.push({
+        id:            c.subject_id,
+        conf:          (c.requested_confidence as SubjectConf) ?? 'MEDIUM',
+        pendingChange: rowToChange(c),
+      });
+    }
+  }
 
   return {
     id:                     row.id,
@@ -85,20 +131,29 @@ function rowToTutor(row: RawTutorRow): Tutor {
   };
 }
 
-/** Fetch a single tutor by their user ID. Returns null if not found or on error. */
+/** Fetch a single tutor by their user ID, including any pending subject change requests. */
 export async function fetchTutor(
   userId: string,
   supabase: SupabaseInstance,
 ): Promise<Tutor | null> {
-  const { data, error } = await supabase
-    .from('users')
-    .select(SELECT_TUTOR)
-    .eq('id', userId)
-    .eq('role', 'TUTOR')
-    .single();
+  const [tutorResult, changesResult] = await Promise.all([
+    supabase
+      .from('users')
+      .select(SELECT_TUTOR)
+      .eq('id', userId)
+      .eq('role', 'TUTOR')
+      .single(),
+    supabase
+      .from('tutor_subject_changes')
+      .select('id, tutor_id, subject_id, tutor_subject_id, change_type, requested_confidence, requested_note, status, decline_reason, created_at')
+      .eq('tutor_id', userId)
+      .eq('status', 'PENDING'),
+  ]);
 
-  if (error || !data) return null;
-  return rowToTutor(data as unknown as RawTutorRow);
+  if (tutorResult.error || !tutorResult.data) return null;
+
+  const pendingChanges = (changesResult.data ?? []) as RawChangeRow[];
+  return rowToTutor(tutorResult.data as unknown as RawTutorRow, pendingChanges);
 }
 
 /** Fetch all active tutors, ordered by name. */
@@ -111,5 +166,6 @@ export async function fetchAllTutors(supabase: SupabaseInstance): Promise<Tutor[
     .order('name');
 
   if (error) throw error;
-  return (data ?? []).map(row => rowToTutor(row as unknown as RawTutorRow));
+  // fetchAllTutors is for coordinator views — no pending changes needed
+  return (data ?? []).map(row => rowToTutor(row as unknown as RawTutorRow, []));
 }
