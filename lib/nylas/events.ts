@@ -183,6 +183,7 @@ interface NylasEventCreateBody {
   when: { object: 'timespan'; start_time: number; end_time: number };
   participants?: { email: string; name: string; status?: string }[];
   location?: string;
+  recurrence?: string[];
 }
 
 interface CreatedNylasEvent {
@@ -242,6 +243,7 @@ export async function createTutoringEvent(
     title: `[Tutoring] ${params.studentName} — ${params.subject}`,
     when: { object: 'timespan', start_time: params.startUnix, end_time: params.endUnix },
     participants: [{ email: params.studentEmail, name: params.studentName, status: 'noreply' }],
+    recurrence: ['RRULE:FREQ=WEEKLY'],
     ...(params.meetingLink ? { location: params.meetingLink } : {}),
   };
 

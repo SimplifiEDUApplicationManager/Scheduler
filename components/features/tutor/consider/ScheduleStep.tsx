@@ -34,56 +34,25 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
 
   const allPlaced = placements.every(pl => pl != null);
 
-  const canDrop = (day: number, start: number, dur: number): boolean => {
-    if (start < START_HR || start + dur > END_HR) return false;
-    if (events.some(e => e.day === day && e.kind === 'session' && e.status !== 'cancelled' && !(start + dur <= e.start || start >= e.end))) return false;
-    return !placements.some((pl, i) => {
-      if (!pl || i === draggingIdx || pl.day !== day) return false;
-      const od = p.tuples[i].end - p.tuples[i].start;
-      return !(start + dur <= pl.start || start >= pl.start + od);
-    });
+  // Placement is only valid at the exact proposed day and start time for the
+  // tuple being dragged. Tutors confirm the coordinator-proposed windows; they
+  // cannot reschedule to arbitrary times.
+  const canDrop = (day: number, start: number, _dur: number): boolean => {
+    if (draggingIdx === null) return false;
+    const tp = p.tuples[draggingIdx];
+    return day === tp.day && start === tp.start;
   };
 
+  // Each tuple has exactly one valid slot: the coordinator-proposed day/time.
   const candidateWindows = useMemo(() => {
     return p.tuples.map((tp, idx) => {
       if (placements[idx]) return [];
-      const dur = tp.end - tp.start;
-      const windows: { day: number; start: number; end: number }[] = [];
-      for (let day = 0; day < 7; day++) {
-        let runStart: number | null = null;
-        for (let h = START_HR; h + dur <= END_HR; h += 0.5) {
-          const clashEv = events.some(e => e.day === day && e.kind === 'session' && e.status !== 'cancelled' && !(h + dur <= e.start || h >= e.end));
-          const clashPl = placements.some((pl, i) => {
-            if (!pl || i === idx || pl.day !== day) return false;
-            const od = p.tuples[i].end - p.tuples[i].start;
-            return !(h + dur <= pl.start || h >= pl.start + od);
-          });
-          const free = !clashEv && !clashPl;
-          if (free && runStart === null) runStart = h;
-          else if (!free && runStart !== null) { windows.push({ day, start: runStart, end: h + dur - 0.5 }); runStart = null; }
-        }
-        if (runStart !== null) windows.push({ day, start: runStart, end: END_HR });
-      }
-      return windows;
+      return [{ day: tp.day, start: tp.start, end: tp.end }];
     });
-  }, [p.tuples, events, placements]);
+  }, [p.tuples, placements]);
 
   const autoPlace = () => {
-    setPlacements(p.tuples.map(tp => {
-      const dur = tp.end - tp.start;
-      const tryAt = (day: number, start: number): Placement => {
-        if (start < START_HR || start + dur > END_HR) return null;
-        if (events.some(e => e.day === day && e.kind === 'session' && e.status !== 'cancelled' && !(start + dur <= e.start || start >= e.end))) return null;
-        return { day, start };
-      };
-      const primary = tryAt(tp.day, tp.start);
-      if (primary) return primary;
-      for (let off = 0.5; off <= 3; off += 0.5) {
-        const fwd = tryAt(tp.day, tp.start + off); if (fwd) return fwd;
-        const bwd = tryAt(tp.day, tp.start - off); if (bwd) return bwd;
-      }
-      return null;
-    }));
+    setPlacements(p.tuples.map(tp => ({ day: tp.day, start: tp.start })));
   };
 
   const onDrop = (day: number, start: number, e: React.DragEvent) => {
@@ -96,7 +65,8 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
   };
 
   const placeAt = (idx: number, day: number, start: number) => {
-    if (!canDrop(day, start, p.tuples[idx].end - p.tuples[idx].start)) return;
+    const tp = p.tuples[idx];
+    if (day !== tp.day || start !== tp.start) return;
     setPlacements(pls => pls.map((pl, i) => i === idx ? { day, start } : pl));
     setFocusedIdx(null); setPinned(false);
   };
