@@ -145,7 +145,7 @@ export const REQUESTS: TuitionRequest[] = [
   {
     id: 'req-1', source: 'asana', status: 'open', receivedAt: '2h ago',
     studentName: 'Ava Rodriguez', studentEmail: 'ava.rodriguez@gmail.com',
-    subject: 'AP Calculus BC', subjectId: 'apcalcbc',
+    subject: 'Calculus BC', subjectId: '3340ce1b-ffb0-4df5-9107-654a87abb90e',
     tuples: [{ day: 1, start: 17, end: 20 }, { day: 3, start: 18, end: 21 }],
     tz: 'America/New_York', startDate: 'May 6',
     notes: 'Junior, preparing for May exam. Needs help with series and parametric.',
@@ -153,7 +153,7 @@ export const REQUESTS: TuitionRequest[] = [
   {
     id: 'req-2', source: 'asana', status: 'open', receivedAt: 'Yesterday',
     studentName: 'Liam Chen', studentEmail: 'liam.chen@gmail.com',
-    subject: 'SAT Math', subjectId: 'satmath',
+    subject: 'SAT Prep', subjectId: '680bd170-5cbe-4457-8edc-54f92fa195a7',
     tuples: [{ day: 2, start: 16, end: 19 }, { day: 4, start: 16, end: 19 }],
     tz: 'America/Los_Angeles', startDate: 'May 10',
     notes: 'Target score 780+. Currently 680.',
@@ -161,7 +161,7 @@ export const REQUESTS: TuitionRequest[] = [
   {
     id: 'req-3', source: 'manual', status: 'open', receivedAt: '3 days ago',
     studentName: 'Zoe Kaplan', studentEmail: 'zoe.kaplan@gmail.com',
-    subject: 'AP Physics C', subjectId: 'apphysc',
+    subject: 'Physics - Mechanics', subjectId: 'f74fc1b2-b5e2-4873-a1d7-d9bc3a9fe86c',
     tuples: [{ day: 2, start: 15, end: 18 }, { day: 4, start: 15, end: 18 }],
     tz: 'America/Chicago', startDate: 'ASAP',
     notes: 'Mechanics only. E&M is covered at school.',
@@ -169,7 +169,7 @@ export const REQUESTS: TuitionRequest[] = [
   {
     id: 'req-4', source: 'asana', status: 'open', receivedAt: '4h ago',
     studentName: 'Mateo Ruiz', studentEmail: 'mateo.ruiz@gmail.com',
-    subject: 'Spanish', subjectId: 'spanish',
+    subject: 'Spanish I', subjectId: '56714b3c-a78a-409e-a36d-f7b1f54ce42a',
     tuples: [{ day: 1, start: 15, end: 17 }, { day: 3, start: 15, end: 17 }],
     tz: 'America/New_York', startDate: 'May 12',
     notes: 'Heritage speaker. Weak on formal writing.',
@@ -177,15 +177,15 @@ export const REQUESTS: TuitionRequest[] = [
   {
     id: 'req-5', source: 'asana', status: 'open', receivedAt: '5h ago',
     studentName: 'Priya Desai', studentEmail: 'priya.desai@gmail.com',
-    subject: 'MCAT', subjectId: 'mcat',
+    subject: 'Biology', subjectId: '86d92819-4635-4bae-aaf0-8b4965f45b27',
     tuples: [{ day: 0, start: 10, end: 13 }, { day: 6, start: 10, end: 13 }],
     tz: 'America/Chicago', startDate: 'May 18',
-    notes: 'Retaking in September. Needs CARS boost.',
+    notes: 'AP Biology, retaking the exam. Needs help with genetics and ecology.',
   },
   {
     id: 'req-6', source: 'manual', status: 'open', receivedAt: 'Yesterday',
     studentName: 'Jackson Wu', studentEmail: 'jackson.wu@gmail.com',
-    subject: 'AP Statistics', subjectId: 'apstat',
+    subject: 'Statistics', subjectId: 'cb673cc0-cdfc-41f6-bd03-41f58a731cd6',
     tuples: [{ day: 2, start: 17, end: 19 }, { day: 4, start: 17, end: 19 }],
     tz: 'America/Denver', startDate: 'May 7',
     notes: 'Senior. First AP. Nervous.',
@@ -193,7 +193,7 @@ export const REQUESTS: TuitionRequest[] = [
   {
     id: 'req-7', source: 'asana', status: 'open', receivedAt: '2 days ago',
     studentName: 'Hannah Kim', studentEmail: 'hannah.kim@gmail.com',
-    subject: 'AP English Lang', subjectId: 'apenglang',
+    subject: 'English Language and Composition', subjectId: 'c8742ba5-feb7-4cc1-9bf8-ff2495ed0466',
     tuples: [{ day: 2, start: 16, end: 18 }, { day: 5, start: 10, end: 12 }],
     tz: 'America/New_York', startDate: 'ASAP',
     notes: 'Needs essay structure help urgently.',
@@ -201,7 +201,7 @@ export const REQUESTS: TuitionRequest[] = [
   {
     id: 'req-8', source: 'asana', status: 'matched', receivedAt: '1 week ago',
     studentName: 'Oliver Grant', studentEmail: 'oliver.grant@gmail.com',
-    subject: 'AP Chemistry', subjectId: 'apchem',
+    subject: 'Chemistry', subjectId: '7bb3b6d0-f529-4e98-b186-a6ca9ea037b4',
     tuples: [{ day: 1, start: 17, end: 19 }, { day: 3, start: 17, end: 19 }],
     tz: 'America/New_York', startDate: 'Apr 21',
     notes: 'Sophomore. Strong math.',
@@ -212,28 +212,28 @@ export const REQUESTS: TuitionRequest[] = [
 export const INVITATIONS: Invitation[] = [
   {
     id: 'inv-1', tutorId: 't-julia',  requestId: 'req-1',
-    studentName: 'Ava Rodriguez', subject: 'AP Calculus BC',
+    studentName: 'Ava Rodriguez', subject: 'Calculus BC',
     sentAt: '2h ago', sentBy: 'Meg Adams', status: 'pending',
   },
   {
     id: 'inv-2', tutorId: 't-maya',   requestId: 'req-3',
-    studentName: 'Marcus Webb', subject: 'AP Physics C',
+    studentName: 'Marcus Webb', subject: 'Physics - Mechanics',
     sentAt: 'Yesterday', sentBy: 'Meg Adams', status: 'pending',
   },
   {
     id: 'inv-3', tutorId: 't-chris',  requestId: 'req-2',
-    studentName: 'Liam Chen', subject: 'SAT Math',
+    studentName: 'Liam Chen', subject: 'SAT Prep',
     sentAt: '3h ago', sentBy: 'Meg Adams', status: 'accepted',
   },
   {
     id: 'inv-4', tutorId: 't-robbie', requestId: 'req-7',
-    studentName: 'Sienna Park', subject: 'Essay Writing',
+    studentName: 'Sienna Park', subject: 'English Language and Composition',
     sentAt: '2d ago', sentBy: 'Meg Adams', status: 'declined',
     declineReason: 'Schedule conflict — committed hours are full for May.',
   },
   {
     id: 'inv-5', tutorId: 't-elisa',  requestId: 'req-4',
-    studentName: 'Noa Friedman', subject: 'Spanish',
+    studentName: 'Noa Friedman', subject: 'Spanish I',
     sentAt: '4d ago', sentBy: 'Meg Adams', status: 'expired',
   },
 ];
