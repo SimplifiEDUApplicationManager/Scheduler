@@ -85,8 +85,7 @@ async function createBookingEvent(
 
   // Create one recurring weekly event per proposed tuple, using the tutor's
   // confirmed placement day/start if provided, otherwise the original tuple.
-  const firstEventId: string | null = null;
-  let savedEventId = firstEventId;
+  let savedEventId: string | null = null;
 
   for (let i = 0; i < schedule.length; i++) {
     const tp = schedule[i];
