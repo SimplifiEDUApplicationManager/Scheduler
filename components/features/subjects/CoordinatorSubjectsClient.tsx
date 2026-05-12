@@ -11,6 +11,7 @@ interface Props {
 
 const CONF_OPTIONS = ['HIGH', 'MEDIUM', 'UNPROVEN', 'LOW'] as const;
 type Conf = typeof CONF_OPTIONS[number];
+type SelfConf = 'HIGH' | 'MEDIUM' | 'LOW';
 
 const CONF_LABEL: Record<Conf, string> = {
   HIGH:     'High',
@@ -19,12 +20,26 @@ const CONF_LABEL: Record<Conf, string> = {
   LOW:      'Low',
 };
 
-// Active button styles per confidence level
+// Active button styles per coordinator confidence level
 const CONF_ACTIVE: Record<Conf, string> = {
   HIGH:     'bg-fg-1 text-fg-on-brand',
   MEDIUM:   'bg-warning-ink text-white',
   UNPROVEN: 'bg-neutral-200 text-fg-2',
   LOW:      'bg-danger text-white',
+};
+
+// Row tint based on tutor's self-reported confidence
+const SELF_CONF_TINT: Record<SelfConf, string> = {
+  HIGH:   'bg-emerald-50 border-l-[3px] border-l-emerald-400',
+  MEDIUM: 'bg-amber-50 border-l-[3px] border-l-amber-400',
+  LOW:    'bg-red-50 border-l-[3px] border-l-red-400',
+};
+
+// Small self-confidence badge
+const SELF_CONF_BADGE: Record<SelfConf, string> = {
+  HIGH:   'bg-emerald-100 text-emerald-800',
+  MEDIUM: 'bg-amber-100 text-amber-800',
+  LOW:    'bg-red-100 text-red-800',
 };
 
 const AVATAR_TONES = ['brand', 'cream', 'dark', 'neutral'] as const;
@@ -59,11 +74,6 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
     return ['All', ...cats];
   }, [subjects]);
 
-  const totalPending = useMemo(
-    () => Object.values(claims).flat().filter(c => c.gradedBy === null).length,
-    [claims],
-  );
-
   const filteredSubjects = useMemo(() => {
     return subjects.filter(s => {
       if (categoryFilter !== 'All' && s.category !== categoryFilter) return false;
@@ -93,21 +103,12 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
       return;
     }
 
-    // Update local claim — mark as graded (gradedBy non-null) and set new confidence
+    // Update local claim — mark as graded and set new coordinator confidence
     setClaims(prev => ({
       ...prev,
       [subjectId]: (prev[subjectId] ?? []).map(c =>
-        c.rowId === rowId ? { ...c, confidence, gradedBy: 'graded' } : c,
+        c.rowId === rowId ? { ...c, coordConfidence: confidence, gradedBy: 'graded' } : c,
       ),
-    }));
-
-    // Recalculate pendingCount: pending = gradedBy === null
-    setSubjects(prev => prev.map(s => {
-      if (s.id !== subjectId) return s;
-      const updatedClaims = (claims[subjectId] ?? []).map(c =>
-        c.rowId === rowId ? { ...c, gradedBy: 'graded' } : c,
-      );
-      return { ...s, pendingCount: updatedClaims.filter(c => c.gradedBy === null).length };
     }));
 
     showToast(`Graded as ${CONF_LABEL[confidence]}`);
@@ -276,11 +277,6 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
                   <span className={['text-[13px] font-semibold leading-snug', isActive ? 'text-fg-on-brand' : 'text-fg-1'].join(' ')}>
                     {s.name}
                   </span>
-                  {s.pendingCount > 0 && (
-                    <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-warning-bg text-warning-ink shrink-0 whitespace-nowrap">
-                      {s.pendingCount} pending
-                    </span>
-                  )}
                 </div>
                 <div className={['text-[11px] mt-0.5', isActive ? 'text-neutral-400' : 'text-fg-3'].join(' ')}>
                   {s.category} · {s.tutorCount} {s.tutorCount === 1 ? 'tutor' : 'tutors'}
@@ -323,19 +319,6 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
               </div>
             </div>
 
-            {/* Pending banner */}
-            {totalPending > 0 && (
-              <div className="flex items-start gap-3 px-4 py-3 bg-warning-bg border border-warning rounded-xl mb-6 text-sm">
-                <svg className="text-warning-ink shrink-0 mt-px" width={16} height={16} viewBox="0 0 16 16" fill="none" aria-hidden>
-                  <path d="M8 2L1 14h14L8 2z" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />
-                  <path d="M8 7v3M8 12v.5" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-                </svg>
-                <span className="text-warning-ink text-[13px]">
-                  <strong>{totalPending} pending {totalPending === 1 ? 'review' : 'reviews'}</strong> across all subjects. Grade below to make these tutors filterable.
-                </span>
-              </div>
-            )}
-
             {/* Tutors section */}
             {selectedClaims.length === 0 ? (
               <div className="bg-surface-1 border border-border-default rounded-xl p-10 text-center">
@@ -354,15 +337,26 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
                 {/* Tutor rows */}
                 {selectedClaims.map((claim, idx) => {
                   const busy = busyRows[claim.rowId] ?? false;
+                  const tint = SELF_CONF_TINT[claim.selfConfidence];
                   return (
                     <div
                       key={claim.rowId}
-                      className={['flex items-center gap-4 px-5 py-4', idx > 0 ? 'border-t border-border-default' : ''].join(' ')}
+                      className={[
+                        'flex items-center gap-4 px-5 py-4',
+                        idx > 0 ? 'border-t border-border-default' : '',
+                        tint,
+                      ].join(' ')}
                     >
                       <Avatar initials={claim.tutorInitials} tone={avatarTone(idx)} size="md" />
 
                       <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-bold text-fg-1">{claim.tutorName}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] font-bold text-fg-1">{claim.tutorName}</span>
+                          {/* Tutor's self-reported confidence badge */}
+                          <span className={['text-[10px] font-bold px-1.5 py-px rounded uppercase tracking-wide', SELF_CONF_BADGE[claim.selfConfidence]].join(' ')}>
+                            {CONF_LABEL[claim.selfConfidence]}
+                          </span>
+                        </div>
                         {claim.tutorBio && (
                           <div className="text-[11px] text-fg-3 mt-px truncate">{claim.tutorBio}</div>
                         )}
@@ -371,10 +365,11 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
                         )}
                       </div>
 
-                      {/* Confidence toggle buttons — nothing selected until a coordinator grades */}
+                      {/* Coordinator confidence grading buttons */}
                       <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[10px] text-fg-muted mr-1 hidden sm:inline">Coord:</span>
                         {CONF_OPTIONS.map(conf => {
-                          const isSelected = claim.gradedBy !== null && claim.confidence === conf;
+                          const isSelected = claim.gradedBy !== null && claim.coordConfidence === conf;
                           return (
                             <button
                               key={conf}

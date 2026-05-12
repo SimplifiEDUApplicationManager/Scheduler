@@ -14,7 +14,6 @@ export interface SubjectRow {
   name: string;
   category: string;
   tutorCount: number;
-  pendingCount: number;
 }
 
 export interface TutorClaim {
@@ -23,9 +22,11 @@ export interface TutorClaim {
   tutorName: string;
   tutorInitials: string;
   tutorBio: string;
-  confidence: 'HIGH' | 'MEDIUM' | 'UNPROVEN' | 'LOW';
+  /** Tutor's own self-reported confidence. */
+  selfConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  /** Coordinator's graded confidence. */
+  coordConfidence: 'HIGH' | 'MEDIUM' | 'UNPROVEN' | 'LOW';
   qualificationNote: string;
-  /** null means never graded by a coordinator — this is "pending" */
   gradedBy: string | null;
 }
 
@@ -47,7 +48,7 @@ export default async function SubjectsPage() {
       .order('name'),
     supabase
       .from('tutor_subjects')
-      .select('id, coordinator_confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio)')
+      .select('id, confidence, coordinator_confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio)')
       .order('created_at'),
   ]);
 
@@ -65,7 +66,8 @@ export default async function SubjectsPage() {
       tutorName:         name,
       tutorInitials:     initials(name),
       tutorBio:          tutorInfo?.bio ?? '',
-      confidence:        row.coordinator_confidence as TutorClaim['confidence'],
+      selfConfidence:    (row.confidence as TutorClaim['selfConfidence']) ?? 'HIGH',
+      coordConfidence:   row.coordinator_confidence as TutorClaim['coordConfidence'],
       qualificationNote: row.qualification_note ?? '',
       gradedBy:          row.graded_by ?? null,
     };
@@ -73,11 +75,10 @@ export default async function SubjectsPage() {
   }
 
   const subjects: SubjectRow[] = (subjectRows ?? []).map(s => ({
-    id:           s.id,
-    name:         s.name,
-    category:     s.category,
-    tutorCount:   claimsBySubject[s.id]?.length ?? 0,
-    pendingCount: claimsBySubject[s.id]?.filter(c => c.gradedBy === null).length ?? 0,
+    id:         s.id,
+    name:       s.name,
+    category:   s.category,
+    tutorCount: claimsBySubject[s.id]?.length ?? 0,
   }));
 
   return (
