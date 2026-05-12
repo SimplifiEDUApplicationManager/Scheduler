@@ -18,14 +18,25 @@ type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
  *
  * Neither the Nylas nor Asana side-effects block the accept — failures are logged only.
  */
+type Placement = { day: number; start: number } | null;
+
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireActiveRole(['TUTOR']);
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
+
+  let placements: Placement[] | undefined;
+  try {
+    const body = await req.json() as { placements?: Placement[] };
+    placements = body.placements;
+  } catch {
+    // No body — proceed without placements; will use proposed times from DB.
+  }
+
   const result = await acceptProposal(id, auth.user.id, auth.supabase);
 
   if (!result.ok) {
@@ -37,7 +48,7 @@ export async function POST(
 
   // Side-effects run after the accept is committed; failures never block the response.
   await Promise.allSettled([
-    createBookingEvent(id, auth.user.id, auth.supabase).catch(err => {
+    createBookingEvent(id, auth.user.id, auth.supabase, placements).catch(err => {
       console.error('[proposals/accept] Nylas booking failed:', err);
     }),
     updateAsanaTask(id, auth.supabase).catch(err => {
@@ -52,6 +63,7 @@ async function createBookingEvent(
   proposalId: string,
   tutorId: string,
   supabase: SupabaseInstance,
+  placements?: Placement[],
 ): Promise<void> {
   const [{ data: proposal }, { data: tutor }] = await Promise.all([
     supabase
@@ -69,30 +81,43 @@ async function createBookingEvent(
   if (!proposal || !tutor?.nylas_grant_id) return;
 
   const schedule = (proposal.requested_schedule ?? []) as { day: number; start: number; end: number }[];
-  const firstTuple = schedule[0];
-  if (!firstTuple) return;
+  if (schedule.length === 0) return;
 
-  const { startUnix, endUnix } = tupleToUnix(
-    firstTuple.day,
-    firstTuple.start,
-    firstTuple.end,
-    proposal.timezone,
-    proposal.start_date,
-  );
+  // Create one recurring weekly event per proposed tuple, using the tutor's
+  // confirmed placement day/start if provided, otherwise the original tuple.
+  let savedEventId: string | null = null;
 
-  const nylasEventId = await createTutoringEvent(tutor.nylas_grant_id, {
-    studentName:  proposal.student_name,
-    studentEmail: proposal.student_email,
-    subject:      proposal.subject,
-    startUnix,
-    endUnix,
-    meetingLink: tutor.meeting_link ?? undefined,
-  });
+  for (let i = 0; i < schedule.length; i++) {
+    const tp = schedule[i];
+    const pl = placements?.[i];
+    const day   = pl?.day   ?? tp.day;
+    const start = pl?.start ?? tp.start;
+    const dur   = tp.end - tp.start;
 
-  if (nylasEventId) {
+    const { startUnix, endUnix } = tupleToUnix(
+      day, start, start + dur,
+      proposal.timezone,
+      proposal.start_date,
+    );
+
+    const nylasEventId = await createTutoringEvent(tutor.nylas_grant_id, {
+      studentName:  proposal.student_name,
+      studentEmail: proposal.student_email,
+      subject:      proposal.subject,
+      startUnix,
+      endUnix,
+      meetingLink: tutor.meeting_link ?? undefined,
+    });
+
+    if (nylasEventId && savedEventId === null) {
+      savedEventId = nylasEventId;
+    }
+  }
+
+  if (savedEventId) {
     await supabase
       .from('proposals')
-      .update({ nylas_event_id: nylasEventId })
+      .update({ nylas_event_id: savedEventId })
       .eq('id', proposalId);
   }
 }

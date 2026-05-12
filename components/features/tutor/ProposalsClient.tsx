@@ -74,7 +74,11 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     const p = proposals.find(prop => prop.id === consideringId);
     if (!p) return;
 
-    const res = await fetch(`/api/proposals/${p.id}/accept`, { method: 'POST' });
+    const res = await fetch(`/api/proposals/${p.id}/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ placements }),
+    });
     if (!res.ok) {
       const body = await res.json() as { error?: string };
       showToast(`Error: ${body.error ?? 'Failed to accept proposal'}`);
