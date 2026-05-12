@@ -15,6 +15,15 @@ interface ProposeModalProps {
   asanaTaskId?: string;
 }
 
+/** Converts a date string to YYYY-MM-DD for Postgres, or null if unparseable/ASAP/etc. */
+function toIsoDate(s?: string): string | null {
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
 export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: ProposeModalProps) {
   const [notes,      setNotes]      = useState(request?.notes ?? '');
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +43,7 @@ export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: P
           subject:            request?.subject      ?? '',
           requested_schedule: request?.tuples       ?? [],
           timezone:           request?.tz           ?? 'America/New_York',
-          start_date:         request?.startDate !== '—' ? request?.startDate : null,
+          start_date:         toIsoDate(request?.startDate),
           notes:              notes.trim() || null,
           asana_task_id:      asanaTaskId ?? null,
         }),
