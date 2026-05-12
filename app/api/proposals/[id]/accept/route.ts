@@ -78,10 +78,21 @@ async function createBookingEvent(
       .single(),
   ]);
 
-  if (!proposal || !tutor?.nylas_grant_id) return;
+  if (!proposal || !tutor?.nylas_grant_id) {
+    console.error('[proposals/accept] createBookingEvent early exit:', {
+      hasProposal: !!proposal,
+      hasGrantId: !!tutor?.nylas_grant_id,
+      proposalId,
+      tutorId,
+    });
+    return;
+  }
 
   const schedule = (proposal.requested_schedule ?? []) as { day: number; start: number; end: number }[];
-  if (schedule.length === 0) return;
+  if (schedule.length === 0) {
+    console.error('[proposals/accept] createBookingEvent: empty schedule', { proposalId });
+    return;
+  }
 
   // Create one recurring weekly event per proposed tuple, using the tutor's
   // confirmed placement day/start if provided, otherwise the original tuple.

@@ -222,7 +222,7 @@ export function tupleToUnix(
 }
 
 /**
- * Create a tutoring session event on the tutor's primary calendar.
+ * Create a tutoring session event on the tutor's first writable calendar.
  * Returns the Nylas event ID, or null on failure.
  *
  * The event title uses the `[Tutoring]` prefix so it is counted by the
@@ -239,6 +239,11 @@ export async function createTutoringEvent(
     meetingLink?: string;
   },
 ): Promise<string | null> {
+  // Nylas v3 requires a real calendar ID — 'primary' is not valid as a query param.
+  // Fetch the actual writable calendar IDs for this grant.
+  const calendarIds = await fetchCalendarIds(grantId);
+  const calendarId = calendarIds[0];
+
   const body: NylasEventCreateBody = {
     title: `[Tutoring] ${params.studentName} — ${params.subject}`,
     when: { object: 'timespan', start_time: params.startUnix, end_time: params.endUnix },
@@ -248,12 +253,12 @@ export async function createTutoringEvent(
   };
 
   const result = await nylasPost<CreatedNylasEvent>(
-    `${grantPath(grantId, 'events')}?calendar_id=primary&notify_participants=true`,
+    `${grantPath(grantId, 'events')}?calendar_id=${encodeURIComponent(calendarId)}&notify_participants=true`,
     body,
   );
 
   if (!result.ok) {
-    console.error('[nylas/events] createTutoringEvent failed:', result.error);
+    console.error('[nylas/events] createTutoringEvent failed:', result.error, { calendarId });
     return null;
   }
 
