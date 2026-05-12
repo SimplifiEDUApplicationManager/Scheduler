@@ -31,14 +31,14 @@ const CONF_ACTIVE: Record<Conf, string> = {
 // Row tint based on tutor's self-reported confidence
 const SELF_CONF_TINT: Record<SelfConf, string> = {
   HIGH:   'bg-emerald-50 border-l-[3px] border-l-emerald-400',
-  MEDIUM: 'bg-amber-50 border-l-[3px] border-l-amber-400',
+  MEDIUM: 'bg-blue-50 border-l-[3px] border-l-blue-400',
   LOW:    'bg-red-50 border-l-[3px] border-l-red-400',
 };
 
 // Small self-confidence badge
 const SELF_CONF_BADGE: Record<SelfConf, string> = {
   HIGH:   'bg-emerald-100 text-emerald-800',
-  MEDIUM: 'bg-amber-100 text-amber-800',
+  MEDIUM: 'bg-blue-100 text-blue-800',
   LOW:    'bg-red-100 text-red-800',
 };
 
