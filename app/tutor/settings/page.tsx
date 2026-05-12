@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { SettingsClient } from '@/components/features/tutor/SettingsClient';
@@ -12,7 +13,7 @@ export default async function TutorSettingsPage() {
     const me = TUTORS.find(t => t.id === ME_TUTOR_ID);
     if (!me) return notFound();
     const allSubjects: Subject[] = SUBJECTS.map(s => ({ id: s.id, name: s.name, cat: s.cat }));
-    return <SettingsClient me={me} allSubjects={allSubjects} schedulerSummary={null} />;
+    return <Suspense><SettingsClient me={me} allSubjects={allSubjects} schedulerSummary={null} /></Suspense>;
   }
 
   const supabase = await createClient();
@@ -39,5 +40,9 @@ export default async function TutorSettingsPage() {
     ? await fetchSchedulerSummary(me.nylasSchedulerConfigId)
     : null;
 
-  return <SettingsClient me={me} allSubjects={allSubjects} schedulerSummary={schedulerSummary} />;
+  return (
+    <Suspense>
+      <SettingsClient me={me} allSubjects={allSubjects} schedulerSummary={schedulerSummary} />
+    </Suspense>
+  );
 }
