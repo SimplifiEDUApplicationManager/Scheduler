@@ -242,14 +242,14 @@ export const ME_TUTOR_ID = 't-julia';
 
 // Julia Hering's recurring weekly sessions + one-off events
 export const TUTOR_EVENTS: TutorEvent[] = [
-  { id: 'ev-1', day: 1, start: 15,   end: 17,   title: 'Oliver G. · AP Chem',    kind: 'session', status: 'upcoming',  studentName: 'Oliver Grant', studentInitials: 'OG', subject: 'AP Chemistry', recurring: true  },
-  { id: 'ev-2', day: 1, start: 17.5, end: 19.5, title: 'Mia C. · AP Calc BC',    kind: 'session', status: 'upcoming',  studentName: 'Mia Chen',     studentInitials: 'MC', subject: 'AP Calc BC',   recurring: true  },
-  { id: 'ev-3', day: 2, start: 9,    end: 11,   title: 'Tyler B. · AP Physics C', kind: 'session', status: 'completed', studentName: 'Tyler Brooks', studentInitials: 'TB', subject: 'AP Physics C', recurring: true  },
-  { id: 'ev-4', day: 2, start: 16.5, end: 18.5, title: 'Emma S. · AP Chem',      kind: 'session', status: 'upcoming',  studentName: 'Emma Santos',  studentInitials: 'ES', subject: 'AP Chemistry', recurring: true  },
-  { id: 'ev-5', day: 3, start: 15,   end: 17,   title: 'Oliver G. · AP Chem',    kind: 'session', status: 'upcoming',  studentName: 'Oliver Grant', studentInitials: 'OG', subject: 'AP Chemistry', recurring: true  },
-  { id: 'ev-6', day: 3, start: 17.5, end: 19.5, title: 'Mia C. · AP Calc BC',    kind: 'session', status: 'upcoming',  studentName: 'Mia Chen',     studentInitials: 'MC', subject: 'AP Calc BC',   recurring: true  },
-  { id: 'ev-7', day: 4, start: 9,    end: 11,   title: 'Sofia L. · AP Calc BC',  kind: 'session', status: 'upcoming',  studentName: 'Sofia Lim',    studentInitials: 'SL', subject: 'AP Calc BC',   recurring: true  },
-  { id: 'ev-8', day: 5, start: 13,   end: 14.5, title: 'Team sync',              kind: 'other',   status: 'upcoming',  recurring: false },
+  { id: 'ev-1', day: 1, start: 15,   end: 17,   title: 'Oliver G. · Chemistry',        kind: 'session', status: 'upcoming',  studentName: 'Oliver Grant', studentInitials: 'OG', subject: 'Chemistry',          recurring: true  },
+  { id: 'ev-2', day: 1, start: 17.5, end: 19.5, title: 'Mia C. · Calculus BC',         kind: 'session', status: 'upcoming',  studentName: 'Mia Chen',     studentInitials: 'MC', subject: 'Calculus BC',        recurring: true  },
+  { id: 'ev-3', day: 2, start: 9,    end: 11,   title: 'Tyler B. · Physics - Mechanics', kind: 'session', status: 'completed', studentName: 'Tyler Brooks', studentInitials: 'TB', subject: 'Physics - Mechanics', recurring: true  },
+  { id: 'ev-4', day: 2, start: 16.5, end: 18.5, title: 'Emma S. · Chemistry',          kind: 'session', status: 'upcoming',  studentName: 'Emma Santos',  studentInitials: 'ES', subject: 'Chemistry',          recurring: true  },
+  { id: 'ev-5', day: 3, start: 15,   end: 17,   title: 'Oliver G. · Chemistry',        kind: 'session', status: 'upcoming',  studentName: 'Oliver Grant', studentInitials: 'OG', subject: 'Chemistry',          recurring: true  },
+  { id: 'ev-6', day: 3, start: 17.5, end: 19.5, title: 'Mia C. · Calculus BC',         kind: 'session', status: 'upcoming',  studentName: 'Mia Chen',     studentInitials: 'MC', subject: 'Calculus BC',        recurring: true  },
+  { id: 'ev-7', day: 4, start: 9,    end: 11,   title: 'Sofia L. · Calculus BC',       kind: 'session', status: 'upcoming',  studentName: 'Sofia Lim',    studentInitials: 'SL', subject: 'Calculus BC',        recurring: true  },
+  { id: 'ev-8', day: 5, start: 13,   end: 14.5, title: 'Team sync',                    kind: 'other',   status: 'upcoming',  recurring: false },
 ];
 
 // Proposals sent to Julia by coordinators
@@ -257,18 +257,18 @@ export const TUTOR_PROPOSALS: TutorProposal[] = [
   {
     id: 'tp-1', status: 'pending', sentAt: '2h ago',
     studentName: 'Ava Rodriguez', studentEmail: 'ava.rodriguez@gmail.com',
-    subject: 'AP Calculus BC', tz: 'America/New_York',
+    subject: 'Calculus BC', tz: 'America/New_York',
     tuples: [{ day: 1, start: 17, end: 20 }, { day: 3, start: 18, end: 21 }],
     startDate: 'May 6', hoursPerWeek: 6,
     notes: 'Junior, preparing for May exam. Needs help with series and parametric.',
     coordinator: 'Meg Adams', coordinatorEmail: 'meg@simplifiedu.com',
     studentGrade: 'Junior',
-    rationale: 'Julia has high confidence in AP Calc BC and strong availability overlap on Mon/Wed evenings — a clean match for Ava\'s study window before the May exam.',
+    rationale: 'Julia has high confidence in Calculus BC and strong availability overlap on Mon/Wed evenings — a clean match for Ava\'s study window before the May exam.',
   },
   {
     id: 'tp-2', status: 'pending', sentAt: '1d ago',
     studentName: 'Jackson Wu', studentEmail: 'jackson.wu@gmail.com',
-    subject: 'AP Physics C', tz: 'America/Chicago',
+    subject: 'Physics - Mechanics', tz: 'America/Chicago',
     tuples: [{ day: 4, start: 9, end: 11 }],
     startDate: 'May 7', hoursPerWeek: 2,
     notes: 'Senior. First AP. Nervous. Mechanics focus.',
@@ -278,7 +278,7 @@ export const TUTOR_PROPOSALS: TutorProposal[] = [
   {
     id: 'tp-3', status: 'accepted', sentAt: '3d ago',
     studentName: 'Liam Chen', studentEmail: 'liam.chen@gmail.com',
-    subject: 'AP Calculus AB', tz: 'America/Los_Angeles',
+    subject: 'Calculus AB', tz: 'America/Los_Angeles',
     tuples: [{ day: 2, start: 16, end: 18 }],
     startDate: 'May 10', hoursPerWeek: 2,
     notes: 'Needs to solidify integration before finals.',
@@ -287,7 +287,7 @@ export const TUTOR_PROPOSALS: TutorProposal[] = [
   {
     id: 'tp-4', status: 'declined', sentAt: '5d ago',
     studentName: 'Chloe Park', studentEmail: 'chloe.park@gmail.com',
-    subject: 'AP Chemistry', tz: 'America/New_York',
+    subject: 'Chemistry', tz: 'America/New_York',
     tuples: [{ day: 1, start: 15, end: 17 }],
     startDate: 'ASAP', hoursPerWeek: 2,
     notes: 'Weak on equilibrium and thermodynamics.',
@@ -332,15 +332,15 @@ export const COORDINATOR_INVITES: CoordinatorInvite[] = [
 
 export const AT_RISK_STUDENTS: AtRiskStudent[] = [
   {
-    name: 'Tyler Brooks', subject: 'AP Chemistry', tutor: 'Katrina A.',
+    name: 'Tyler Brooks', subject: 'Chemistry', tutor: 'Katrina A.',
     reason: 'Missed last 2 sessions', severity: 'high',
   },
   {
-    name: 'Jordan Lee', subject: 'SAT Math', tutor: 'Chris D.',
+    name: 'Jordan Lee', subject: 'SAT Prep', tutor: 'Chris D.',
     reason: 'Score plateau · 40 sessions in', severity: 'medium',
   },
   {
-    name: 'Mia Chen', subject: 'AP Calc BC', tutor: 'Julia H.',
+    name: 'Mia Chen', subject: 'Calculus BC', tutor: 'Julia H.',
     reason: 'Parent flagged stress', severity: 'medium',
   },
 ];
