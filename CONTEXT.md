@@ -78,9 +78,9 @@ _Avoid_: tutor confidence, self-rating
 Free text a tutor writes when adding or editing a subject, explaining their experience or qualifications. Required on both add and edit. When editing, the note explains what changed. The most recent note is stored on the `tutor_subjects` row and shown to coordinators on the subjects review page.
 _Avoid_: bio, description
 
-**Subject Pending Review**:
-A tutor-subject entry where `coordinator_confidence = UNPROVEN`. This state is set automatically when a tutor adds a new subject or edits their self-reported confidence. Coordinators review these at `/dashboard/subjects` and set their assessment. There is no separate "pending" status — UNPROVEN is the indicator.
-_Avoid_: pending subject, unapproved subject
+**Subject Change Request**:
+A pending mutation a tutor has submitted to their subject list — an ADD (requesting a new subject), EDIT (requesting a confidence change on an existing subject), or REMOVE (requesting removal of a subject). Stored in `tutor_subject_changes` with status `PENDING`. The `tutor_subjects` table is not touched until the coordinator approves. Coordinators review pending change requests in the "Pending review" queue at the top of `/dashboard/subjects`. On approval the change is applied; on decline the tutor's list reverts to its previous state. Tutors see the pending state in their Settings via "Pending coordinator review", "Confidence change pending", or "Removal pending" badges.
+_Avoid_: pending subject, unapproved subject, UNPROVEN (UNPROVEN is a coordinator confidence grade, not a pending state)
 
 ### Tutor profile
 

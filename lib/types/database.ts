@@ -246,6 +246,76 @@ export type Database = {
           },
         ]
       }
+      tutor_subject_changes: {
+        Row: {
+          id: string
+          tutor_id: string
+          subject_id: string
+          tutor_subject_id: string | null
+          change_type: string
+          requested_confidence: string | null
+          requested_note: string | null
+          status: string
+          reviewed_by: string | null
+          reviewed_at: string | null
+          decline_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tutor_id: string
+          subject_id: string
+          tutor_subject_id?: string | null
+          change_type: string
+          requested_confidence?: string | null
+          requested_note?: string | null
+          status?: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          decline_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tutor_id?: string
+          subject_id?: string
+          tutor_subject_id?: string | null
+          change_type?: string
+          requested_confidence?: string | null
+          requested_note?: string | null
+          status?: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          decline_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_subject_changes_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_subject_changes_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_subject_changes_tutor_subject_id_fkey"
+            columns: ["tutor_subject_id"]
+            isOneToOne: false
+            referencedRelation: "tutor_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tutor_subjects: {
         Row: {
           coordinator_confidence: string

@@ -81,9 +81,12 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   async function handleAdd(ts: TutorSubject) {
     const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
     if (DEV_BYPASS) {
-      setSubjects(prev => [...prev, { ...ts, rowId: `dev-${ts.id}`, coordConf: 'UNPROVEN' }]);
+      setSubjects(prev => [...prev, {
+        ...ts,
+        pendingChange: { id: `dev-${ts.id}`, tutorId: '', subjectId: ts.id, changeType: 'ADD' as const, requestedConf: ts.conf, requestedNote: ts.qualificationNote, status: 'PENDING' as const, createdAt: new Date().toISOString() },
+      }]);
       setAddOpen(false);
-      showToast(`${name} added · confidence set to Unproven`);
+      showToast(`${name} submitted for coordinator review`);
       return;
     }
     try {
@@ -93,21 +96,37 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
         body: JSON.stringify({ subject_id: ts.id, qualification_note: ts.qualificationNote, tutor_confidence: ts.conf }),
       });
       const body = await safeJson(res);
-      if (!res.ok) { showToast(`Error: ${String(body.error ?? 'Failed to add subject')}`); return; }
-      setSubjects(prev => [...prev, { ...ts, rowId: String(body.id ?? ''), coordConf: 'UNPROVEN' }]);
+      if (!res.ok) { showToast(`Error: ${String(body.error ?? 'Failed to submit request')}`); return; }
+      setSubjects(prev => [...prev, {
+        ...ts,
+        // No rowId — not in tutor_subjects until the coordinator approves
+        pendingChange: {
+          id: String(body.id ?? ''),
+          tutorId: '',
+          subjectId: ts.id,
+          changeType: 'ADD' as const,
+          requestedConf: ts.conf,
+          requestedNote: ts.qualificationNote,
+          status: 'PENDING' as const,
+          createdAt: String(body.created_at ?? new Date().toISOString()),
+        },
+      }]);
       setAddOpen(false);
-      showToast(`${name} added · confidence set to Unproven`);
+      showToast(`${name} submitted for coordinator review`);
     } catch {
-      showToast('Failed to add subject — check your connection and try again');
+      showToast('Failed to submit request — check your connection and try again');
     }
   }
 
   async function handleEdit(ts: TutorSubject, updated: Pick<TutorSubject, 'conf' | 'qualificationNote'>) {
     const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
     if (DEV_BYPASS) {
-      setSubjects(prev => prev.map(x => x.id === ts.id ? { ...x, conf: updated.conf, qualificationNote: updated.qualificationNote } : x));
+      setSubjects(prev => prev.map(x => x.id === ts.id ? {
+        ...x,
+        pendingChange: { id: `dev-edit-${ts.id}`, tutorId: '', subjectId: ts.id, tutorSubjectId: ts.rowId, changeType: 'EDIT' as const, requestedConf: updated.conf, requestedNote: updated.qualificationNote, status: 'PENDING' as const, createdAt: new Date().toISOString() },
+      } : x));
       setEditingTs(null);
-      showToast(`${name} updated · coordinator notified`);
+      showToast(`${name} change submitted for coordinator review`);
       return;
     }
     if (!ts.rowId) { showToast('Cannot edit: subject has no row ID'); return; }
@@ -118,20 +137,37 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
         body: JSON.stringify({ tutor_confidence: updated.conf, qualification_note: updated.qualificationNote }),
       });
       const body = await safeJson(res);
-      if (!res.ok) { showToast(`Error: ${String(body.error ?? 'Failed to update subject')}`); return; }
-      setSubjects(prev => prev.map(x => x.id === ts.id ? { ...x, conf: updated.conf, qualificationNote: updated.qualificationNote } : x));
+      if (!res.ok) { showToast(`Error: ${String(body.error ?? 'Failed to submit change')}`); return; }
+      // Mark the subject as having a pending edit — confidence unchanged until coordinator approves
+      setSubjects(prev => prev.map(x => x.id === ts.id ? {
+        ...x,
+        pendingChange: {
+          id: String(body.id ?? ''),
+          tutorId: '',
+          subjectId: ts.id,
+          tutorSubjectId: ts.rowId,
+          changeType: 'EDIT' as const,
+          requestedConf: updated.conf,
+          requestedNote: updated.qualificationNote,
+          status: 'PENDING' as const,
+          createdAt: String(body.created_at ?? new Date().toISOString()),
+        },
+      } : x));
       setEditingTs(null);
-      showToast(`${name} updated · coordinator notified`);
+      showToast(`${name} change submitted for coordinator review`);
     } catch {
-      showToast('Failed to update subject — check your connection and try again');
+      showToast('Failed to submit change — check your connection and try again');
     }
   }
 
   async function handleRemove(ts: TutorSubject, reason: string) {
     if (DEV_BYPASS) {
       setDeletingTs(null);
-      setSubjects(prev => prev.filter(x => x.id !== ts.id));
-      showToast('Subject removed · coordinator notified');
+      setSubjects(prev => prev.map(x => x.id === ts.id ? {
+        ...x,
+        pendingChange: { id: `dev-remove-${ts.id}`, tutorId: '', subjectId: ts.id, tutorSubjectId: ts.rowId, changeType: 'REMOVE' as const, requestedNote: reason, status: 'PENDING' as const, createdAt: new Date().toISOString() },
+      } : x));
+      showToast('Removal request submitted for coordinator review');
       return;
     }
     if (!ts.rowId) { setDeletingTs(null); showToast('Cannot remove: subject has no row ID'); return; }
@@ -142,12 +178,24 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
         body: JSON.stringify({ reason }),
       });
       const body = await safeJson(res);
-      if (!res.ok) { showToast(`Error: ${String(body.error ?? 'Failed to remove subject')}`); return; }
+      if (!res.ok) { showToast(`Error: ${String(body.error ?? 'Failed to submit removal request')}`); return; }
       setDeletingTs(null);
-      setSubjects(prev => prev.filter(x => x.id !== ts.id));
-      showToast('Subject removed · coordinator notified');
+      setSubjects(prev => prev.map(x => x.id === ts.id ? {
+        ...x,
+        pendingChange: {
+          id: String(body.id ?? ''),
+          tutorId: '',
+          subjectId: ts.id,
+          tutorSubjectId: ts.rowId,
+          changeType: 'REMOVE' as const,
+          requestedNote: reason,
+          status: 'PENDING' as const,
+          createdAt: String(body.created_at ?? new Date().toISOString()),
+        },
+      } : x));
+      showToast('Removal request submitted for coordinator review');
     } catch {
-      showToast('Failed to remove subject — check your connection and try again');
+      showToast('Failed to submit removal request — check your connection and try again');
     }
   }
 
@@ -333,25 +381,60 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 {[...mySubjects].sort((a, b) => CONF_ORDER.indexOf(a.conf) - CONF_ORDER.indexOf(b.conf)).map(ts => {
                   const subject = allSubjects.find(s => s.id === ts.id);
                   if (!subject) return null;
-                  const meta = CONF_META[ts.conf];
+                  const meta        = CONF_META[ts.conf];
+                  const pending     = ts.pendingChange;
+                  const isPending   = pending?.status === 'PENDING';
+                  const isRemovePending = isPending && pending?.changeType === 'REMOVE';
+                  const isAddPending    = isPending && pending?.changeType === 'ADD';
+                  const isEditPending   = isPending && pending?.changeType === 'EDIT';
+                  const isDeclined  = pending?.status === 'DECLINED';
+
+                  const cardOpacity = isRemovePending ? 0.55 : 1;
+                  const borderColor = isAddPending ? '#D97706' : isDeclined ? '#DC2626' : '#E4E4E7';
+                  const accentColor = isAddPending ? '#D97706' : isDeclined ? '#DC2626' : meta.bar;
+
                   return (
-                    <div key={ts.id} style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, overflow: 'hidden', position: 'relative' }}>
-                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: meta.bar }} />
-                      <div style={{ padding: '12px 12px 12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#18181B' }}>{subject.name}</div>
-                          <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 1 }}>{subject.cat}</div>
+                    <div key={`${ts.id}-${pending?.id ?? 'approved'}`} style={{ background: '#fff', border: `1px solid ${borderColor}`, borderRadius: 10, overflow: 'hidden', position: 'relative', opacity: cardOpacity }}>
+                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: accentColor }} />
+                      <div style={{ padding: '12px 12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#18181B', textDecoration: isRemovePending ? 'line-through' : 'none' }}>{subject.name}</div>
+                            <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 1 }}>{subject.cat}</div>
+                          </div>
+
+                          {/* Confidence badge — show current (or requested for ADD) */}
+                          {!isPending || isEditPending || isRemovePending ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, background: meta.bg, color: meta.fg, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                              <span style={{ width: 5, height: 5, borderRadius: 999, background: meta.bar }} />
+                              {meta.label}
+                            </span>
+                          ) : null}
+                          {isAddPending && pending.requestedConf && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, background: CONF_META[pending.requestedConf].bg, color: CONF_META[pending.requestedConf].fg, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                              <span style={{ width: 5, height: 5, borderRadius: 999, background: CONF_META[pending.requestedConf].bar }} />
+                              {CONF_META[pending.requestedConf].label}
+                            </span>
+                          )}
+
+                          {/* Action buttons — disabled when a change is pending */}
+                          {!isPending && (
+                            <>
+                              <button onClick={() => setEditingTs(ts)} title="Edit confidence" style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #E4E4E7', background: '#fff', color: '#71717A', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden><path d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z" /></svg>
+                              </button>
+                              <button onClick={() => setDeletingTs(ts)} title="Remove subject" style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #FECACA', background: '#fff', color: '#DC2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M2 2l8 8M10 2l-8 8" /></svg>
+                              </button>
+                            </>
+                          )}
                         </div>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, background: meta.bg, color: meta.fg, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
-                          <span style={{ width: 5, height: 5, borderRadius: 999, background: meta.bar }} />
-                          {meta.label}
-                        </span>
-                        <button onClick={() => setEditingTs(ts)} title="Edit confidence" style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #E4E4E7', background: '#fff', color: '#71717A', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden><path d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z" /></svg>
-                        </button>
-                        <button onClick={() => setDeletingTs(ts)} title="Remove subject" style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #FECACA', background: '#fff', color: '#DC2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <svg width={11} height={11} viewBox="0 0 12 12" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M2 2l8 8M10 2l-8 8" /></svg>
-                        </button>
+
+                        {/* Pending / declined status line */}
+                        {isAddPending    && <div style={{ fontSize: 10, fontWeight: 700, color: '#92400E', background: '#FEF3C7', borderRadius: 4, padding: '2px 6px', display: 'inline-block', alignSelf: 'flex-start' }}>Pending coordinator review</div>}
+                        {isEditPending   && <div style={{ fontSize: 10, fontWeight: 700, color: '#1E40AF', background: '#DBEAFE', borderRadius: 4, padding: '2px 6px', display: 'inline-block', alignSelf: 'flex-start' }}>Confidence change pending: {CONF_META[ts.conf].label} → {pending.requestedConf ? CONF_META[pending.requestedConf].label : '?'}</div>}
+                        {isRemovePending && <div style={{ fontSize: 10, fontWeight: 700, color: '#92400E', background: '#FEF3C7', borderRadius: 4, padding: '2px 6px', display: 'inline-block', alignSelf: 'flex-start' }}>Removal pending coordinator review</div>}
+                        {isDeclined      && <div style={{ fontSize: 10, fontWeight: 700, color: '#991B1B', background: '#FEE2E2', borderRadius: 4, padding: '2px 6px', display: 'inline-block', alignSelf: 'flex-start' }}>Request declined{pending?.declineReason ? ` — ${pending.declineReason}` : ''}</div>}
                       </div>
                     </div>
                   );

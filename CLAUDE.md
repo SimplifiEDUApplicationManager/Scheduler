@@ -180,7 +180,7 @@ Coordinators can:
 - **Add new subjects** to the system (name + category, e.g. "STEM", "Humanities", "Languages")
 - **Remove subjects** (with warning if tutors are assigned)
 - **Grade tutor confidence** for any subject on a tutor's list: `HIGH`, `MEDIUM`, `UNPROVEN`, `LOW` — done via the `/dashboard/subjects` page
-- **View subjects pending review** — all subjects where `coordinator_confidence = UNPROVEN`, shown at `/dashboard/subjects`. This includes newly added subjects and any subjects where the tutor has updated their self-reported confidence. Coordinators set their assessment from this queue.
+- **Review and approve or decline tutor subject change requests** — shown in the "Pending review" queue at the top of `/dashboard/subjects`. Changes include: ADD (new subject), EDIT (confidence change), and REMOVE (removal request). Approving applies the change to `tutor_subjects`; declining leaves the row unchanged.
 
 ### AI Mode (Future — documented but not V2 launch)
 An assistant panel in the coordinator dashboard that uses tutor personality context + current filters to suggest the best match. This is the web-app equivalent of `/filter`'s AI ranking step. Documented in the spec for architectural planning but not required for V2 launch.
@@ -404,9 +404,9 @@ Coordinators can also enter a request manually (student name, email, subject, sc
 
 **Two-tier system:**
 
-1. **Tutor's claimed subjects** — the tutor adds subjects they feel comfortable teaching. Each addition includes a qualification note and the tutor's self-reported confidence level (HIGH, MEDIUM, or LOW). The `coordinator_confidence` defaults to `UNPROVEN` on creation — tutors never see this field.
+1. **Tutor's claimed subjects** — the tutor adds subjects they feel comfortable teaching. Each addition includes a qualification note and the tutor's self-reported confidence level (HIGH, MEDIUM, or LOW). This creates a `PENDING` entry in `tutor_subject_changes` (type `ADD`). The `tutor_subjects` row is NOT created until the coordinator approves. The tutor sees a "Pending coordinator review" badge on the subject card in their Settings. On approval the coordinator sets `coordinator_confidence` to `UNPROVEN` automatically.
 
-2. **Editing confidence** — tutors can edit their self-reported confidence on any existing subject. They must provide a new explanation note (10+ chars) describing what changed. On save, `coordinator_confidence` resets to `UNPROVEN` so the coordinator sees the change in their subjects review queue. The API endpoint is `PATCH /api/tutor-subjects/[id]`.
+2. **Editing confidence** — tutors can edit their self-reported confidence on any existing subject. They must provide a new explanation note (10+ chars) describing what changed. This creates a `PENDING` entry in `tutor_subject_changes` (type `EDIT`); the `tutor_subjects` row is NOT updated until the coordinator approves. The tutor sees a "Confidence change pending" badge on the subject card in their Settings. API endpoint: `PATCH /api/tutor-subjects/[id]` (now creates a change request, not a direct update).
 
 3. **Coordinator confidence grading** — coordinators grade each tutor-subject pair on the subjects page (`/dashboard/subjects`):
    - **HIGH** — proven, reliable, would recommend without hesitation
