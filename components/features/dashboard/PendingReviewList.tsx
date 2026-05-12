@@ -15,7 +15,7 @@ export function PendingReviewList({ items }: PendingReviewListProps) {
   if (items.length === 0) {
     return (
       <div className="py-5 text-center">
-        <p className="text-xs font-semibold text-fg-muted mt-1.5">All graded</p>
+        <p className="text-xs font-semibold text-fg-muted mt-1.5">No pending changes</p>
       </div>
     );
   }
