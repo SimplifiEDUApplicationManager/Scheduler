@@ -147,7 +147,7 @@ export const REQUESTS: TuitionRequest[] = [
     studentName: 'Ava Rodriguez', studentEmail: 'ava.rodriguez@gmail.com',
     subject: 'Calculus BC', subjectId: '3340ce1b-ffb0-4df5-9107-654a87abb90e',
     tuples: [{ day: 1, start: 17, end: 20 }, { day: 3, start: 18, end: 21 }],
-    tz: 'America/New_York', startDate: 'May 6',
+    tz: 'America/New_York', startDate: '2026-05-06',
     notes: 'Junior, preparing for May exam. Needs help with series and parametric.',
   },
   {
@@ -155,7 +155,7 @@ export const REQUESTS: TuitionRequest[] = [
     studentName: 'Liam Chen', studentEmail: 'liam.chen@gmail.com',
     subject: 'SAT Prep', subjectId: '680bd170-5cbe-4457-8edc-54f92fa195a7',
     tuples: [{ day: 2, start: 16, end: 19 }, { day: 4, start: 16, end: 19 }],
-    tz: 'America/Los_Angeles', startDate: 'May 10',
+    tz: 'America/Los_Angeles', startDate: '2026-05-10',
     notes: 'Target score 780+. Currently 680.',
   },
   {
@@ -171,7 +171,7 @@ export const REQUESTS: TuitionRequest[] = [
     studentName: 'Mateo Ruiz', studentEmail: 'mateo.ruiz@gmail.com',
     subject: 'Spanish I', subjectId: '56714b3c-a78a-409e-a36d-f7b1f54ce42a',
     tuples: [{ day: 1, start: 15, end: 17 }, { day: 3, start: 15, end: 17 }],
-    tz: 'America/New_York', startDate: 'May 12',
+    tz: 'America/New_York', startDate: '2026-05-12',
     notes: 'Heritage speaker. Weak on formal writing.',
   },
   {
@@ -179,7 +179,7 @@ export const REQUESTS: TuitionRequest[] = [
     studentName: 'Priya Desai', studentEmail: 'priya.desai@gmail.com',
     subject: 'Biology', subjectId: '86d92819-4635-4bae-aaf0-8b4965f45b27',
     tuples: [{ day: 0, start: 10, end: 13 }, { day: 6, start: 10, end: 13 }],
-    tz: 'America/Chicago', startDate: 'May 18',
+    tz: 'America/Chicago', startDate: '2026-05-18',
     notes: 'AP Biology, retaking the exam. Needs help with genetics and ecology.',
   },
   {
@@ -187,7 +187,7 @@ export const REQUESTS: TuitionRequest[] = [
     studentName: 'Jackson Wu', studentEmail: 'jackson.wu@gmail.com',
     subject: 'Statistics', subjectId: 'cb673cc0-cdfc-41f6-bd03-41f58a731cd6',
     tuples: [{ day: 2, start: 17, end: 19 }, { day: 4, start: 17, end: 19 }],
-    tz: 'America/Denver', startDate: 'May 7',
+    tz: 'America/Denver', startDate: '2026-05-07',
     notes: 'Senior. First AP. Nervous.',
   },
   {
@@ -203,7 +203,7 @@ export const REQUESTS: TuitionRequest[] = [
     studentName: 'Oliver Grant', studentEmail: 'oliver.grant@gmail.com',
     subject: 'Chemistry', subjectId: '7bb3b6d0-f529-4e98-b186-a6ca9ea037b4',
     tuples: [{ day: 1, start: 17, end: 19 }, { day: 3, start: 17, end: 19 }],
-    tz: 'America/New_York', startDate: 'Apr 21',
+    tz: 'America/New_York', startDate: '2026-04-21',
     notes: 'Sophomore. Strong math.',
     matchedTutorId: 't-katrina',
   },
