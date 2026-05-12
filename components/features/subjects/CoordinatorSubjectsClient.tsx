@@ -135,7 +135,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject }: 
     }
 
     const subject = await res.json() as { id: string; name: string; category: string };
-    const newRow: SubjectRow = { ...subject, tutorCount: 0, pendingCount: 0 };
+    const newRow: SubjectRow = { ...subject, tutorCount: 0 };
     setSubjects(prev =>
       [...prev, newRow].sort((a, b) =>
         a.category.localeCompare(b.category) || a.name.localeCompare(b.name),
