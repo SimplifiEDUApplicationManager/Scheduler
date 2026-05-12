@@ -466,6 +466,7 @@ Coordinators can still propose to at-capacity tutors — the system warns but do
   /utils
     /availability.ts        → Thin wrapper over Nylas availability (no custom computation)
     /capacity.ts            → Weekly hours calculation from events
+    /dates.ts               → toIsoDate — normalise date strings to YYYY-MM-DD for Postgres
     /timezone.ts            → Timezone conversion (date-fns-tz only, no moment.js)
   /hooks                    → Custom React hooks
   /types                    → Shared TypeScript types and interfaces
@@ -485,6 +486,7 @@ Coordinators can still propose to at-capacity tutors — the system warns but do
 - **No `console.log` in committed code.**
 - **Unit test utility functions** — especially `capacity.ts` and any tuple-matching logic.
 - **Use `date-fns-tz` for timezone conversions.** Never use `moment.js`.
+- **Never pass user-supplied date strings directly to `new Date()`.** V8 silently parses year-less strings like `"May 6"` as year 2001. Always use `toIsoDate()` from `lib/utils/dates.ts` to normalise to YYYY-MM-DD (or null) before storing or converting.
 - **Components under ~150 lines.** Split if larger.
 - **Don't mix tutor and coordinator UI logic** in the same components.
 
