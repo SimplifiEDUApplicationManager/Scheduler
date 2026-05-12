@@ -31,9 +31,9 @@ export default async function DashboardPage() {
   const supabase = await createClient();
 
   const { data: reviewRows } = await supabase
-    .from('tutor_subjects')
-    .select('id, subject_id, subjects(name), users!tutor_subjects_tutor_id_fkey(name)')
-    .eq('coordinator_confidence', 'UNPROVEN')
+    .from('tutor_subject_changes')
+    .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
+    .eq('status', 'PENDING')
     .order('created_at');
 
   const pendingReviewItems: PendingReviewItem[] = (reviewRows ?? []).map(r => {
@@ -199,7 +199,7 @@ export default async function DashboardPage() {
 
           <DashCard
             title="Subject pending review"
-            subtitle="Tutors waiting on coordinator to grade"
+            subtitle="Tutor subject changes awaiting approval"
             action={
               <Link
                 href="/dashboard/subjects"
