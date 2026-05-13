@@ -53,7 +53,6 @@ export default async function RequestsPage() {
           requests={REQUESTS}
           invitations={INVITATIONS}
           tutors={TUTORS}
-          hasAsana={false}
         />
       </Suspense>
     );
@@ -63,26 +62,16 @@ export default async function RequestsPage() {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) redirect('/login');
 
-  const [
-    { data: rows },
-    { data: coordinator },
-    tutors,
-  ] = await Promise.all([
+  const [{ data: rows }, tutors] = await Promise.all([
     supabase
       .from('requests')
       .select('*')
       .eq('coordinator_id', user.id)
       .order('created_at', { ascending: false }),
-    supabase
-      .from('users')
-      .select('asana_access_token, asana_project_id')
-      .eq('id', user.id)
-      .single(),
     fetchAllTutors(supabase),
   ]);
 
   const requests = (rows ?? []).map(rowToRequest);
-  const hasAsana = !!(coordinator?.asana_access_token && coordinator?.asana_project_id);
 
   return (
     <Suspense>
@@ -90,7 +79,6 @@ export default async function RequestsPage() {
         requests={requests}
         invitations={[]}
         tutors={tutors}
-        hasAsana={hasAsana}
       />
     </Suspense>
   );

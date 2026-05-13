@@ -1,8 +1,40 @@
 import { redirect } from 'next/navigation';
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import type { Tables, Database } from '@/lib/types/database';
+
+// ── Skill bearer-token auth ───────────────────────────────────────────────────
+//
+// API routes that need to be callable from Claude skills accept an alternative
+// auth path: Authorization: Bearer $SKILL_API_KEY.
+// When the token matches, the request is treated as the bound coordinator
+// (SKILL_COORDINATOR_ID) using a service-role Supabase client.
+
+async function resolveSkillCaller(): Promise<
+  { ok: true; user: { id: string }; supabase: ReturnType<typeof createServiceClient>; role: Role } | null
+> {
+  const apiKey = process.env.SKILL_API_KEY;
+  const coordinatorId = process.env.SKILL_COORDINATOR_ID;
+  if (!apiKey || !coordinatorId) return null;
+
+  const headerStore = await headers();
+  const auth = headerStore.get('authorization') ?? '';
+  if (auth !== `Bearer ${apiKey}`) return null;
+
+  const supabase = createServiceClient();
+  const { data: caller } = await supabase
+    .from('users')
+    .select('role, status')
+    .eq('id', coordinatorId)
+    .single();
+
+  if (!caller || caller.status !== 'ACTIVE') return null;
+  if (caller.role !== 'COORDINATOR' && caller.role !== 'SUPER_ADMIN') return null;
+
+  return { ok: true, user: { id: coordinatorId }, supabase, role: caller.role as Role };
+}
 
 // ── Route auth helpers ───────────────────────────────────────────────────────
 //
@@ -32,6 +64,9 @@ type AuthFail = { ok: false; response: NextResponse };
 
 /** Verify the session only. No DB round-trip to fetch the caller row. */
 export async function requireAuth(): Promise<AuthOk | AuthFail> {
+  const skill = await resolveSkillCaller();
+  if (skill) return { ok: true, user: skill.user, supabase: skill.supabase };
+
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) {
@@ -46,6 +81,14 @@ export async function requireAuth(): Promise<AuthOk | AuthFail> {
  * for fine-grained ownership checks without a second DB query.
  */
 export async function requireActiveRole(roles: readonly Role[]): Promise<CallerOk | AuthFail> {
+  const skill = await resolveSkillCaller();
+  if (skill) {
+    if (!(roles as readonly string[]).includes(skill.role)) {
+      return { ok: false, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+    }
+    return skill;
+  }
+
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) {

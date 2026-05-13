@@ -12,10 +12,9 @@ interface Props {
   requests: TuitionRequest[];
   invitations: Invitation[];
   tutors: Tutor[];
-  hasAsana: boolean;
 }
 
-export function RequestsClient({ requests: initialRequests, invitations, tutors, hasAsana }: Props) {
+export function RequestsClient({ requests: initialRequests, invitations, tutors }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reqParam = searchParams.get('req');
@@ -27,13 +26,12 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
       : (initialRequests[0]?.id ?? ''),
   );
 
-  // Sync state when the server re-fetches after router.refresh() (e.g. post-sync).
+  // Sync state when the server re-fetches (e.g. post-create via router.refresh()).
   useEffect(() => {
     setRequests(initialRequests);
   }, [initialRequests]);
   const [proposeFor, setProposeFor]   = useState<{ tutor: Tutor; request: TuitionRequest } | null>(null);
   const [toastMsg, setToastMsg]       = useState<string | null>(null);
-  const [syncing, setSyncing]         = useState(false);
   const [showNewRequest, setShowNewRequest] = useState(false);
 
   const selected = requests.find(r => r.id === selectedId) ?? requests[0] ?? null;
@@ -42,25 +40,6 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
   function showToast(msg: string) {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3200);
-  }
-
-  async function handleSync() {
-    setSyncing(true);
-    try {
-      const res = await fetch('/api/coordinator/asana/sync', { method: 'POST' });
-      if (res.ok) {
-        const { synced } = await res.json() as { synced: number };
-        showToast(`Synced ${synced} request${synced === 1 ? '' : 's'} from Asana`);
-        router.refresh();
-      } else {
-        const body = await res.json() as { error?: string };
-        showToast(body.error ?? 'Sync failed');
-      }
-    } catch {
-      showToast('Network error — sync failed');
-    } finally {
-      setSyncing(false);
-    }
   }
 
   function handleProposeSend(tutorName: string) {
@@ -83,15 +62,6 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
           <div className="flex items-center justify-between gap-2 mb-0.5">
             <h2 className="text-[13px] font-bold text-fg-1">Requests</h2>
             <div className="flex items-center gap-1.5">
-              {hasAsana && (
-                <button
-                  onClick={handleSync}
-                  disabled={syncing}
-                  className="h-6 px-2 rounded text-[10px] font-semibold bg-surface-3 text-fg-2 hover:bg-neutral-200 transition-colors disabled:opacity-50"
-                >
-                  {syncing ? 'Syncing…' : '↻ Sync'}
-                </button>
-              )}
               <button
                 onClick={() => setShowNewRequest(true)}
                 className="h-6 px-2 rounded text-[10px] font-semibold bg-brand-ink text-white hover:bg-neutral-700 transition-colors"
@@ -106,9 +76,7 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
         <div className="flex-1 overflow-y-auto min-h-0">
           {requests.length === 0 ? (
             <div className="px-4 py-6 text-center text-[12px] text-fg-muted">
-              {hasAsana
-                ? 'No requests yet. Click ↻ Sync to pull from Asana, or + New to enter one manually.'
-                : 'No requests yet. Click + New to enter one manually, or connect Asana in Settings.'}
+              {'No requests yet. Click + New to enter one manually, or run /sync-requests in Claude.'}
             </div>
           ) : (
             requests.map(r => (

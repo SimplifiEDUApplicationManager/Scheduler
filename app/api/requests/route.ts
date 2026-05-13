@@ -37,28 +37,37 @@ export async function POST(req: NextRequest) {
   const { user, supabase } = auth;
 
   const body = await req.json() as Record<string, unknown>;
-  const { student_name, student_email, subject, requested_schedule, timezone, start_date, notes } = body;
+  const {
+    student_name, student_email, subject, requested_schedule, timezone,
+    start_date, notes, asana_task_id, asana_task_url,
+  } = body;
 
   if (!student_name || typeof student_name !== 'string') {
     return NextResponse.json({ error: 'student_name is required', status: 400 }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from('requests')
-    .insert({
-      coordinator_id:     user.id,
-      source:             'manual',
-      status:             'open',
-      student_name:       student_name,
-      student_email:      typeof student_email === 'string' ? student_email : '',
-      subject:            typeof subject       === 'string' ? subject       : null,
-      requested_schedule: requested_schedule != null ? (requested_schedule as Json) : null,
-      timezone:           typeof timezone      === 'string' ? timezone      : null,
-      start_date:         typeof start_date    === 'string' ? start_date    : null,
-      notes:              typeof notes         === 'string' ? notes         : null,
-    })
-    .select('id')
-    .single();
+  const baseRow = {
+    coordinator_id:     user.id,
+    source:             (typeof asana_task_id === 'string' ? 'asana' : 'manual') as 'asana' | 'manual',
+    student_name:       student_name,
+    student_email:      typeof student_email   === 'string' ? student_email   : '',
+    subject:            typeof subject         === 'string' ? subject         : null,
+    requested_schedule: requested_schedule != null ? (requested_schedule as Json) : null,
+    timezone:           typeof timezone        === 'string' ? timezone        : null,
+    start_date:         typeof start_date      === 'string' ? start_date      : null,
+    notes:              typeof notes           === 'string' ? notes           : null,
+    asana_task_id:      typeof asana_task_id   === 'string' ? asana_task_id   : null,
+    asana_task_url:     typeof asana_task_url  === 'string' ? asana_task_url  : null,
+  };
+
+  // Upsert when an asana_task_id is provided so re-running the skill is idempotent.
+  // status is excluded from the upsert row so re-syncing does not overwrite an
+  // already-matched or declined request back to 'open'.
+  const query = typeof asana_task_id === 'string'
+    ? supabase.from('requests').upsert(baseRow, { onConflict: 'asana_task_id', ignoreDuplicates: false }).select('id').single()
+    : supabase.from('requests').insert({ ...baseRow, status: 'open' as const }).select('id').single();
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message, status: 500 }, { status: 500 });
