@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import type { Json, Database } from '@/lib/types/database';
 
+/**
+ * DELETE /api/requests/[id]
+ * Delete a request. Coordinators may only delete their own requests.
+ */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireActiveRole(['COORDINATOR', 'SUPER_ADMIN']);
+  if (!auth.ok) return auth.response;
+  const { user, supabase } = auth;
+
+  const { id } = await params;
+
+  const { error } = await supabase
+    .from('requests')
+    .delete()
+    .eq('id', id)
+    .eq('coordinator_id', user.id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message, status: 500 }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
 type RequestUpdate = Database['public']['Tables']['requests']['Update'];
 
 /**
