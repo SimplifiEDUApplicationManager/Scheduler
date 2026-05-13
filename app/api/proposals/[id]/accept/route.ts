@@ -73,7 +73,7 @@ async function createBookingEvent(
       .single(),
     supabase
       .from('users')
-      .select('nylas_grant_id, meeting_link')
+      .select('nylas_grant_id, meeting_link, email')
       .eq('id', tutorId)
       .single(),
   ]);
@@ -118,6 +118,7 @@ async function createBookingEvent(
       startUnix,
       endUnix,
       meetingLink: tutor.meeting_link ?? undefined,
+      calendarId:  tutor.email ?? undefined,
     });
 
     if (nylasEventId && savedEventId === null) {
