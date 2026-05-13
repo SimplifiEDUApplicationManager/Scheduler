@@ -46,10 +46,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'student_name is required', status: 400 }, { status: 400 });
   }
 
-  const row = {
+  const baseRow = {
     coordinator_id:     user.id,
     source:             (typeof asana_task_id === 'string' ? 'asana' : 'manual') as 'asana' | 'manual',
-    status:             'open' as const,
     student_name:       student_name,
     student_email:      typeof student_email   === 'string' ? student_email   : '',
     subject:            typeof subject         === 'string' ? subject         : null,
@@ -62,9 +61,11 @@ export async function POST(req: NextRequest) {
   };
 
   // Upsert when an asana_task_id is provided so re-running the skill is idempotent.
+  // status is excluded from the upsert row so re-syncing does not overwrite an
+  // already-matched or declined request back to 'open'.
   const query = typeof asana_task_id === 'string'
-    ? supabase.from('requests').upsert(row, { onConflict: 'asana_task_id', ignoreDuplicates: false }).select('id').single()
-    : supabase.from('requests').insert(row).select('id').single();
+    ? supabase.from('requests').upsert(baseRow, { onConflict: 'asana_task_id', ignoreDuplicates: false }).select('id').single()
+    : supabase.from('requests').insert({ ...baseRow, status: 'open' as const }).select('id').single();
 
   const { data, error } = await query;
 

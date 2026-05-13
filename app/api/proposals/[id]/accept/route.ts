@@ -11,11 +11,8 @@ type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
 /**
  * POST /api/proposals/[id]/accept
  * Tutor accepts a pending proposal addressed to them.
- * On success:
- *   1. Creates a Nylas calendar event (best-effort).
- *   2. If the proposal has an asana_task_id, adds a comment + marks the Asana task complete (best-effort).
- *
- * Neither the Nylas nor Asana side-effects block the accept — failures are logged only.
+ * On success, creates a Nylas calendar event (best-effort).
+ * Failure does not block the accept — logged only.
  */
 type Placement = { day: number; start: number } | null;
 

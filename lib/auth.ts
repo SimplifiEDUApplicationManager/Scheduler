@@ -31,6 +31,7 @@ async function resolveSkillCaller(): Promise<
     .single();
 
   if (!caller || caller.status !== 'ACTIVE') return null;
+  if (caller.role !== 'COORDINATOR' && caller.role !== 'SUPER_ADMIN') return null;
 
   return { ok: true, user: { id: coordinatorId }, supabase, role: caller.role as Role };
 }
