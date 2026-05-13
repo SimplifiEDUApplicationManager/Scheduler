@@ -237,12 +237,15 @@ export async function createTutoringEvent(
     startUnix: number;
     endUnix: number;
     meetingLink?: string;
+    // For Google Calendar, the primary calendar ID is the tutor's email address.
+    // Pass it here to ensure the event lands on the correct calendar.
+    // Falls back to the first writable calendar from the Nylas API.
+    calendarId?: string;
   },
 ): Promise<string | null> {
-  // Nylas v3 requires a real calendar ID — 'primary' is not valid as a query param.
-  // Fetch the actual writable calendar IDs for this grant.
-  const calendarIds = await fetchCalendarIds(grantId);
-  const calendarId = calendarIds[0];
+  // Resolve the target calendar: use the provided ID (tutor's email for Google),
+  // or fall back to fetching the first writable calendar from Nylas.
+  const calendarId = params.calendarId ?? (await fetchCalendarIds(grantId))[0];
 
   const body: NylasEventCreateBody = {
     title: `[Tutoring] ${params.studentName} — ${params.subject}`,
