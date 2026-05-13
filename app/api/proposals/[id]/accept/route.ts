@@ -3,7 +3,6 @@ import { createServerClient } from '@supabase/ssr';
 import { requireActiveRole } from '@/lib/auth';
 import { acceptProposal, transitionHttpStatus } from '@/lib/data/proposals';
 import { createTutoringEvent, tupleToUnix } from '@/lib/nylas/events';
-import { addAsanaComment, completeAsanaTask } from '@/lib/asana/client';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/types/database';
 
@@ -47,14 +46,9 @@ export async function POST(
   }
 
   // Side-effects run after the accept is committed; failures never block the response.
-  await Promise.allSettled([
-    createBookingEvent(id, auth.user.id, auth.supabase, placements).catch(err => {
-      console.error('[proposals/accept] Nylas booking failed:', err);
-    }),
-    updateAsanaTask(id, auth.supabase).catch(err => {
-      console.error('[proposals/accept] Asana update failed:', err);
-    }),
-  ]);
+  await createBookingEvent(id, auth.user.id, auth.supabase, placements).catch(err => {
+    console.error('[proposals/accept] Nylas booking failed:', err);
+  });
 
   return NextResponse.json({ id });
 }
@@ -132,46 +126,4 @@ async function createBookingEvent(
       .update({ nylas_event_id: savedEventId })
       .eq('id', proposalId);
   }
-}
-
-async function updateAsanaTask(
-  proposalId: string,
-  supabase: SupabaseInstance,
-): Promise<void> {
-  // Fetch proposal + tutor name using the tutor's session (proposals are readable by the tutor).
-  const { data: proposal } = await supabase
-    .from('proposals')
-    .select('asana_task_id, coordinator_id, student_name, subject, tutor_id')
-    .eq('id', proposalId)
-    .single();
-
-  if (!proposal?.asana_task_id || !proposal.coordinator_id) return;
-
-  // Use the service-role client to read the coordinator's PAT — the tutor's
-  // RLS session cannot read another user's row.
-  const admin = createServiceClient();
-  const [{ data: coordinator }, { data: tutor }] = await Promise.all([
-    admin
-      .from('users')
-      .select('asana_access_token')
-      .eq('id', proposal.coordinator_id)
-      .single(),
-    admin
-      .from('users')
-      .select('name')
-      .eq('id', proposal.tutor_id ?? '')
-      .single(),
-  ]);
-
-  const pat = coordinator?.asana_access_token;
-  if (!pat) return;
-
-  const tutorName = tutor?.name ?? 'a tutor';
-  const comment = `Matched: ${proposal.student_name} assigned to ${tutorName} for ${proposal.subject ?? 'tutoring'}.`;
-
-  // Run comment + complete in parallel so a failure on one doesn't block the other.
-  await Promise.allSettled([
-    addAsanaComment(pat, proposal.asana_task_id, comment),
-    completeAsanaTask(pat, proposal.asana_task_id),
-  ]);
 }
