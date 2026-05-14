@@ -22,6 +22,7 @@ interface TutorsClientProps {
   requests: TuitionRequest[];
   subjects: Subject[];
   invitations: Invitation[];
+  coordinatorTz?: string;
 }
 
 export function TutorsClient({ tutors, requests, subjects, invitations }: TutorsClientProps) {
