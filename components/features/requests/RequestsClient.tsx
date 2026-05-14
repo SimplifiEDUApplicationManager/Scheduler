@@ -55,6 +55,17 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
     showToast('Request created');
   }
 
+  async function handleDelete() {
+    if (!selected) return;
+    const id = selected.id;
+    const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
+    if (!res.ok) { showToast('Failed to delete request'); return; }
+    const remaining = requests.filter(r => r.id !== id);
+    setRequests(remaining);
+    setSelectedId(remaining[0]?.id ?? '');
+    showToast('Request deleted');
+  }
+
   return (
     <div className="flex flex-1 overflow-hidden min-h-0">
       {/* ── Left: request list ───────────────────────────────────────────── */}
@@ -101,6 +112,7 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
             tutors={tutors}
             coordinatorTz={coordinatorTz}
             onPropose={tutor => setProposeFor({ tutor, request: selected })}
+            onDelete={handleDelete}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-fg-muted text-sm">

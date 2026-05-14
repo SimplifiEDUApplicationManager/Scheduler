@@ -15,9 +15,10 @@ interface Props {
   matchedTutor?: Tutor;
   coordinatorTz: string;
   onPropose: (tutor: Tutor) => void;
+  onDelete: () => void;
 }
 
-export function RequestDetail({ request: r, invitations, tutors, matchedTutor, coordinatorTz, onPropose }: Props) {
+export function RequestDetail({ request: r, invitations, tutors, matchedTutor, coordinatorTz, onPropose, onDelete }: Props) {
   const suggestions = useMemo(() => {
     const CONF_ORDER = ['HIGH', 'MEDIUM', 'UNPROVEN', 'LOW'] as const;
     return tutors
@@ -62,14 +63,25 @@ export function RequestDetail({ request: r, invitations, tutors, matchedTutor, c
               <span>{r.receivedAt}</span>
             </div>
           </div>
-          {r.status === 'open' && (
-            <a
-              href={`/dashboard/requests/${r.id}/consider`}
-              className="h-8 px-3.5 rounded-lg bg-brand-ink text-white text-[12px] font-semibold flex items-center gap-1.5 hover:bg-neutral-700 transition-colors shrink-0"
+          <div className="flex items-center gap-2 shrink-0">
+            {r.status === 'open' && (
+              <a
+                href={`/dashboard/requests/${r.id}/consider`}
+                className="h-8 px-3.5 rounded-lg bg-brand-ink text-white text-[12px] font-semibold flex items-center gap-1.5 hover:bg-neutral-700 transition-colors"
+              >
+                Find a tutor →
+              </a>
+            )}
+            <button
+              onClick={onDelete}
+              className="h-8 w-8 rounded-lg border border-border-default flex items-center justify-center text-fg-3 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+              aria-label="Delete request"
             >
-              Find a tutor →
-            </a>
-          )}
+              <svg width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M2 3.5h10M5.5 3.5V2.5h3v1M5 3.5l.5 8M9 3.5l-.5 8" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Matched banner */}
