@@ -9,19 +9,22 @@ import type { Database } from '@/lib/types/database';
 
 type RequestRow = Database['public']['Tables']['requests']['Row'];
 
-function rowToRequest(row: RequestRow): TuitionRequest {
+function rowToRequest(
+  row: RequestRow,
+  subjectsByName: Map<string, string>,
+): TuitionRequest {
   const tuples = Array.isArray(row.requested_schedule)
     ? (row.requested_schedule as unknown as Tuple[])
     : [];
-
+  const subjectName = row.subject ?? '—';
   return {
     id:           row.id,
     source:       (row.source as RequestSource) ?? 'manual',
     status:       (row.status as RequestStatus)  ?? 'open',
     studentName:  row.student_name,
     studentEmail: row.student_email,
-    subject:      row.subject ?? '—',
-    subjectId:    '',
+    subject:      subjectName,
+    subjectId:    subjectsByName.get(subjectName.toLowerCase()) ?? '',
     tuples,
     tz:           row.timezone ?? 'America/New_York',
     startDate:    row.start_date ?? '—',
@@ -53,6 +56,7 @@ export default async function RequestsPage() {
           requests={REQUESTS}
           invitations={INVITATIONS}
           tutors={TUTORS}
+          coordinatorTz="America/New_York"
         />
       </Suspense>
     );
@@ -62,16 +66,22 @@ export default async function RequestsPage() {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) redirect('/login');
 
-  const [{ data: rows }, tutors] = await Promise.all([
+  const [{ data: rows }, tutors, { data: subjects }, { data: coordRow }] = await Promise.all([
     supabase
       .from('requests')
       .select('*')
       .eq('coordinator_id', user.id)
       .order('created_at', { ascending: false }),
     fetchAllTutors(supabase),
+    supabase.from('subjects').select('id, name'),
+    supabase.from('users').select('timezone').eq('id', user.id).single(),
   ]);
 
-  const requests = (rows ?? []).map(rowToRequest);
+  const subjectsByName = new Map(
+    (subjects ?? []).map(s => [s.name.toLowerCase(), s.id]),
+  );
+  const coordinatorTz = coordRow?.timezone ?? 'America/New_York';
+  const requests = (rows ?? []).map(r => rowToRequest(r, subjectsByName));
 
   return (
     <Suspense>
@@ -79,6 +89,7 @@ export default async function RequestsPage() {
         requests={requests}
         invitations={[]}
         tutors={tutors}
+        coordinatorTz={coordinatorTz}
       />
     </Suspense>
   );

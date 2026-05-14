@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import type { TuitionRequest, Invitation, Tutor } from '@/lib/types/domain';
 import { overlapsTuple, DAY_NAMES_FULL, fmtRange } from '@/lib/utils/tutors';
+import { convertTupleTimezone } from '@/lib/utils/timezone';
 import { RequestDetailCard } from './RequestDetailCard';
 import { RequestTimeline } from './RequestTimeline';
 import { SuggestionRow } from './SuggestionRow';
@@ -12,10 +13,11 @@ interface Props {
   invitations: Invitation[];
   tutors: Tutor[];
   matchedTutor?: Tutor;
+  coordinatorTz: string;
   onPropose: (tutor: Tutor) => void;
 }
 
-export function RequestDetail({ request: r, invitations, tutors, matchedTutor, onPropose }: Props) {
+export function RequestDetail({ request: r, invitations, tutors, matchedTutor, coordinatorTz, onPropose }: Props) {
   const suggestions = useMemo(() => {
     const CONF_ORDER = ['HIGH', 'MEDIUM', 'UNPROVEN', 'LOW'] as const;
     return tutors
@@ -33,7 +35,9 @@ export function RequestDetail({ request: r, invitations, tutors, matchedTutor, o
       );
   }, [tutors, r]);
 
-  const tzShort = r.tz.split('/').pop()?.replace(/_/g, ' ') ?? r.tz;
+  const studentTzShort   = r.tz.split('/').pop()?.replace(/_/g, ' ') ?? r.tz;
+  const coordTzShort     = coordinatorTz.split('/').pop()?.replace(/_/g, ' ') ?? coordinatorTz;
+  const showTzConversion = r.tz !== coordinatorTz;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -84,13 +88,23 @@ export function RequestDetail({ request: r, invitations, tutors, matchedTutor, o
         {/* 2-col grid */}
         <div className="grid grid-cols-2 gap-4">
           {/* Requested times */}
-          <RequestDetailCard title="Requested times" subtitle={`Start: ${r.startDate} · ${tzShort}`}>
+          <RequestDetailCard title="Requested times" subtitle={`Start: ${r.startDate} · ${showTzConversion ? coordTzShort : studentTzShort}`}>
             <div className="flex flex-col gap-1.5">
-              {r.tuples.map((t, i) => (
-                <div key={i} className="text-[12px] font-medium text-fg-1">
-                  {DAY_NAMES_FULL[t.day]} · {fmtRange(t.start, t.end)}
-                </div>
-              ))}
+              {r.tuples.map((t, i) => {
+                const coordT = showTzConversion
+                  ? convertTupleTimezone(t, r.tz, coordinatorTz)
+                  : t;
+                return (
+                  <div key={i} className="text-[12px] font-medium text-fg-1">
+                    {DAY_NAMES_FULL[coordT.day]} · {fmtRange(coordT.start, coordT.end)}
+                    {showTzConversion && (
+                      <span className="text-fg-3 ml-1.5 text-[10px] font-normal">
+                        ({DAY_NAMES_FULL[t.day]} · {fmtRange(t.start, t.end)} {studentTzShort})
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </RequestDetailCard>
 
