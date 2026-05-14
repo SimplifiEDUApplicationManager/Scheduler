@@ -3,6 +3,7 @@ import {
   tupleToUtcRange,
   formatInTz,
   formatDecimalHour,
+  convertTupleTimezone,
 } from '@/lib/utils/timezone';
 import type { Tuple } from '@/lib/types/domain';
 
@@ -178,6 +179,94 @@ describe('tupleToUtcRange — decimal (half-hour) start', () => {
     const { start } = tupleToUtcRange({ day: 2, start: 17.5, end: 19.5 }, SUMMER_MON, ET);
     // Tue Mar 11 5:30 PM EDT = 21:30 UTC
     expect(start.toISOString()).toBe('2025-03-11T21:30:00.000Z');
+  });
+});
+
+// ── convertTupleTimezone ────────────────────────────────────────────────────
+
+describe('convertTupleTimezone — identity', () => {
+  it('returns an equal tuple when fromTz equals toTz', () => {
+    const t = { day: 1, start: 17, end: 19 };
+    expect(convertTupleTimezone(t, ET, ET)).toEqual(t);
+  });
+});
+
+describe('convertTupleTimezone — cross-timezone conversion', () => {
+  // Mon 5–7 PM ET (UTC-5 in winter) = Mon 2–4 PM PT (UTC-8 in winter)
+  it('shifts hours when converting ET → PT (Mon 5pm ET → Mon 2pm PT)', () => {
+    const result = convertTupleTimezone({ day: 1, start: 17, end: 19 }, ET, PT);
+    expect(result.day).toBe(1);           // still Monday
+    expect(result.start).toBeCloseTo(14); // 2 PM PT
+    expect(result.end).toBeCloseTo(16);   // 4 PM PT
+  });
+
+  it('shifts hours when converting PT → ET (Mon 2pm PT → Mon 5pm ET)', () => {
+    const result = convertTupleTimezone({ day: 1, start: 14, end: 16 }, PT, ET);
+    expect(result.day).toBe(1);
+    expect(result.start).toBeCloseTo(17);
+    expect(result.end).toBeCloseTo(19);
+  });
+
+  it('rolls the day back when early-morning ET crosses midnight going west (Mon 1am ET → Sun 10pm PT)', () => {
+    const result = convertTupleTimezone({ day: 1, start: 1, end: 2 }, ET, PT);
+    expect(result.day).toBe(0);           // Sunday
+    expect(result.start).toBeCloseTo(22); // 10 PM PT
+    expect(result.end).toBeCloseTo(23);   // 11 PM PT
+  });
+
+  it('works for non-US timezone pairs (ET → London winter, UTC+0)', () => {
+    // Mon 12pm ET (UTC-5) = Mon 5pm UTC
+    const result = convertTupleTimezone({ day: 1, start: 12, end: 13 }, ET, 'Europe/London');
+    expect(result.day).toBe(1);
+    expect(result.start).toBeCloseTo(17);
+    expect(result.end).toBeCloseTo(18);
+  });
+
+  it('works for large offsets (ET → Tokyo, UTC+9)', () => {
+    // Mon 12pm ET (UTC-5) = Tue 2am JST (UTC+9, offset=14h)
+    const result = convertTupleTimezone({ day: 1, start: 12, end: 13 }, ET, 'Asia/Tokyo');
+    expect(result.day).toBe(2);           // Tuesday
+    expect(result.start).toBeCloseTo(2);  // 2 AM JST
+    expect(result.end).toBeCloseTo(3);    // 3 AM JST
+  });
+
+  it('produces end > start (not end < start) when session crosses midnight in toTz', () => {
+    // Mon 11 PM – Tue 12 AM ET (UTC-5 winter) = Mon 8 PM – 9 PM PT. No midnight cross here.
+    // Use a case that actually crosses midnight: Sat 11 PM PT → Sun 12 AM PT, converted to ET
+    // Sat 11 PM PT (UTC-8) = Sun 2 AM ET (UTC-5) → day=0 (Sun), start=2, end=3 -- no cross still
+    // For a genuine cross-midnight: Mon 10 PM – Tue 1 AM ET converted to UTC+9 (Tokyo)
+    // Mon 10 PM ET (UTC-5) = Tue 3 AM Tokyo (UTC+9), Mon 11 PM ET = Tue 4 AM, Mon midnight ET = Tue 5 AM
+    // But we need end to cross midnight *in* toTz.
+    // Mon 11 PM ET → Tue 1 AM ET (2h session) converted to Tokyo (UTC+9):
+    // Mon 11 PM ET = Tue 4 AM JST, Tue 1 AM ET = Tue 6 AM JST — no midnight cross in JST
+    // The midnight-cross-in-toTz scenario: something like PT → UTC+2 where a late-night slot flips
+    // Sat 10 PM PT → Sun 12:30 AM PT (2.5h session) converted to ET (UTC-5 winter):
+    // Sat 10 PM PT (UTC-8) = Sun 1 AM ET (UTC-5). Sun 12:30 AM PT = Sun 3:30 AM ET -- no cross
+    // Genuine case: Mon 10 PM – Tue 0:30 AM in PT, converted to ET:
+    // 10 PM PT = 1 AM ET Tuesday, 0:30 AM PT = 3:30 AM ET Tuesday -- both same day Tuesday, no cross
+    // The real midnight-crossing scenario in toTz: Sun 10 PM PT → Mon 0:30 AM PT:
+    // Sun 10 PM PT (UTC-8) = Mon 6 AM UTC, Mon 0:30 AM PT = Mon 8:30 AM UTC
+    // In ET (UTC-5): Mon 1 AM and Mon 3:30 AM — day=1, start=1, end=3.5 -- no cross
+    //
+    // The cleanest way to trigger midnight-in-toTz: ET 10 PM → ET 1 AM converted to UTC+12:
+    // ET 10 PM (UTC-5) = UTC+3:00, which in UTC+12 = 3 AM+12 = next day
+    // Let's use: Mon 10 PM ET (UTC-5 winter) → Mon midnight ET → Tue 2 AM ET (4h session)
+    // In UTC+14 (Pacific/Kiritimati):
+    // Mon 10 PM ET = Tue 11 AM Kiritimati (UTC+14), Tue 2 AM ET = Tue 3 PM Kiritimati
+    // All on Tuesday — no midnight cross.
+    //
+    // Actual triggering case: a long eastward shift. Mon 11 PM – Tue 1 AM ET to UTC+12:
+    // Mon 11 PM ET (UTC-5) = Tue 4 AM UTC+12. Tue 1 AM ET = Tue 6 AM UTC+12. No cross.
+    //
+    // Actually crossing midnight in toTz requires a westward shift where toTz is behind fromTz
+    // AND the session straddles local midnight in toTz.
+    // ET Mon 2 AM – 4 AM → PT (UTC-8): Sun 11 PM – Mon 1 AM PT
+    // In PT: start=23 (Sunday), end=1 (Monday next day)
+    // day is derived from utcStart in PT → Sunday (day=0), start=23, end=1 → end < start!
+    const result = convertTupleTimezone({ day: 1, start: 2, end: 4 }, ET, PT);
+    // Mon 2 AM ET (UTC-5) = Sun 11 PM PT (UTC-8) → day=0 (Sun), start=23
+    // Mon 4 AM ET (UTC-5) = Mon 1 AM PT (UTC-8) → end=1 in PT, but end < start would give 25
+    expect(result.end).toBeGreaterThan(result.start); // must never produce end < start
   });
 });
 

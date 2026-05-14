@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { TuitionRequest, Tutor } from '@/lib/types/domain';
 import { overlapsTuple, DAY_NAMES_FULL, fmtRange, getWeekLabel } from '@/lib/utils/tutors';
+import { convertTupleTimezone } from '@/lib/utils/timezone';
 import { SuggestionRow } from './SuggestionRow';
 import { WeekView } from '@/components/features/calendar/WeekView';
 import { ProposeModal } from '@/components/features/tutors/ProposeModal';
@@ -10,9 +11,10 @@ import { ProposeModal } from '@/components/features/tutors/ProposeModal';
 interface Props {
   request: TuitionRequest;
   tutors: Tutor[];
+  coordinatorTz: string;
 }
 
-export function ConsiderRequestClient({ request: r, tutors }: Props) {
+export function ConsiderRequestClient({ request: r, tutors, coordinatorTz }: Props) {
   const [activeTutorId, setActiveTutorId] = useState<string | null>(null);
   const [proposeFor, setProposeFor]        = useState<Tutor | null>(null);
   const [weekOffset, setWeekOffset]        = useState(0);
@@ -51,7 +53,9 @@ export function ConsiderRequestClient({ request: r, tutors }: Props) {
     setTimeout(() => setToastName(null), 3200);
   }
 
-  const tzShort = r.tz.split('/').pop()?.replace(/_/g, ' ') ?? r.tz;
+  const studentTzShort   = r.tz.split('/').pop()?.replace(/_/g, ' ') ?? r.tz;
+  const coordTzShort     = coordinatorTz.split('/').pop()?.replace(/_/g, ' ') ?? coordinatorTz;
+  const showTzConversion = r.tz !== coordinatorTz;
 
   return (
     <div className="flex flex-1 overflow-hidden min-h-0">
@@ -79,12 +83,22 @@ export function ConsiderRequestClient({ request: r, tutors }: Props) {
 
           {/* Tuples */}
           <div className="flex flex-col gap-1 mb-2.5">
-            {r.tuples.map((t, i) => (
-              <div key={i} className="text-[12px] text-fg-1 font-medium">
-                {DAY_NAMES_FULL[t.day]} · {fmtRange(t.start, t.end)}
-                <span className="text-fg-muted ml-1 text-[11px]">{tzShort}</span>
-              </div>
-            ))}
+            {r.tuples.map((t, i) => {
+              const coordT = showTzConversion
+                ? convertTupleTimezone(t, r.tz, coordinatorTz)
+                : t;
+              return (
+                <div key={i} className="text-[12px] text-fg-1 font-medium">
+                  {DAY_NAMES_FULL[coordT.day]} · {fmtRange(coordT.start, coordT.end)}
+                  <span className="text-fg-muted ml-1 text-[11px]">{coordTzShort}</span>
+                  {showTzConversion && (
+                    <span className="text-fg-muted ml-1.5 text-[10px]">
+                      ({DAY_NAMES_FULL[t.day]} · {fmtRange(t.start, t.end)} {studentTzShort})
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-3 text-[11px] text-fg-3">

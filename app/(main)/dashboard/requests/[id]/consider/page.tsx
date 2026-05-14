@@ -8,18 +8,22 @@ import type { Database } from '@/lib/types/database';
 
 type RequestRow = Database['public']['Tables']['requests']['Row'];
 
-function rowToRequest(row: RequestRow): TuitionRequest {
+function rowToRequest(
+  row: RequestRow,
+  subjectsByName: Map<string, string>,
+): TuitionRequest {
   const tuples = Array.isArray(row.requested_schedule)
     ? (row.requested_schedule as unknown as Tuple[])
     : [];
+  const subjectName = row.subject ?? '—';
   return {
     id:           row.id,
     source:       (row.source as RequestSource) ?? 'manual',
     status:       (row.status as RequestStatus)  ?? 'open',
     studentName:  row.student_name,
     studentEmail: row.student_email,
-    subject:      row.subject ?? '—',
-    subjectId:    '',
+    subject:      subjectName,
+    subjectId:    subjectsByName.get(subjectName.toLowerCase()) ?? '',
     tuples,
     tz:           row.timezone ?? 'America/New_York',
     startDate:    row.start_date ?? '—',
@@ -40,24 +44,32 @@ export default async function ConsiderRequestPage({ params }: Props) {
     const { REQUESTS, TUTORS } = await import('@/lib/data/mock');
     const request = REQUESTS.find(r => r.id === id);
     if (!request) notFound();
-    return <ConsiderRequestClient request={request} tutors={TUTORS} />;
+    return <ConsiderRequestClient request={request} tutors={TUTORS} coordinatorTz="America/New_York" />;
   }
 
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) redirect('/login');
 
-  const [{ data: row }, tutors] = await Promise.all([
+  const [{ data: row }, tutors, { data: subjects }, { data: coordRow }] = await Promise.all([
     supabase.from('requests').select('*').eq('id', id).eq('coordinator_id', user.id).single(),
     fetchAllTutors(supabase),
+    supabase.from('subjects').select('id, name'),
+    supabase.from('users').select('timezone').eq('id', user.id).single(),
   ]);
 
   if (!row) notFound();
 
+  const subjectsByName = new Map(
+    (subjects ?? []).map(s => [s.name.toLowerCase(), s.id]),
+  );
+  const coordinatorTz = coordRow?.timezone ?? 'America/New_York';
+
   return (
     <ConsiderRequestClient
-      request={rowToRequest(row)}
+      request={rowToRequest(row, subjectsByName)}
       tutors={tutors}
+      coordinatorTz={coordinatorTz}
     />
   );
 }

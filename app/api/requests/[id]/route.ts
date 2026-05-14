@@ -16,14 +16,19 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('requests')
     .delete()
     .eq('id', id)
-    .eq('coordinator_id', user.id);
+    .eq('coordinator_id', user.id)
+    .select('id');
 
   if (error) {
     return NextResponse.json({ error: error.message, status: 500 }, { status: 500 });
+  }
+
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: 'Not found', status: 404 }, { status: 404 });
   }
 
   return NextResponse.json({ ok: true });

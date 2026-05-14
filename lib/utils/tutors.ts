@@ -24,10 +24,11 @@ export function overlapHours(availability: Availability, tuples: Tuple[]): numbe
   return Math.round(total * 10) / 10;
 }
 
-/** Formats a decimal hour as 12h time, e.g. 16 → "4:00 PM", 9.5 → "9:30 AM". */
+/** Formats a decimal hour as 12h time, e.g. 16 → "4:00 PM", 9.5 → "9:30 AM".
+ *  Accepts values ≥ 24 for sessions that cross midnight (e.g. 25 → "1 AM"). */
 export function fmtHour(h: number): string {
   const mins = Math.round((h % 1) * 60);
-  const hour = Math.floor(h);
+  const hour = Math.floor(h % 24); // normalise cross-midnight values
   const suffix = hour >= 12 ? 'PM' : 'AM';
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
   return mins === 0 ? `${h12} ${suffix}` : `${h12}:${String(mins).padStart(2, '0')} ${suffix}`;

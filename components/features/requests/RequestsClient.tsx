@@ -12,9 +12,10 @@ interface Props {
   requests: TuitionRequest[];
   invitations: Invitation[];
   tutors: Tutor[];
+  coordinatorTz: string;
 }
 
-export function RequestsClient({ requests: initialRequests, invitations, tutors }: Props) {
+export function RequestsClient({ requests: initialRequests, invitations, tutors, coordinatorTz }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reqParam = searchParams.get('req');
@@ -98,6 +99,7 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors 
             request={selected}
             invitations={invitations.filter(i => i.requestId === selected.id)}
             tutors={tutors}
+            coordinatorTz={coordinatorTz}
             onPropose={tutor => setProposeFor({ tutor, request: selected })}
           />
         ) : (
