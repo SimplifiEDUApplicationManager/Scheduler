@@ -106,7 +106,14 @@ export function convertTupleTimezone(tuple: Tuple, fromTz: string, toTz: string)
   const toDecimal = (d: Date) =>
     Number(formatInTimeZone(d, toTz, 'H')) + Number(formatInTimeZone(d, toTz, 'm')) / 60;
 
-  return { day, start: toDecimal(utcStart), end: toDecimal(utcEnd) };
+  const start = toDecimal(utcStart);
+  const rawEnd = toDecimal(utcEnd);
+  // If end appears to precede start, the session crossed midnight in toTz.
+  // Add 24 so end > start is always true (e.g. 25 = 1 AM the next day).
+  // fmtHour handles values ≥ 24 by normalising with % 24.
+  const end = rawEnd < start ? rawEnd + 24 : rawEnd;
+
+  return { day, start, end };
 }
 
 // ── Internal helpers ───────────────────────────────────────────────────────

@@ -64,3 +64,23 @@ describe('fmtRange — cross-period', () => {
     expect(fmtRange(11.5, 12.5)).toBe('11:30 AM–12:30 PM');
   });
 });
+
+describe('fmtHour — cross-midnight values (≥ 24)', () => {
+  it('treats 24 as midnight (12 AM)', () => {
+    expect(fmtHour(24)).toBe('12 AM');
+  });
+
+  it('treats 25 as 1 AM', () => {
+    expect(fmtHour(25)).toBe('1 AM');
+  });
+
+  it('treats 24.5 as 12:30 AM', () => {
+    expect(fmtHour(24.5)).toBe('12:30 AM');
+  });
+});
+
+describe('fmtRange — cross-midnight end (end ≥ 24)', () => {
+  it('formats a range that ends past midnight (11 PM – 1 AM)', () => {
+    expect(fmtRange(23, 25)).toBe('11 PM–1 AM');
+  });
+});
