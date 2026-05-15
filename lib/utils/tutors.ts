@@ -11,17 +11,22 @@ export function overlapsTuple(availability: Availability, tuple: Tuple): boolean
   return windows.some(([ws, we]) => ws < tuple.end && we > tuple.start);
 }
 
-/** Returns total overlap hours between a tutor's availability and a set of tuples. */
+/**
+ * Returns the number of weekly hours a tutor would take on from a set of request tuples.
+ *
+ * Each tuple represents a student's availability window for one weekly session.
+ * Sessions are 1 hour each, once per week — so each tuple that overlaps the
+ * tutor's availability contributes exactly 1 hour regardless of window width.
+ */
 export function overlapHours(availability: Availability, tuples: Tuple[]): number {
   let total = 0;
   for (const tuple of tuples) {
-    for (const [ws, we] of availability[tuple.day] ?? []) {
-      const s = Math.max(ws, tuple.start);
-      const e = Math.min(we, tuple.end);
-      if (e > s) total += e - s;
-    }
+    const overlaps = (availability[tuple.day] ?? []).some(
+      ([ws, we]) => ws < tuple.end && we > tuple.start,
+    );
+    if (overlaps) total += 1;
   }
-  return Math.round(total * 10) / 10;
+  return total;
 }
 
 /** Formats a decimal hour as 12h time, e.g. 16 → "4:00 PM", 9.5 → "9:30 AM".
