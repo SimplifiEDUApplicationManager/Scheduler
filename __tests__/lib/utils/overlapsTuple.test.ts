@@ -10,28 +10,26 @@ describe('overlapHours — single tuple', () => {
     expect(overlapHours(availability, [{ day: 1, start: 14, end: 16 }])).toBe(0);
   });
 
-  it('calculates the overlapping portion of a partial overlap', () => {
-    // Tutor 14–18, tuple 16–20 → overlap is 16–18 = 2h
+  it('returns 1 for a partial overlap (session is 1hr regardless of window width)', () => {
     const availability: Availability = { 1: [[14, 18]] };
-    expect(overlapHours(availability, [{ day: 1, start: 16, end: 20 }])).toBe(2);
+    expect(overlapHours(availability, [{ day: 1, start: 16, end: 20 }])).toBe(1);
   });
 
-  it('returns the full tuple duration when tutor window fully contains it', () => {
-    // Tutor 10–20, tuple 14–16 → overlap is 14–16 = 2h
+  it('returns 1 when tutor window fully contains the tuple', () => {
     const availability: Availability = { 1: [[10, 20]] };
-    expect(overlapHours(availability, [{ day: 1, start: 14, end: 16 }])).toBe(2);
+    expect(overlapHours(availability, [{ day: 1, start: 14, end: 16 }])).toBe(1);
   });
 });
 
 describe('overlapHours — multiple tuples', () => {
-  it('sums overlap across multiple tuples on different days', () => {
-    // Mon 14–18 overlap with 15–17 = 2h, Fri 9–12 overlap with 10–13 = 2h → 4h
+  it('counts 1 per matching tuple across multiple days', () => {
+    // Mon and Fri each overlap → 2 sessions = 2h
     const availability: Availability = { 1: [[14, 18]], 5: [[9, 12]] };
     const tuples: Tuple[] = [
       { day: 1, start: 15, end: 17 },
       { day: 5, start: 10, end: 13 },
     ];
-    expect(overlapHours(availability, tuples)).toBe(4);
+    expect(overlapHours(availability, tuples)).toBe(2);
   });
 
   it('returns 0 for an empty tuples array', () => {
@@ -40,12 +38,11 @@ describe('overlapHours — multiple tuples', () => {
   });
 });
 
-describe('overlapHours — rounding', () => {
-  it('rounds to 1 decimal place', () => {
-    // Tutor 14–17.333, tuple 14–17.333 → overlap = 3.333h → rounds to 3.3
+describe('overlapHours — counts 1 per tuple regardless of window width', () => {
+  it('returns 1 even when the tuple spans many hours', () => {
     const availability: Availability = { 1: [[14, 17 + 1 / 3]] };
     const result = overlapHours(availability, [{ day: 1, start: 14, end: 17 + 1 / 3 }]);
-    expect(result).toBe(3.3);
+    expect(result).toBe(1);
   });
 });
 
