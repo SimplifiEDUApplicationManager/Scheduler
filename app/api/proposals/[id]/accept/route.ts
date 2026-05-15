@@ -94,7 +94,7 @@ async function createBookingEvent(
     const pl = placements?.[i];
     const day   = pl?.day   ?? tp.day;
     const start = pl?.start ?? tp.start;
-    const dur   = tp.end - tp.start;
+    const dur   = 1; // sessions are 1 hr/week regardless of availability window width
 
     const { startUnix, endUnix } = tupleToUnix(
       day, start, start + dur,

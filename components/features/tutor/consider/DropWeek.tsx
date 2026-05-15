@@ -70,16 +70,15 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
               const anyFocused = focusedIdx != null;
               const bg = isFocused ? color.bandBright : anyFocused ? 'rgba(0,0,0,0.02)' : color.band;
               const bdr = isFocused ? `1.5px dashed ${color.strong}` : anyFocused ? '1px dashed rgba(0,0,0,0.08)' : `1px dashed ${color.borderDash}`;
-              const dur = tp.end - tp.start;
               return (candidateWindows[ti] || []).filter(w => w.day === dayIdx).map((w, wi) => (
                 <div key={`c-${ti}-${wi}`}
                   onMouseEnter={() => onCandidateHover(ti)}
                   onMouseLeave={() => onCandidateHover(null)}
                   onClick={() => onCandidateClick(ti, dayIdx, w.start)}
-                  title={`Fits ${proposal.subject} · ${dur} hr · click to place`}
+                  title={`Fits ${proposal.subject} · 1 hr session · click to place`}
                   style={{ position: 'absolute', top: (w.start - startHr) * ROW_H, height: (w.end - w.start) * ROW_H, left: 2, right: 2, background: bg, border: bdr, borderRadius: 4, cursor: 'pointer', zIndex: isFocused ? 3 : 1, transition: 'background 120ms', display: 'flex', alignItems: 'flex-start', padding: '2px 4px', overflow: 'hidden', pointerEvents: draggingIdx != null ? 'none' : 'auto' }}>
                   {isFocused && (w.end - w.start) * ROW_H >= 24 && (
-                    <span style={{ background: 'rgba(255,255,255,0.9)', padding: '1px 5px', borderRadius: 3, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: color.strong }}>Fits {dur}hr</span>
+                    <span style={{ background: 'rgba(255,255,255,0.9)', padding: '1px 5px', borderRadius: 3, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: color.strong }}>1hr session</span>
                   )}
                 </div>
               ));
@@ -123,7 +122,7 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
             {/* Placed cards */}
             {placements.map((pl, i) => {
               if (!pl || pl.day !== dayIdx) return null;
-              const dur = tuples[i].end - tuples[i].start;
+              const dur = 1; // sessions are 1 hr regardless of availability window width
               return (
                 <div key={`pl-${i}`} style={{ position: 'absolute', top: (pl.start - startHr) * ROW_H + 1, height: dur * ROW_H - 2, left: 4, right: 4, background: '#22C55E', borderRadius: 6, padding: '4px 6px', fontSize: 11, fontWeight: 700, color: '#fff', overflow: 'hidden', boxShadow: '0 2px 6px rgba(34,197,94,0.35)', pointerEvents: 'none', animation: 'crpSlotPulse 800ms ease-out', zIndex: 6 }}>
                   <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proposal.studentName}</div>

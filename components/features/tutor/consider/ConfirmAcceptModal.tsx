@@ -30,7 +30,7 @@ export function ConfirmAcceptModal({ p, overCap, anyConflict, newTotal, capHours
   const [first, ...rest] = (p.studentName || '').split(' ');
   const studentShort = rest[0] ? `${first} ${rest[0][0]}.` : first;
   const sessions = p.tuples.length;
-  const totalHrs = p.tuples.reduce((s, t) => s + (t.end - t.start), 0);
+  const totalHrs = p.tuples.length; // 1 hr per session
   const conflictCount = conflicts.filter(c => c.clashes.length > 0).length;
   const hasWarning = overCap || anyConflict;
 
@@ -65,7 +65,7 @@ export function ConfirmAcceptModal({ p, overCap, anyConflict, newTotal, capHours
                   <div style={{ flex: 1, fontSize: 13, color: '#18181B', fontWeight: 600 }}>
                     {DAY_NAMES[tp.day]} · {fmtH(tp.start)}–{fmtH(tp.end)}
                   </div>
-                  <div style={{ fontSize: 11, color: '#71717A' }}>{fmtHrs(tp.end - tp.start)}</div>
+                  <div style={{ fontSize: 11, color: '#71717A' }}>1 hr</div>
                   {clash && (
                     <div style={{ fontSize: 10, fontWeight: 600, color: '#991B1B', background: '#FEF2F2', padding: '2px 6px', borderRadius: 4, border: '1px solid #FECACA', whiteSpace: 'nowrap' }}>
                       conflicts w/ {clash.studentName ? clash.studentName.split(' ')[0] : 'existing'}
