@@ -88,7 +88,7 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
               const placed = placements[i];
               const color = TUPLE_COLORS[i % TUPLE_COLORS.length];
               const isFocused = focusedIdx === i;
-              const dur = tp.end - tp.start;
+              const dur = 1; // sessions are 1 hr regardless of availability window width
               return (
                 <div key={i}
                   className={'crp-draggable' + (draggingIdx === i ? ' dragging' : '')}

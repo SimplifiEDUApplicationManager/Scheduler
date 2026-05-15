@@ -74,7 +74,7 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
                       <div key={i} style={{ padding: '12px 14px', borderRadius: 10, border: `1px solid ${bad ? '#FECACA' : '#E4E4E7'}`, background: bad ? '#FEF2F2' : '#fff', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 14, fontWeight: 700, color: '#18181B' }}>{DAY_NAMES_FULL[tp.day]} · {fmtH(tp.start)}–{fmtH(tp.end)}</div>
-                          <div style={{ fontSize: 11, color: '#71717A', marginTop: 2 }}>{tp.end - tp.start} hr session · {tz}</div>
+                          <div style={{ fontSize: 11, color: '#71717A', marginTop: 2 }}>1 hr session · {tz}</div>
                           {bad && (
                             <div style={{ marginTop: 8, padding: '6px 8px', background: '#fff', borderRadius: 6, border: '1px solid #FECACA', fontSize: 11, color: '#7F1D1D', lineHeight: 1.4 }}>
                               <b>Conflicts with:</b>{' '}
