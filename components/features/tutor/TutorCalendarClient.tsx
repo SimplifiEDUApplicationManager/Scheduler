@@ -14,7 +14,7 @@ import { ConsiderModal } from './consider/ConsiderModal';
 
 type CalView = 'week' | 'month';
 
-interface Toast { type: 'accept' | 'decline' | 'cancel'; name: string; undo?: () => void; }
+interface Toast { type: 'accept' | 'decline' | 'cancel' | 'error'; name: string; undo?: () => void; }
 
 interface Props {
   me: Tutor;
@@ -65,27 +65,35 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
   }
 
 
-  function handleAcceptWithPlacements(placements: ({ day: number; start: number } | null)[]) {
+  async function handleAcceptWithPlacements(placements: ({ day: number; start: number } | null)[]) {
     const p = proposals.find(prop => prop.id === consideringId);
     if (!p) return;
-    const newEvents: TutorEvent[] = placements
-      .map((pl, i) => {
-        if (!pl) return null;
-        const tp = p.tuples[i];
-        const dur = tp.end - tp.start;
-        const initials = p.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2);
-        return {
-          id: `ev-new-${p.id}-${i}-${Date.now()}`,
-          day: pl.day, start: pl.start, end: pl.start + dur,
-          title: `${p.studentName} · ${p.subject}`,
-          kind: 'session' as TutorEventKind,
-          status: 'upcoming' as TutorEventStatus,
-          studentName: p.studentName, studentInitials: initials,
-          subject: p.subject, recurring: true,
-        };
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== null) as TutorEvent[];
-    setEvents(es => [...es, ...newEvents]);
+
+    const res = await fetch(`/api/proposals/${p.id}/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ placements }),
+    });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast({ type: 'error', name: body.error ?? 'Failed to accept proposal' });
+      return;
+    }
+
+    const pl = placements[0];
+    if (pl) {
+      const initials = p.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2);
+      const newEvent: TutorEvent = {
+        id: `ev-new-${p.id}-${Date.now()}`,
+        day: pl.day, start: pl.start, end: pl.start + 1,
+        title: `${p.studentName} · ${p.subject}`,
+        kind: 'session' as TutorEventKind,
+        status: 'upcoming' as TutorEventStatus,
+        studentName: p.studentName, studentInitials: initials,
+        subject: p.subject, recurring: true,
+      };
+      setEvents(es => [...es, newEvent]);
+    }
     setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'accepted' } : prop));
     setConsideringId(null);
     showToast({ type: 'accept', name: p.studentName });
@@ -257,10 +265,11 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 bg-white border border-border-default rounded-xl shadow-lg text-[13px] font-medium text-fg-1">
-          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: toast.type === 'accept' ? '#22C55E' : toast.type === 'cancel' ? '#DC2626' : '#F59E0B' }} />
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: toast.type === 'accept' ? '#22C55E' : toast.type === 'cancel' || toast.type === 'error' ? '#DC2626' : '#F59E0B' }} />
           <span className="flex-1">
             {toast.type === 'accept' ? `Booked ${toast.name}. Invitation sent.`
               : toast.type === 'cancel' ? `Cancelled session with ${toast.name}.`
+              : toast.type === 'error' ? toast.name
               : `Declined. ${toast.name} returns to the request pool.`}
           </span>
           {toast.undo && (

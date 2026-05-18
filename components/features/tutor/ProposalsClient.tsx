@@ -88,7 +88,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     const newEvents: TutorEvent[] = placements
       .map((pl, i) => {
         if (!pl) return null;
-        const dur = p.tuples[i].end - p.tuples[i].start;
+        const dur = 1;
         return {
           id: `prop-${p.id}-${i}`,
           day: pl.day, start: pl.start, end: pl.start + dur,
