@@ -33,7 +33,7 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
   const [focused, setFocused] = useState(false);
   const [pinned, setPinned] = useState(false);
 
-  // Valid drop: any 30-min-aligned start such that a 1-hr session fits within a window.
+  // Valid drop: any 15-min-aligned start such that a 1-hr session fits within a window.
   const canDrop = (day: number, start: number): boolean => {
     return p.tuples.some(tp => tp.day === day && start >= tp.start && start + 1 <= tp.end);
   };

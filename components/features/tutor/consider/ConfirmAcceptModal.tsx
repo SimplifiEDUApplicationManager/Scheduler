@@ -53,19 +53,19 @@ export function ConfirmAcceptModal({ p, overCap, anyConflict, newTotal, capHours
 
         <div style={{ margin: '16px 24px 0', border: '1px solid #E4E4E7', borderRadius: 10, overflow: 'hidden', background: '#FAFAFA' }}>
           <div style={{ padding: '10px 14px', background: '#fff', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#71717A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.subject}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#71717A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.subject} · 1 session/week</div>
             <div style={{ fontSize: 11, color: '#71717A' }}>Starts {p.startDate}</div>
           </div>
-          <div style={{ padding: '8px 14px 10px' }}>
+          <div style={{ padding: '6px 14px 10px' }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '4px 0 6px' }}>Student available</div>
             {p.tuples.map((tp, i) => {
               const clash = conflicts[i]?.clashes[0] ?? null;
               return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderTop: i === 0 ? 'none' : '1px solid #F0F0F0' }}>
-                  <div style={{ width: 6, height: 6, borderRadius: 3, background: clash ? '#DC2626' : '#22C55E', flexShrink: 0 }} />
-                  <div style={{ flex: 1, fontSize: 13, color: '#18181B', fontWeight: 600 }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0', borderTop: i === 0 ? 'none' : '1px solid #F0F0F0' }}>
+                  <div style={{ width: 6, height: 6, borderRadius: 3, background: clash ? '#DC2626' : '#A1A1AA', flexShrink: 0 }} />
+                  <div style={{ flex: 1, fontSize: 12, color: '#52525B' }}>
                     {DAY_NAMES[tp.day]} · {fmtH(tp.start)}–{fmtH(tp.end)}
                   </div>
-                  <div style={{ fontSize: 11, color: '#71717A' }}>1 hr</div>
                   {clash && (
                     <div style={{ fontSize: 10, fontWeight: 600, color: '#991B1B', background: '#FEF2F2', padding: '2px 6px', borderRadius: 4, border: '1px solid #FECACA', whiteSpace: 'nowrap' }}>
                       conflicts w/ {clash.studentName ? clash.studentName.split(' ')[0] : 'existing'}
@@ -74,6 +74,9 @@ export function ConfirmAcceptModal({ p, overCap, anyConflict, newTotal, capHours
                 </div>
               );
             })}
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #F0F0F0', fontSize: 11, color: '#71717A' }}>
+              You&apos;ll pick the exact 1-hr slot in the next step.
+            </div>
           </div>
         </div>
 

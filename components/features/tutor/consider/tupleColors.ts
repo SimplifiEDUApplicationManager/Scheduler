@@ -19,6 +19,6 @@ export function countFitSlots(windows: { start: number; end: number }[], dur: nu
   return windows.reduce((n, w) => {
     const span = (w.end - w.start) - dur;
     if (span < 0) return n;
-    return n + Math.floor(span / 0.5) + 1;
+    return n + Math.floor(span / 0.25) + 1; // 15-min slots
   }, 0);
 }
