@@ -46,7 +46,7 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
             <div style={{ marginTop: 8, fontSize: 13, color: '#52525B', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               {p.studentGrade && <><span>{p.studentGrade}</span><span style={{ color: '#D4D4D8' }}>·</span></>}
               <span>Start {p.startDate}</span><span style={{ color: '#D4D4D8' }}>·</span>
-              <span>{p.hoursPerWeek} hrs/week</span><span style={{ color: '#D4D4D8' }}>·</span>
+              <span>1 hr/week</span><span style={{ color: '#D4D4D8' }}>·</span>
               <span>{tz}</span>
             </div>
           </div>
@@ -119,7 +119,7 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
                 <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #F5F5F5', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <Meta label="Subject" value={p.subject} />
                   <Meta label="Start" value={p.startDate} />
-                  <Meta label="Hours/wk" value={`${p.hoursPerWeek}`} />
+                  <Meta label="Hours/wk" value="1" />
                   <Meta label="Timezone" value={tz} />
                 </div>
               </SideCard>
@@ -136,8 +136,8 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
                 </div>
                 <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: overCap ? '#FEF2F2' : '#F0FDF4', border: `1px solid ${overCap ? '#FECACA' : '#BBF7D0'}`, fontSize: 12, color: overCap ? '#991B1B' : '#166534', lineHeight: 1.4 }}>
                   {overCap
-                    ? <><b>Over cap.</b> Accepting adds {p.hoursPerWeek} hrs · you&apos;d be {newTotal - me.hoursMax} hr{newTotal - me.hoursMax === 1 ? '' : 's'} over.</>
-                    : <><b>Room to take this on.</b> Accepting adds {p.hoursPerWeek} hrs · {remaining} hr{remaining === 1 ? '' : 's'} left after.</>}
+                    ? <><b>Over cap.</b> Accepting adds 1 hr · you&apos;d be {newTotal - me.hoursMax} hr{newTotal - me.hoursMax === 1 ? '' : 's'} over.</>
+                    : <><b>Room to take this on.</b> Accepting adds 1 hr · {remaining} hr{remaining === 1 ? '' : 's'} left after.</>}
                 </div>
               </SideCard>
 

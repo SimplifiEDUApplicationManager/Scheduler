@@ -85,37 +85,30 @@ async function createBookingEvent(
     return;
   }
 
-  // Create one recurring weekly event per proposed tuple, using the tutor's
-  // confirmed placement day/start if provided, otherwise the original tuple.
-  let savedEventId: string | null = null;
+  // One session per student. Use the tutor's confirmed placement if provided;
+  // fall back to the start of the first availability window.
+  const pl    = placements?.[0];
+  const tp    = schedule[0];
+  const day   = pl?.day   ?? tp.day;
+  const start = pl?.start ?? tp.start;
 
-  for (let i = 0; i < schedule.length; i++) {
-    const tp = schedule[i];
-    const pl = placements?.[i];
-    const day   = pl?.day   ?? tp.day;
-    const start = pl?.start ?? tp.start;
-    const dur   = 1; // sessions are 1 hr/week regardless of availability window width
+  const { startUnix, endUnix } = tupleToUnix(
+    day, start, start + 1, // 1-hr session
+    proposal.timezone,
+    proposal.start_date,
+  );
 
-    const { startUnix, endUnix } = tupleToUnix(
-      day, start, start + dur,
-      proposal.timezone,
-      proposal.start_date,
-    );
+  const nylasEventId = await createTutoringEvent(tutor.nylas_grant_id, {
+    studentName:  proposal.student_name,
+    studentEmail: proposal.student_email,
+    subject:      proposal.subject,
+    startUnix,
+    endUnix,
+    meetingLink: tutor.meeting_link ?? undefined,
+    calendarId:  tutor.email ?? undefined,
+  });
 
-    const nylasEventId = await createTutoringEvent(tutor.nylas_grant_id, {
-      studentName:  proposal.student_name,
-      studentEmail: proposal.student_email,
-      subject:      proposal.subject,
-      startUnix,
-      endUnix,
-      meetingLink: tutor.meeting_link ?? undefined,
-      calendarId:  tutor.email ?? undefined,
-    });
-
-    if (nylasEventId && savedEventId === null) {
-      savedEventId = nylasEventId;
-    }
-  }
+  let savedEventId = nylasEventId ?? null;
 
   if (savedEventId) {
     await supabase

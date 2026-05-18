@@ -29,8 +29,8 @@ function fmtHrs(n: number): string {
 export function ConfirmAcceptModal({ p, overCap, anyConflict, newTotal, capHours, usedHours, conflicts, onCancel, onConfirm }: Props) {
   const [first, ...rest] = (p.studentName || '').split(' ');
   const studentShort = rest[0] ? `${first} ${rest[0][0]}.` : first;
-  const sessions = p.tuples.length;
-  const totalHrs = p.tuples.length; // 1 hr per session
+  const sessions = 1; // one session per student regardless of how many availability windows
+  const totalHrs = 1;
   const conflictCount = conflicts.filter(c => c.clashes.length > 0).length;
   const hasWarning = overCap || anyConflict;
 
