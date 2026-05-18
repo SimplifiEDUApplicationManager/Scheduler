@@ -5,6 +5,9 @@ import type { TupleColor } from './tupleColors';
 import { fmtRange, getWeekDays } from '@/lib/utils/tutors';
 
 const ROW_H = 38;
+const SLOT_MIN = 15; // minutes per drop-zone slot
+const SLOTS_PER_HOUR = 60 / SLOT_MIN;
+const SLOT_H = ROW_H / SLOTS_PER_HOUR;
 const COL_TO_DAY = [1, 2, 3, 4, 5, 6, 0]; // Mon–Sun
 
 interface Props {
@@ -14,15 +17,17 @@ interface Props {
   tuples: Tuple[];
   overSlot: { day: number; start: number } | null;
   setOverSlot: (s: { day: number; start: number } | null) => void;
-  draggingIdx: number | null;
-  canDrop: (day: number, start: number, dur: number) => boolean;
+  /** True while the session card is being dragged. */
+  dragging: boolean;
+  /** Returns true if a 1-hr session starting at (day, start) fits within any availability window. */
+  canDrop: (day: number, start: number) => boolean;
   onDrop: (day: number, start: number, e: React.DragEvent) => void;
   startHr: number;
   endHr: number;
   candidateWindows: { day: number; start: number; end: number }[][];
-  focusedIdx: number | null;
+  focused: boolean;
   onCandidateClick: (idx: number, day: number, start: number) => void;
-  onCandidateHover: (idx: number | null) => void;
+  onCandidateHover: (on: boolean) => void;
   tupleColors: TupleColor[];
 }
 
@@ -32,12 +37,17 @@ function fmtH(h: number): string {
   return mn === 0 ? `${h12}${suf}` : `${h12}:${String(mn).padStart(2, '0')}${suf}`;
 }
 
-export function DropWeek({ events, proposal, placements, tuples, overSlot, setOverSlot, draggingIdx, canDrop, onDrop, startHr, endHr, candidateWindows, focusedIdx, onCandidateClick, onCandidateHover, tupleColors }: Props) {
+export function DropWeek({ events, proposal, placements, tuples, overSlot, setOverSlot, dragging, canDrop, onDrop, startHr, endHr, candidateWindows, focused, onCandidateClick, onCandidateHover, tupleColors }: Props) {
   const hours = Array.from({ length: endHr - startHr + 1 }, (_, i) => startHr + i);
-  const halfSteps = Array.from({ length: (endHr - startHr) * 2 }, (_, i) => startHr + i * 0.5);
+  // 15-minute-aligned drop slots
+  const slotSteps = Array.from(
+    { length: (endHr - startHr) * SLOTS_PER_HOUR },
+    (_, i) => +(startHr + i / SLOTS_PER_HOUR).toFixed(4),
+  );
   const colHeight = hours.length * ROW_H;
   const weekDays = getWeekDays(0);
   const colDays = COL_TO_DAY.map(dow => weekDays.find(d => d.dayIdx === dow)!);
+  const color = tupleColors[0];
 
   return (
     <div style={{ flex: 1, overflow: 'auto', background: '#fff' }}>
@@ -62,51 +72,45 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
 
         {COL_TO_DAY.map((dayIdx, ci) => (
           <div key={ci} style={{ borderLeft: '1px solid #F5F5F5', position: 'relative', height: colHeight }}>
-            {/* Candidate windows */}
+            {/* Candidate windows — all availability windows shown as drop zones */}
             {tuples.map((tp, ti) => {
-              if (placements[ti]) return null;
-              const color = tupleColors[ti % tupleColors.length];
-              const isFocused = focusedIdx === ti;
-              const anyFocused = focusedIdx != null;
-              const bg = isFocused ? color.bandBright : anyFocused ? 'rgba(0,0,0,0.02)' : color.band;
-              const bdr = isFocused ? `1.5px dashed ${color.strong}` : anyFocused ? '1px dashed rgba(0,0,0,0.08)' : `1px dashed ${color.borderDash}`;
+              const bg = focused ? color.bandBright : color.band;
+              const bdr = focused ? `1.5px dashed ${color.strong}` : `1px dashed ${color.borderDash}`;
               return (candidateWindows[ti] || []).filter(w => w.day === dayIdx).map((w, wi) => (
                 <div key={`c-${ti}-${wi}`}
-                  onMouseEnter={() => onCandidateHover(ti)}
-                  onMouseLeave={() => onCandidateHover(null)}
+                  onMouseEnter={() => onCandidateHover(true)}
+                  onMouseLeave={() => onCandidateHover(false)}
                   onClick={() => onCandidateClick(ti, dayIdx, w.start)}
-                  title={`Fits ${proposal.subject} · 1 hr session · click to place`}
-                  style={{ position: 'absolute', top: (w.start - startHr) * ROW_H, height: (w.end - w.start) * ROW_H, left: 2, right: 2, background: bg, border: bdr, borderRadius: 4, cursor: 'pointer', zIndex: isFocused ? 3 : 1, transition: 'background 120ms', display: 'flex', alignItems: 'flex-start', padding: '2px 4px', overflow: 'hidden', pointerEvents: draggingIdx != null ? 'none' : 'auto' }}>
-                  {isFocused && (w.end - w.start) * ROW_H >= 24 && (
+                  title={`${proposal.subject} · 1 hr session · click to place at window start`}
+                  style={{ position: 'absolute', top: (w.start - startHr) * ROW_H, height: (w.end - w.start) * ROW_H, left: 2, right: 2, background: bg, border: bdr, borderRadius: 4, cursor: 'pointer', zIndex: focused ? 3 : 1, transition: 'background 120ms', display: 'flex', alignItems: 'flex-start', padding: '2px 4px', overflow: 'hidden', pointerEvents: dragging ? 'none' : 'auto' }}>
+                  {focused && (w.end - w.start) * ROW_H >= 24 && (
                     <span style={{ background: 'rgba(255,255,255,0.9)', padding: '1px 5px', borderRadius: 3, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: color.strong }}>1hr session</span>
                   )}
                 </div>
               ));
             })}
 
-            {/* Half-hour drop zones */}
-            {halfSteps.map((h, hi) => {
-              const isOver = overSlot?.day === dayIdx && Math.abs((overSlot?.start ?? -1) - h) < 0.01;
-              const tuple = draggingIdx != null ? tuples[draggingIdx] : null;
-              const dur = tuple ? tuple.end - tuple.start : 0;
-              const droppable = draggingIdx != null && canDrop(dayIdx, h, dur);
+            {/* 15-minute drop zones */}
+            {slotSteps.map((h, hi) => {
+              const isOver = overSlot?.day === dayIdx && Math.abs((overSlot?.start ?? -1) - h) < 0.001;
+              const droppable = dragging && canDrop(dayIdx, h);
               return (
                 <div key={hi}
                   className={'crp-slot' + (isOver && droppable ? ' over' : '')}
-                  onDragOver={e => { if (draggingIdx == null || !droppable) return; e.preventDefault(); setOverSlot({ day: dayIdx, start: h }); }}
+                  onDragOver={e => { if (!droppable) return; e.preventDefault(); setOverSlot({ day: dayIdx, start: h }); }}
                   onDragLeave={() => { if (isOver) setOverSlot(null); }}
                   onDrop={e => onDrop(dayIdx, h, e)}
-                  style={{ position: 'absolute', top: (h - startHr) * ROW_H, left: 0, right: 0, height: ROW_H / 2 }}
+                  style={{ position: 'absolute', top: (h - startHr) * ROW_H, left: 0, right: 0, height: SLOT_H }}
                 />
               );
             })}
 
-            {/* Student's preferred times */}
+            {/* Student's available windows (striped) */}
             {tuples.map((tp, i) => {
-              if (tp.day !== dayIdx || placements[i]) return null;
+              if (tp.day !== dayIdx || placements[0]) return null;
               return (
                 <div key={`pref-${i}`} style={{ position: 'absolute', top: (tp.start - startHr) * ROW_H + 1, height: (tp.end - tp.start) * ROW_H - 2, left: 4, right: 4, background: 'repeating-linear-gradient(45deg,rgba(24,24,27,0.06) 0 6px,rgba(24,24,27,0.12) 6px 12px)', border: '1.5px dashed #71717A', borderRadius: 4, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: '#52525B', textAlign: 'center', padding: 4, zIndex: 4 }}>
-                  Student prefers
+                  Student available
                 </div>
               );
             })}
@@ -119,14 +123,13 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
               </div>
             ))}
 
-            {/* Placed cards */}
+            {/* Placed session — 1 hr block */}
             {placements.map((pl, i) => {
               if (!pl || pl.day !== dayIdx) return null;
-              const dur = 1; // sessions are 1 hr regardless of availability window width
               return (
-                <div key={`pl-${i}`} style={{ position: 'absolute', top: (pl.start - startHr) * ROW_H + 1, height: dur * ROW_H - 2, left: 4, right: 4, background: '#22C55E', borderRadius: 6, padding: '4px 6px', fontSize: 11, fontWeight: 700, color: '#fff', overflow: 'hidden', boxShadow: '0 2px 6px rgba(34,197,94,0.35)', pointerEvents: 'none', animation: 'crpSlotPulse 800ms ease-out', zIndex: 6 }}>
+                <div key={`pl-${i}`} style={{ position: 'absolute', top: (pl.start - startHr) * ROW_H + 1, height: ROW_H - 2, left: 4, right: 4, background: '#22C55E', borderRadius: 6, padding: '4px 6px', fontSize: 11, fontWeight: 700, color: '#fff', overflow: 'hidden', boxShadow: '0 2px 6px rgba(34,197,94,0.35)', pointerEvents: 'none', animation: 'crpSlotPulse 800ms ease-out', zIndex: 6 }}>
                   <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proposal.studentName}</div>
-                  <div style={{ fontSize: 9, opacity: 0.9, marginTop: 1 }}>{fmtH(pl.start)}–{fmtH(pl.start + dur)}</div>
+                  <div style={{ fontSize: 9, opacity: 0.9, marginTop: 1 }}>{fmtH(pl.start)}–{fmtH(pl.start + 1)}</div>
                 </div>
               );
             })}
