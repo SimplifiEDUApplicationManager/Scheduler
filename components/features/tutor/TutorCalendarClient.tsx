@@ -14,7 +14,7 @@ import { ConsiderModal } from './consider/ConsiderModal';
 
 type CalView = 'week' | 'month';
 
-interface Toast { type: 'accept' | 'decline' | 'cancel'; name: string; undo?: () => void; }
+interface Toast { type: 'accept' | 'decline' | 'cancel' | 'error'; name: string; undo?: () => void; }
 
 interface Props {
   me: Tutor;
@@ -76,7 +76,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
     });
     if (!res.ok) {
       const body = await res.json() as { error?: string };
-      showToast({ type: 'decline', name: body.error ?? 'Failed to accept proposal' });
+      showToast({ type: 'error', name: body.error ?? 'Failed to accept proposal' });
       return;
     }
 
@@ -265,10 +265,11 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 bg-white border border-border-default rounded-xl shadow-lg text-[13px] font-medium text-fg-1">
-          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: toast.type === 'accept' ? '#22C55E' : toast.type === 'cancel' ? '#DC2626' : '#F59E0B' }} />
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: toast.type === 'accept' ? '#22C55E' : toast.type === 'cancel' || toast.type === 'error' ? '#DC2626' : '#F59E0B' }} />
           <span className="flex-1">
             {toast.type === 'accept' ? `Booked ${toast.name}. Invitation sent.`
               : toast.type === 'cancel' ? `Cancelled session with ${toast.name}.`
+              : toast.type === 'error' ? toast.name
               : `Declined. ${toast.name} returns to the request pool.`}
           </span>
           {toast.undo && (
