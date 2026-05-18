@@ -65,27 +65,35 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
   }
 
 
-  function handleAcceptWithPlacements(placements: ({ day: number; start: number } | null)[]) {
+  async function handleAcceptWithPlacements(placements: ({ day: number; start: number } | null)[]) {
     const p = proposals.find(prop => prop.id === consideringId);
     if (!p) return;
-    const newEvents: TutorEvent[] = placements
-      .map((pl, i) => {
-        if (!pl) return null;
-        const tp = p.tuples[i];
-        const dur = tp.end - tp.start;
-        const initials = p.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2);
-        return {
-          id: `ev-new-${p.id}-${i}-${Date.now()}`,
-          day: pl.day, start: pl.start, end: pl.start + dur,
-          title: `${p.studentName} · ${p.subject}`,
-          kind: 'session' as TutorEventKind,
-          status: 'upcoming' as TutorEventStatus,
-          studentName: p.studentName, studentInitials: initials,
-          subject: p.subject, recurring: true,
-        };
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== null) as TutorEvent[];
-    setEvents(es => [...es, ...newEvents]);
+
+    const res = await fetch(`/api/proposals/${p.id}/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ placements }),
+    });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast({ type: 'decline', name: body.error ?? 'Failed to accept proposal' });
+      return;
+    }
+
+    const pl = placements[0];
+    if (pl) {
+      const initials = p.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2);
+      const newEvent: TutorEvent = {
+        id: `ev-new-${p.id}-${Date.now()}`,
+        day: pl.day, start: pl.start, end: pl.start + 1,
+        title: `${p.studentName} · ${p.subject}`,
+        kind: 'session' as TutorEventKind,
+        status: 'upcoming' as TutorEventStatus,
+        studentName: p.studentName, studentInitials: initials,
+        subject: p.subject, recurring: true,
+      };
+      setEvents(es => [...es, newEvent]);
+    }
     setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'accepted' } : prop));
     setConsideringId(null);
     showToast({ type: 'accept', name: p.studentName });
