@@ -74,7 +74,7 @@ export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPr
       >
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-neutral-100 flex items-start gap-3.5 shrink-0">
-          <Avatar initials={tutor.initials} size="xl" tone="brand" />
+          <Avatar initials={tutor.initials} src={tutor.photoUrl} size="xl" tone="brand" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <h2 className="text-xl font-extrabold text-fg-1 tracking-tight leading-none">{tutor.name}</h2>

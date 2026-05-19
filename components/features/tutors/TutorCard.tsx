@@ -55,6 +55,7 @@ export function TutorCard({
       <div className="flex gap-2.5 items-start">
         <Avatar
           initials={tutor.initials}
+          src={tutor.photoUrl}
           size="md"
           tone={selected ? 'dark' : 'brand'}
         />
