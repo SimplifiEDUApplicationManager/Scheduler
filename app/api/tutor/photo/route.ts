@@ -58,17 +58,17 @@ export async function POST(request: Request) {
     .from('avatars')
     .getPublicUrl(storagePath);
 
-  // Bust the browser cache by appending a timestamp so the new photo shows immediately
-  const photoUrl = `${publicUrl}?t=${Date.now()}`;
-
   const { error: updateError } = await service
     .from('users')
-    .update({ photo_url: photoUrl })
+    .update({ photo_url: publicUrl })
     .eq('id', user.id);
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
+  // Append cache-buster only in the response so the uploading client sees the new
+  // photo immediately, without polluting the stored URL with a stale timestamp.
+  const photoUrl = `${publicUrl}?t=${Date.now()}`;
   return NextResponse.json({ photoUrl });
 }
