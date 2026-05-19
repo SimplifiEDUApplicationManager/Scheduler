@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { TutorCalendarClient } from '@/components/features/tutor/TutorCalendarClient';
 import { fetchTutorEvents, weekRange } from '@/lib/nylas/events';
+import { getTutorProposals } from '@/lib/data/proposals';
 import { TUTORS, TUTOR_EVENTS, TUTOR_PROPOSALS, ME_TUTOR_ID } from '@/lib/data/mock';
 import { DEV_BYPASS } from '@/lib/env';
 import type { Tutor } from '@/lib/types/domain';
@@ -60,11 +61,13 @@ export default async function TutorCalendarPage() {
     ? await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, me.tz)
     : [];
 
+  const initialProposals = await getTutorProposals(row.id, supabase);
+
   return (
     <TutorCalendarClient
       me={me}
       initialEvents={initialEvents}
-      initialProposals={TUTOR_PROPOSALS}
+      initialProposals={initialProposals}
     />
   );
 }
