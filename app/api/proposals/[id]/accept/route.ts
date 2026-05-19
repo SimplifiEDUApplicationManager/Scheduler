@@ -42,7 +42,7 @@ export async function POST(
       .select('tutor_id')
       .eq('id', id)
       .single();
-    if (!proposal) {
+    if (!proposal?.tutor_id) {
       return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
     }
     tutorId = proposal.tutor_id;
