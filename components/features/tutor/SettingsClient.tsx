@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useRef, useEffect, useCallback, type ReactNode, type ChangeEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
 import type { SchedulerSummary } from '@/lib/nylas/scheduler';
@@ -40,6 +40,9 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const [meetingLink, setLink]    = useState(me.meetingLink ?? '');
   const [maxHours, setMax]        = useState(me.hoursMax);
   const [minHours, setMin]        = useState(me.hoursMin);
+  const [photoUrl, setPhotoUrl]   = useState(me.photoUrl ?? null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef              = useRef<HTMLInputElement>(null);
   const bookingUrl                = me.bookingPageUrl ?? null;
   const [mySubjects, setSubjects] = useState<TutorSubject[]>(me.subjects);
   const [notifs, setNotifs]       = useState({ newRequest: true, reminders: true, coordMessages: true, cancellations: true, weeklySummary: false });
@@ -56,6 +59,27 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const searchParams = useSearchParams();
 
   const touch = () => setDirty(true);
+
+  async function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/tutor/photo', { method: 'POST', body: fd });
+      const data = await res.json() as { photoUrl?: string; error?: string };
+      if (!res.ok) { showToast(data.error ?? 'Upload failed'); return; }
+      setPhotoUrl(data.photoUrl ?? null);
+      showToast('Profile photo updated');
+    } catch {
+      showToast('Upload failed — check your connection and try again');
+    } finally {
+      setUploading(false);
+      // Reset so the same file can be re-selected if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
 
   const openSchedulerEdit = useCallback(async () => {
     setEditingScheduler(true);
@@ -265,6 +289,8 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   }
 
   return (
+    <>
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     <div ref={scrollRef} style={{ flex: 1, overflow: 'auto', background: '#FAFAFA' }}>
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '24px 32px 120px', display: 'grid', gridTemplateColumns: '192px minmax(0,1fr)', gap: 32 }}>
 
@@ -303,13 +329,33 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
 
           {/* Profile */}
           <Card id="profile" title="Profile" subtitle="Shown to coordinators on your tutor card.">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              style={{ display: 'none' }}
+              onChange={handlePhotoChange}
+            />
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
-              <Avatar initials={me.initials} size="xl" tone="brand" />
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <Avatar initials={me.initials} src={photoUrl ?? undefined} size="xl" tone="brand" />
+                {uploading && (
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '999px', background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '999px', animation: 'spin 0.7s linear infinite' }} />
+                  </div>
+                )}
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>{me.name}</div>
                 <div style={{ fontSize: 12, color: '#71717A' }}>{me.email}</div>
               </div>
-              <button style={btn('secondary')}>Change photo</button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={{ ...btn('secondary'), opacity: uploading ? 0.5 : 1, cursor: uploading ? 'not-allowed' : 'pointer' }}
+              >
+                {uploading ? 'Uploading…' : 'Change photo'}
+              </button>
             </div>
             <Row label="Full name" sub="Appears on your tutor card, proposals, and calendar invites.">
               <input value={name} onChange={e => { setName(e.target.value); touch(); }} style={input()} />
@@ -616,6 +662,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
         </div>
       )}
     </div>
+    </>
   );
 }
 

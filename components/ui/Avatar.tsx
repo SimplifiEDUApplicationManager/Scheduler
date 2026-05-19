@@ -20,24 +20,27 @@ export type AvatarSize = keyof typeof sizeClasses;
 
 export interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
   initials: string;
+  src?: string;
   tone?: AvatarTone;
   size?: AvatarSize;
 }
 
 const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
-  ({ initials, tone = 'neutral', size = 'md', className, ...props }, ref) => (
+  ({ initials, src, tone = 'neutral', size = 'md', className, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        'rounded-full flex items-center justify-center font-bold tracking-wide shrink-0',
-        toneClasses[tone],
+        'rounded-full flex items-center justify-center font-bold tracking-wide shrink-0 overflow-hidden',
+        !src && toneClasses[tone],
         sizeClasses[size],
         className,
       )}
       aria-label={initials}
       {...props}
     >
-      {initials}
+      {src
+        ? <img src={src} alt={initials} className="w-full h-full object-cover" />
+        : initials}
     </div>
   ),
 );
