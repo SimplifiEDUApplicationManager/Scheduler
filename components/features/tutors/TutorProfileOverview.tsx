@@ -29,7 +29,10 @@ export function TutorProfileOverview({ tutor, subjects, contextPersonality, onSa
   return (
     <div className="p-5 flex flex-col gap-3.5">
       <DrawerCard title="About">
-        <p className="text-[13px] text-fg-2 leading-relaxed m-0">{tutor.bio}</p>
+        {tutor.bio
+          ? <p className="text-[13px] text-fg-2 leading-relaxed m-0">{tutor.bio}</p>
+          : <p className="text-[13px] text-fg-muted m-0">No bio yet.</p>
+        }
       </DrawerCard>
 
       <DrawerCard title="Teaching style">
