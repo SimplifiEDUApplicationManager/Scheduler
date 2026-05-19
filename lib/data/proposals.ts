@@ -55,6 +55,7 @@ export async function getTutorProposals(
     .from('proposals')
     .select('*, coordinator:users!proposals_coordinator_id_fkey(name, email)')
     .eq('tutor_id', tutorId)
+    .eq('status', 'PENDING')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
