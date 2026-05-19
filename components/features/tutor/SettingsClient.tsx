@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, type ReactNode, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
+import { uploadTutorPhoto } from '@/lib/utils/uploadTutorPhoto';
 import { useSearchParams } from 'next/navigation';
 import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
 import type { SchedulerSummary } from '@/lib/nylas/scheduler';
@@ -60,23 +61,18 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
 
   const touch = () => setDirty(true);
 
-  async function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch('/api/tutor/photo', { method: 'POST', body: fd });
-      const data = await res.json() as { photoUrl?: string; error?: string };
-      if (!res.ok) { showToast(data.error ?? 'Upload failed'); return; }
-      setPhotoUrl(data.photoUrl ?? null);
+      const photoUrl = await uploadTutorPhoto(file);
+      setPhotoUrl(photoUrl);
       showToast('Profile photo updated');
-    } catch {
-      showToast('Upload failed — check your connection and try again');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Upload failed — check your connection and try again');
     } finally {
       setUploading(false);
-      // Reset so the same file can be re-selected if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
@@ -289,8 +285,6 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   }
 
   return (
-    <>
-    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     <div ref={scrollRef} style={{ flex: 1, overflow: 'auto', background: '#FAFAFA' }}>
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '24px 32px 120px', display: 'grid', gridTemplateColumns: '192px minmax(0,1fr)', gap: 32 }}>
 
@@ -329,14 +323,6 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
 
           {/* Profile */}
           <Card id="profile" title="Profile" subtitle="Shown to coordinators on your tutor card.">
-            <input
-              id="photo-upload"
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              style={{ display: 'none' }}
-              onChange={handlePhotoChange}
-            />
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <Avatar initials={me.initials} src={photoUrl ?? undefined} size="xl" tone="brand" />
@@ -350,11 +336,18 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 <div style={{ fontSize: 15, fontWeight: 700 }}>{me.name}</div>
                 <div style={{ fontSize: 12, color: '#71717A' }}>{me.email}</div>
               </div>
-              <label
-                htmlFor={uploading ? undefined : 'photo-upload'}
-                style={{ ...btn('secondary'), opacity: uploading ? 0.5 : 1, cursor: uploading ? 'not-allowed' : 'pointer' }}
-              >
+              {/* Implicit label containment: the browser activates the input when the label is clicked,
+                  no htmlFor or programmatic .click() needed — works in all browsers */}
+              <label style={{ ...btn('secondary'), opacity: uploading ? 0.5 : 1, cursor: uploading ? 'not-allowed' : 'pointer' }}>
                 {uploading ? 'Uploading…' : 'Change photo'}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  disabled={uploading}
+                  style={{ display: 'none' }}
+                  onChange={handlePhotoChange}
+                />
               </label>
             </div>
             <Row label="Full name" sub="Appears on your tutor card, proposals, and calendar invites.">
@@ -662,7 +655,6 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
         </div>
       )}
     </div>
-    </>
   );
 }
 
