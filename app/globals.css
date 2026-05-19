@@ -1,8 +1,9 @@
 @import 'tailwindcss';
 
-/* ── Drawer animations ────────────────────────────────────────────────────── */
+/* ── Animations ───────────────────────────────────────────────────────────── */
 @keyframes drawerFade  { from { background: rgba(24,24,27,0); }    to { background: rgba(24,24,27,0.45); } }
 @keyframes drawerSlide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes spin        { to   { transform: rotate(360deg); } }
 
 /* ==========================================================================
    Simplifi EDU — Design Tokens
