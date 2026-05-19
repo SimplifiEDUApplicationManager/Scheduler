@@ -12,6 +12,7 @@ import { EditSubjectModal } from './EditSubjectModal';
 import { DeleteSubjectModal } from './DeleteSubjectModal';
 import { BookingPagePreview } from './BookingPagePreview';
 import { DEV_BYPASS } from '@/lib/env';
+import { formatTimezoneLabel } from '@/lib/utils/timezone';
 
 interface Props { me: Tutor; allSubjects: Subject[]; schedulerSummary: SchedulerSummary | null }
 
@@ -742,15 +743,11 @@ function TimezoneSelect({ value, onChange }: { value: string; onChange: (tz: str
   const allTz = useMemo(() => {
     const now = Date.now();
     const zones: string[] = (Intl as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.('timeZone') ?? [];
-    return zones.map(tz => {
-      const offset = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'shortOffset' })
-        .formatToParts(now)
-        .find(p => p.type === 'timeZoneName')?.value ?? '';
-      return { tz, offset, label: `${offset} — ${tz.replace(/_/g, ' ')}` };
-    }).sort((a, b) => {
-      const parse = (o: string) => { const m = o.match(/([+-])(\d+):?(\d*)/); return m ? (m[1] === '+' ? 1 : -1) * (parseInt(m[2]) * 60 + parseInt(m[3] || '0')) : 0; };
-      return parse(a.offset) - parse(b.offset);
-    });
+    return zones.map(tz => ({ tz, label: formatTimezoneLabel(tz, now) }))
+      .sort((a, b) => {
+        const parse = (l: string) => { const m = l.match(/UTC([+-])(\d+):?(\d*)/); return m ? (m[1] === '+' ? 1 : -1) * (parseInt(m[2]) * 60 + parseInt(m[3] || '0')) : 0; };
+        return parse(a.label) - parse(b.label);
+      });
   }, []);
 
   const filtered = search
