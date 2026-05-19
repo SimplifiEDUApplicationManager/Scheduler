@@ -78,6 +78,7 @@ export interface Tutor {
   bookingPageUrl?: string;
   nylasSchedulerConfigId?: string;
   nylasGrantId?: string;
+  photoUrl?: string;
 }
 
 // ── Request ─────────────────────────────────────────────────────────────────

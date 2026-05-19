@@ -24,6 +24,7 @@ const SELECT_TUTOR = [
   'booking_page_url',
   'nylas_scheduler_config_id',
   'nylas_grant_id',
+  'photo_url',
   'tutor_subjects!tutor_subjects_tutor_id_fkey(id, subject_id, tutor_confidence, coordinator_confidence, qualification_note)',
 ].join(', ');
 
@@ -46,6 +47,7 @@ type RawTutorRow = {
   booking_page_url: string | null;
   nylas_scheduler_config_id: string | null;
   nylas_grant_id: string | null;
+  photo_url: string | null;
   tutor_subjects: {
     id: string;
     subject_id: string;
@@ -128,6 +130,7 @@ function rowToTutor(row: RawTutorRow, pendingChanges: RawChangeRow[]): Tutor {
     bookingPageUrl:         row.booking_page_url ?? undefined,
     nylasSchedulerConfigId: row.nylas_scheduler_config_id ?? undefined,
     nylasGrantId:           row.nylas_grant_id ?? undefined,
+    photoUrl:               row.photo_url ?? undefined,
   };
 }
 
