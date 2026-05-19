@@ -116,6 +116,27 @@ export function convertTupleTimezone(tuple: Tuple, fromTz: string, toTz: string)
   return { day, start, end };
 }
 
+// ── Timezone label ─────────────────────────────────────────────────────────
+
+/**
+ * Returns a human-readable label for an IANA timezone, e.g.
+ * "UTC-5 — America/New_York".
+ *
+ * The UTC offset is computed at `at` (defaults to now), so the label
+ * correctly reflects DST: "UTC-5" in winter, "UTC-4" in summer for ET.
+ *
+ * Uses Intl.DateTimeFormat `shortOffset` (returns "GMT±H:MM") and normalises
+ * "GMT" → "UTC" for consistency.
+ */
+export function formatTimezoneLabel(tz: string, at: number = Date.now()): string {
+  const offset = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'shortOffset' })
+    .formatToParts(at)
+    .find(p => p.type === 'timeZoneName')?.value ?? '';
+  const normalised = offset.replace(/^GMT/, 'UTC');
+  const city = tz.replace(/_/g, ' ');
+  return `${normalised} — ${city}`;
+}
+
 // ── Internal helpers ───────────────────────────────────────────────────────
 
 /**
