@@ -330,6 +330,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           {/* Profile */}
           <Card id="profile" title="Profile" subtitle="Shown to coordinators on your tutor card.">
             <input
+              id="photo-upload"
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
@@ -349,13 +350,12 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 <div style={{ fontSize: 15, fontWeight: 700 }}>{me.name}</div>
                 <div style={{ fontSize: 12, color: '#71717A' }}>{me.email}</div>
               </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
+              <label
+                htmlFor={uploading ? undefined : 'photo-upload'}
                 style={{ ...btn('secondary'), opacity: uploading ? 0.5 : 1, cursor: uploading ? 'not-allowed' : 'pointer' }}
               >
                 {uploading ? 'Uploading…' : 'Change photo'}
-              </button>
+              </label>
             </div>
             <Row label="Full name" sub="Appears on your tutor card, proposals, and calendar invites.">
               <input value={name} onChange={e => { setName(e.target.value); touch(); }} style={input()} />
