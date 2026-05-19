@@ -50,13 +50,17 @@ function sentAgo(iso: string): string {
 export async function getTutorProposals(
   tutorId: string,
   supabase: SupabaseInstance,
+  pendingOnly = true,
 ): Promise<TutorProposal[]> {
-  const { data: rows, error } = await supabase
+  let query = supabase
     .from('proposals')
     .select('*, coordinator:users!proposals_coordinator_id_fkey(name, email)')
     .eq('tutor_id', tutorId)
-    .eq('status', 'PENDING')
     .order('created_at', { ascending: false });
+
+  if (pendingOnly) query = query.eq('status', 'PENDING');
+
+  const { data: rows, error } = await query;
 
   if (error) throw error;
 

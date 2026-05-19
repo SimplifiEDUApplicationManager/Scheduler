@@ -66,6 +66,8 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     : enriched.filter(p => p.displayStatus === filter);
 
   function openDetail(id: string) {
+    const p = proposals.find(prop => prop.id === id);
+    if (!p || p.status === 'accepted' || p.status === 'declined') return;
     setReviewed(r => { const n = new Set(r); n.add(id); return n; });
     setConsideringId(id);
   }

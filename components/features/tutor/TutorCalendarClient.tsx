@@ -99,9 +99,19 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
     showToast({ type: 'accept', name: p.studentName });
   }
 
-  function handleDecline(id: string, reason: string) {
-    setProposals(ps => ps.map(p => p.id === id ? { ...p, status: 'declined', declineReason: reason } : p));
+  async function handleDecline(id: string, reason: string) {
     const name = proposals.find(p => p.id === id)?.studentName ?? '';
+    const res = await fetch(`/api/proposals/${id}/decline`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast({ type: 'error', name: body.error ?? 'Failed to decline proposal' });
+      return;
+    }
+    setProposals(ps => ps.map(p => p.id === id ? { ...p, status: 'declined', declineReason: reason } : p));
     setDeclineFor(null);
     showToast({ type: 'decline', name });
   }
@@ -154,9 +164,9 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
           </div>
         </div>
 
-        {/* Proposals list */}
+        {/* Proposals list — only show pending; resolved proposals are view-only on the proposals tab */}
         <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-4 flex flex-col gap-2.5">
-          {proposals.map(p => (
+          {proposals.filter(p => p.status === 'pending').map(p => (
             <ProposalCard
               key={p.id}
               proposal={p}

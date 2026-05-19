@@ -20,7 +20,7 @@ export default async function TutorProposalsPage() {
 
   const [me, proposals] = await Promise.all([
     fetchTutor(user.id, supabase),
-    getTutorProposals(user.id, supabase),
+    getTutorProposals(user.id, supabase, false),
   ]);
 
   if (!me) redirect('/login');
