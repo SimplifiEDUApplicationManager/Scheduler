@@ -20,7 +20,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireActiveRole(['TUTOR']);
+  const auth = await requireActiveRole(['TUTOR', 'SUPER_ADMIN']);
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
@@ -33,7 +33,22 @@ export async function POST(
     // No body — proceed without placements; will use proposed times from DB.
   }
 
-  const result = await acceptProposal(id, auth.user.id, auth.supabase);
+  // For TUTOR the caller IS the tutor. For SUPER_ADMIN look up the proposal's
+  // tutor_id so ownership checks and Nylas booking use the right user.
+  let tutorId = auth.user.id;
+  if (auth.role === 'SUPER_ADMIN') {
+    const { data: proposal } = await auth.supabase
+      .from('proposals')
+      .select('tutor_id')
+      .eq('id', id)
+      .single();
+    if (!proposal) {
+      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
+    }
+    tutorId = proposal.tutor_id;
+  }
+
+  const result = await acceptProposal(id, tutorId, auth.supabase);
 
   if (!result.ok) {
     return NextResponse.json(
@@ -43,7 +58,7 @@ export async function POST(
   }
 
   // Side-effects run after the accept is committed; failures never block the response.
-  await createBookingEvent(id, auth.user.id, auth.supabase, placements).catch(err => {
+  await createBookingEvent(id, tutorId, auth.supabase, placements).catch(err => {
     console.error('[proposals/accept] Nylas booking failed:', err);
   });
 
