@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import { uploadTutorPhoto } from '@/lib/utils/uploadTutorPhoto';
 import { useSearchParams } from 'next/navigation';
 import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
@@ -15,7 +15,6 @@ import { DEV_BYPASS } from '@/lib/env';
 
 interface Props { me: Tutor; allSubjects: Subject[]; schedulerSummary: SchedulerSummary | null }
 
-const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'];
 
 const CONF_META: Record<SubjectConf, { label: string; bg: string; fg: string; bar: string }> = {
   HIGH:   { label: 'High',   bg: '#DCFCE7', fg: '#166534', bar: '#22C55E' },
@@ -357,9 +356,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
               <input defaultValue={me.email} disabled style={{ ...input(), background: '#FAFAFA', color: '#71717A' }} />
             </Row>
             <Row label="Timezone" sub="We interpret your working hours in this timezone and convert session times for students.">
-              <select value={tz} onChange={e => { setTz(e.target.value); touch(); }} style={input()}>
-                {TIMEZONES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <TimezoneSelect value={tz} onChange={v => { setTz(v); touch(); }} />
             </Row>
             <Row label="Bio" sub="Admin-controlled — contact your coordinator to update.">
               <div style={{ padding: 12, background: '#FAFAFA', border: '1px solid #F5F5F5', borderRadius: 8, fontSize: 13, color: '#52525B', lineHeight: 1.5 }}>{me.bio}</div>
@@ -734,6 +731,87 @@ const metaLabel: React.CSSProperties = { display: 'block', fontSize: 11, fontWei
 
 function input(extra?: React.CSSProperties): React.CSSProperties {
   return { width: '100%', height: 36, padding: '0 10px', border: '1px solid #E4E4E7', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', ...extra };
+}
+
+function TimezoneSelect({ value, onChange }: { value: string; onChange: (tz: string) => void }) {
+  const [open, setOpen]     = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef        = useRef<HTMLDivElement>(null);
+  const searchRef           = useRef<HTMLInputElement>(null);
+
+  const allTz = useMemo(() => {
+    const now = Date.now();
+    const zones: string[] = (Intl as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.('timeZone') ?? [];
+    return zones.map(tz => {
+      const offset = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'shortOffset' })
+        .formatToParts(now)
+        .find(p => p.type === 'timeZoneName')?.value ?? '';
+      return { tz, offset, label: `${offset} — ${tz.replace(/_/g, ' ')}` };
+    }).sort((a, b) => {
+      const parse = (o: string) => { const m = o.match(/([+-])(\d+):?(\d*)/); return m ? (m[1] === '+' ? 1 : -1) * (parseInt(m[2]) * 60 + parseInt(m[3] || '0')) : 0; };
+      return parse(a.offset) - parse(b.offset);
+    });
+  }, []);
+
+  const filtered = search
+    ? allTz.filter(t => t.label.toLowerCase().includes(search.toLowerCase()))
+    : allTz;
+
+  const selectedLabel = allTz.find(t => t.tz === value)?.label ?? value;
+
+  useEffect(() => {
+    if (!open) { setSearch(''); return; }
+    searchRef.current?.focus();
+    function onDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{ ...input(), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer', background: '#fff', textAlign: 'left' }}
+      >
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLabel}</span>
+        <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="#A1A1AA" strokeWidth={1.5} strokeLinecap="round" aria-hidden style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+          <path d="M2 4l4 4 4-4" />
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0 10px 24px rgba(22,32,51,0.12)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '8px 8px 6px', borderBottom: '1px solid #F5F5F5' }}>
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search timezones…"
+              style={{ width: '100%', height: 30, padding: '0 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ overflowY: 'auto', maxHeight: 240 }}>
+            {filtered.length === 0 && (
+              <div style={{ padding: '10px 12px', fontSize: 12, color: '#A1A1AA' }}>No timezones found.</div>
+            )}
+            {filtered.map(({ tz, label }) => (
+              <button
+                key={tz}
+                type="button"
+                onClick={() => { onChange(tz); setOpen(false); }}
+                style={{ display: 'block', width: '100%', padding: '7px 12px', textAlign: 'left', fontSize: 12, fontFamily: 'inherit', border: 'none', cursor: 'pointer', background: tz === value ? '#E8F4F1' : 'transparent', color: tz === value ? '#2B7265' : '#18181B', fontWeight: tz === value ? 600 : 400 }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function btn(variant: 'primary' | 'secondary', size?: 'sm'): React.CSSProperties {
