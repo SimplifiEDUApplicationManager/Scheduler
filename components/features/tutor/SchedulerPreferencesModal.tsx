@@ -7,7 +7,7 @@ import type { SchedulerSummary } from '@/lib/nylas/scheduler';
 import { WorkingHoursEditor } from './WorkingHoursEditor';
 import { ExceptionsEditor } from './ExceptionsEditor';
 
-const CUSHION_OPTIONS = [0, 5, 10, 15] as const;
+const CUSHION_OPTIONS = [0, 5, 10, 15, 20] as const;
 
 interface Props {
   open: boolean;
@@ -32,7 +32,10 @@ export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
     setLoading(true);
     setError(null);
     fetch('/api/nylas/scheduler')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('load_failed');
+        return r.json();
+      })
       .then((data: { hours?: HoursMap; exceptions?: SchedulerException[]; cushionMin?: number }) => {
         setHours(data.hours ?? { ...EMPTY_HOURS_MAP });
         setExceptions(data.exceptions ?? []);

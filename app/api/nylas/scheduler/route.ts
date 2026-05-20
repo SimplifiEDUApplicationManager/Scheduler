@@ -82,7 +82,7 @@ export async function GET() {
     const result = await nylasGet<Record<string, unknown>>(
       `/v3/grants/${row.nylas_grant_id}/scheduling/configurations/${row.nylas_scheduler_config_id}`,
     );
-    if (!result.ok) return NextResponse.json(defaults);
+    if (!result.ok) return NextResponse.json({ error: 'Failed to load scheduling preferences' }, { status: 502 });
 
     const avail = result.data.availability as Record<string, unknown> | undefined;
     const rules = avail?.availability_rules as Record<string, unknown> | undefined;
