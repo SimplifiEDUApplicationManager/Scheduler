@@ -26,6 +26,10 @@ export async function POST() {
     if (mint.sessionAuthDisabled) {
       // Config exists but was created without requires_session_auth: true.
       // Patch it to enable session auth, then retry once.
+      // Guard: if grant is somehow missing here, fall through to recreate.
+      if (!row.nylas_grant_id) {
+        return NextResponse.json({ error: 'Calendar not connected — reconnect your calendar before editing scheduling preferences.', status: 400 }, { status: 400 });
+      }
       const patched = await enableSchedulerSessionAuth(row.nylas_scheduler_config_id, row.nylas_grant_id);
       if (patched) {
         const retry = await mintSchedulerEditUrl(row.nylas_scheduler_config_id);

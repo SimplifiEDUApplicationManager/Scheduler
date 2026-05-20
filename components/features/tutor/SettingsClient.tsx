@@ -11,10 +11,11 @@ import { AddSubjectModal } from './AddSubjectModal';
 import { EditSubjectModal } from './EditSubjectModal';
 import { DeleteSubjectModal } from './DeleteSubjectModal';
 import { BookingPagePreview } from './BookingPagePreview';
+import { SchedulerPreferencesModal } from './SchedulerPreferencesModal';
 import { DEV_BYPASS } from '@/lib/env';
 import { formatTimezoneLabel } from '@/lib/utils/timezone';
 
-interface Props { me: Tutor; allSubjects: Subject[]; schedulerSummary: SchedulerSummary | null }
+interface Props { me: Tutor; allSubjects: Subject[]; schedulerSummary: SchedulerSummary | null; }
 
 
 const CONF_META: Record<SubjectConf, { label: string; bg: string; fg: string; bar: string }> = {
@@ -55,7 +56,8 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const [pauseOpen, setPauseOpen]   = useState(false);
   const [toast, setToast]         = useState<string | null>(null);
   const [activeSection, setActive] = useState<SectionId>('profile');
-  const [editingScheduler, setEditingScheduler] = useState(false);
+  const [schedulerSummaryState, setSchedulerSummary] = useState<SchedulerSummary | null>(schedulerSummary);
+  const [showSchedulerModal, setShowSchedulerModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
 
@@ -77,18 +79,8 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
     }
   }
 
-  const openSchedulerEdit = useCallback(async () => {
-    setEditingScheduler(true);
-    try {
-      const res = await fetch('/api/nylas/scheduler-edit-link', { method: 'POST' });
-      const data = await res.json() as { url?: string; error?: string };
-      if (!res.ok || !data.url) { showToast(data.error ?? 'Could not open scheduler'); return; }
-      window.open(data.url, '_blank', 'noreferrer');
-    } catch {
-      showToast('Could not open scheduler');
-    } finally {
-      setEditingScheduler(false);
-    }
+  const openSchedulerEdit = useCallback(() => {
+    setShowSchedulerModal(true);
   }, []);
   const maxError = maxHours < 6 || maxHours > 40;
 
@@ -489,7 +481,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           </Card>
 
           {/* Working hours & meeting link */}
-          <Card id="hours" title="Working hours & meeting link" subtitle="Working hours and exceptions are managed on Nylas. Your permanent meeting link auto-populates in all calendar invites.">
+          <Card id="hours" title="Working hours & meeting link" subtitle="Set your weekly working hours, date-specific exceptions, and session cushion. Your permanent meeting link auto-populates in all calendar invites.">
             <Row label="Permanent meeting link" sub="Pasted into every confirmed session invite. Use a link that doesn't expire (e.g. Google Meet personal room or Zoom PMI).">
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ position: 'relative', flex: 1 }}>
@@ -500,26 +492,24 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 </div>
               </div>
             </Row>
-            {schedulerSummary ? (
+            {schedulerSummaryState ? (
               <div style={{ padding: 14, background: '#FAFAFA', borderRadius: 10, display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 12 }}>
-                <PrefRow label="Working hours" value={schedulerSummary.workingHours} />
-                <PrefRow label="Exceptions to my upcoming availability" value={schedulerSummary.exceptions} />
-                <PrefRow label="Break between sessions" value={schedulerSummary.breakDuration} />
+                <PrefRow label="Working hours" value={schedulerSummaryState.workingHours} />
+                <PrefRow label="Exceptions to my upcoming availability" value={schedulerSummaryState.exceptions} />
+                <PrefRow label="Session cushion" value={schedulerSummaryState.breakDuration} />
               </div>
             ) : (
               <div style={{ padding: 14, background: '#FAFAFA', borderRadius: 10, fontSize: 12, color: '#A1A1AA', marginBottom: 12 }}>
-                {me.nylasSchedulerConfigId
-                  ? 'Could not load scheduling preferences — try again later.'
-                  : 'No scheduling preferences configured yet. Click "Edit scheduling preferences" to set them up on Nylas.'}
+                No scheduling preferences configured yet. Click below to set them up.
               </div>
             )}
             <button
               onClick={openSchedulerEdit}
-              disabled={!me.nylasSchedulerConfigId || editingScheduler}
-              style={{ ...btn('primary'), opacity: (!me.nylasSchedulerConfigId || editingScheduler) ? 0.5 : 1, cursor: (!me.nylasSchedulerConfigId || editingScheduler) ? 'not-allowed' : 'pointer' }}
+              disabled={!me.nylasGrantId}
+              style={{ ...btn('primary'), opacity: !me.nylasGrantId ? 0.5 : 1, cursor: !me.nylasGrantId ? 'not-allowed' : 'pointer' }}
             >
               <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" aria-hidden><rect x={1.5} y={2.5} width={10} height={9} rx={1.5} /><path d="M1.5 5.5h10M4.5 1v3M8.5 1v3" /></svg>
-              {editingScheduler ? 'Opening…' : 'Edit scheduling preferences'}
+              Edit scheduling preferences
             </button>
           </Card>
 
@@ -637,6 +627,12 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           />
         ) : null;
       })()}
+
+      <SchedulerPreferencesModal
+        open={showSchedulerModal}
+        onClose={() => setShowSchedulerModal(false)}
+        onSaved={summary => { setSchedulerSummary(summary); showToast('Scheduling preferences saved'); }}
+      />
 
       {pauseOpen && (
         <PauseModal

@@ -53,7 +53,7 @@ const DAY_ABBR: Record<DayName, string> = {
 
 const DAY_ORDER: DayName[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-function fmtTime(t: string): string {
+export function fmtTime(t: string): string {
   // t is "HH:MM", e.g. "09:00" → "9 am", "17:30" → "5:30 pm"
   const [hStr, mStr] = t.split(':');
   const h = parseInt(hStr ?? '0', 10);
@@ -85,7 +85,7 @@ function collapseDays(days: DayName[]): string {
   ).join(', ');
 }
 
-function fmtWorkingHours(windows: AvailabilityWindow[] | undefined): string {
+export function fmtWorkingHours(windows: AvailabilityWindow[] | undefined): string {
   if (!windows || windows.length === 0) return '—';
   // Group by start/end time and collapse days within each group.
   const groups = new Map<string, DayName[]>();
@@ -102,7 +102,7 @@ function fmtWorkingHours(windows: AvailabilityWindow[] | undefined): string {
     .join('; ');
 }
 
-function fmtBreak(minutes: number | undefined): string {
+export function fmtBreak(minutes: number | undefined): string {
   if (!minutes) return 'None';
   // Snap to the nearest supported denomination (5, 10, 15, 20, 30, 45, 60).
   const denoms = [5, 10, 15, 20, 30, 45, 60];
@@ -114,7 +114,7 @@ function fmtBreak(minutes: number | undefined): string {
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function fmtExceptions(dateHours: DateSpecificHours[] | undefined): string {
+export function fmtExceptions(dateHours: DateSpecificHours[] | undefined): string {
   if (!dateHours || dateHours.length === 0) return 'None';
   // Only count dates where hours is empty (full-day block).
   const today = new Date();
@@ -134,8 +134,8 @@ function fmtExceptions(dateHours: DateSpecificHours[] | undefined): string {
  * Fetch a Nylas Scheduler configuration and format it for display.
  * Returns a summary with `unavailable: true` on any fetch failure.
  */
-export async function fetchSchedulerSummary(configId: string): Promise<SchedulerSummary> {
-  const result = await nylasGet<SchedulerConfig>(`/v3/scheduling/configurations/${configId}`);
+export async function fetchSchedulerSummary(configId: string, grantId: string): Promise<SchedulerSummary> {
+  const result = await nylasGet<SchedulerConfig>(`/v3/grants/${grantId}/scheduling/configurations/${configId}`);
   if (!result.ok) {
     console.error('[nylas/scheduler] Failed to fetch config:', result.error);
     return { workingHours: '—', exceptions: '—', breakDuration: '—', unavailable: true };
