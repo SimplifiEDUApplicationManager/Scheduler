@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { mintSchedulerEditUrl, createSchedulerConfig } from '@/lib/nylas/scheduler';
+import { mintSchedulerEditUrl, createSchedulerConfig, enableSchedulerSessionAuth } from '@/lib/nylas/scheduler';
 
 export async function POST() {
   const auth = await requireAuth();
@@ -21,10 +21,19 @@ export async function POST() {
   if (row.nylas_scheduler_config_id) {
     const mint = await mintSchedulerEditUrl(row.nylas_scheduler_config_id);
     if (mint.url !== null) return NextResponse.json({ url: mint.url });
-    // Only fall through to recreate if Nylas confirmed the config is gone (404).
-    // Any other error (rate limit, server error) should surface immediately so
-    // we don't orphan a config the tutor has already customised.
-    if (!mint.configGone) {
+
+    if (mint.sessionAuthDisabled) {
+      // Config exists but was created without requires_session_auth: true.
+      // Patch it to enable session auth, then retry once.
+      const patched = await enableSchedulerSessionAuth(row.nylas_scheduler_config_id);
+      if (patched) {
+        const retry = await mintSchedulerEditUrl(row.nylas_scheduler_config_id);
+        if (retry.url !== null) return NextResponse.json({ url: retry.url });
+      }
+      // Patch failed or retry still failed — fall through to recreate the config.
+    } else if (!mint.configGone) {
+      // Any other error (rate limit, server error) — surface it immediately so
+      // we don't orphan a config the tutor has already customised.
       return NextResponse.json({ error: mint.error, status: 502 }, { status: 502 });
     }
   }
