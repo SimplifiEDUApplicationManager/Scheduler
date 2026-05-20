@@ -4,7 +4,6 @@ import { useState } from 'react';
 import type { Tutor } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 
-const BOOKING_URL = 'book.nylas.com/us/simplifi/julia-hering';
 
 const SLOTS_BY_DAY = [
   ['9:00 AM', '10:00 AM', '2:00 PM', '3:30 PM', '5:00 PM'],
@@ -30,7 +29,7 @@ function getUpcomingWeekdays(count: number) {
   return days;
 }
 
-export function BookingPagePreview({ tutor }: { tutor: Tutor }) {
+export function BookingPagePreview({ tutor, bookingUrl }: { tutor: Tutor; bookingUrl?: string }) {
   const [selectedDay, setSelectedDay]   = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [duration, setDuration]         = useState(60);
@@ -49,7 +48,7 @@ export function BookingPagePreview({ tutor }: { tutor: Tutor }) {
           <svg width={10} height={10} viewBox="0 0 10 10" fill="none" stroke="#A1A1AA" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
             <rect x={2} y={4} width={6} height={5} rx={1} /><path d="M3.5 4V3a1.5 1.5 0 013 0v1" />
           </svg>
-          {BOOKING_URL}
+          {bookingUrl ? bookingUrl.replace(/^https?:\/\//, '') : 'book.nylas.com/…'}
         </div>
         <span style={{ fontSize: 10, fontWeight: 700, color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Preview</span>
       </div>

@@ -257,7 +257,7 @@ export async function createSchedulerConfig(params: {
   const slug = params.tutorEmail.split('@')[0]!.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   const result = await nylasPost<CreatedConfig>(`/v3/grants/${params.grantId}/scheduling/configurations`, {
-    requires_session_auth: true,
+    requires_session_auth: false,
     slug,
     participants: [{
       name: params.tutorName,
