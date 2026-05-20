@@ -8,7 +8,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     return (
       <>
         <Header />
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0">{children}</main>
       </>
     );
   }
@@ -28,7 +28,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <>
       <Header authUser={{ name: row.name, email: row.email, navRole: 'coordinator', dbRole: row.role }} />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-hidden flex flex-col min-h-0">{children}</main>
     </>
   );
 }
