@@ -7,29 +7,35 @@
 import { nylasGet, nylasPost, nylasPut, nylasPatch } from './client';
 
 // ── Nylas Scheduler config types (v3) ────────────────────────────────────────
+//
+// Nylas uses integer day indices (0=Sunday … 6=Saturday) and `start`/`end`
+// field names (not `start_time`/`end_time`) inside `default_open_hours`.
+// Exceptions live either in `exdates` per open-hours entry (all-day blocks)
+// or in `participants[].specific_time_availability` (partial-day overrides).
 
-type DayName = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
-
-interface AvailabilityWindow {
-  days: DayName[];
-  start_time: string; // "HH:MM"
-  end_time: string;   // "HH:MM"
+// 0=Sunday, 1=Monday, … 6=Saturday
+export interface OpenHours {
+  days: number[];
+  start: string;       // "HH:MM"
+  end: string;         // "HH:MM"
   timezone?: string;
+  exdates?: string[];  // "YYYY-MM-DD" dates to exclude from this rule
 }
 
-interface DateSpecificHours {
-  date: string;        // "YYYY-MM-DD"
-  hours: { start_time: string; end_time: string }[];
-}
+type SpecificTimeAvailability = { date: string; start: string; end: string };
 
 interface SchedulerConfig {
   id: string;
+  participants?: Array<{
+    specific_time_availability?: SpecificTimeAvailability[];
+    [key: string]: unknown;
+  }>;
   availability?: {
     duration_minutes?: number;
-    interval_minutes?: number;  // break between sessions
+    interval_minutes?: number;
     availability_rules?: {
-      availability_windows?: AvailabilityWindow[];
-      date_specific_hours?: DateSpecificHours[];
+      default_open_hours?: OpenHours[];
+      [key: string]: unknown;
     };
   };
 }
@@ -46,12 +52,9 @@ export interface SchedulerSummary {
 
 // ── Format helpers ────────────────────────────────────────────────────────────
 
-const DAY_ABBR: Record<DayName, string> = {
-  sunday: 'Sun', monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed',
-  thursday: 'Thu', friday: 'Fri', saturday: 'Sat',
+const DAY_NUM_ABBR: Record<number, string> = {
+  0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat',
 };
-
-const DAY_ORDER: DayName[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 export function fmtTime(t: string): string {
   // t is "HH:MM", e.g. "09:00" → "9 am", "17:30" → "5:30 pm"
@@ -63,14 +66,13 @@ export function fmtTime(t: string): string {
   return m === 0 ? `${h12} ${suffix}` : `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
 }
 
-function collapseDays(days: DayName[]): string {
-  // Sort days by canonical order then collapse contiguous runs into ranges.
-  const sorted = [...days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
+function collapseDayNums(days: number[]): string {
+  const sorted = [...days].sort((a, b) => a - b);
   if (sorted.length === 0) return '—';
-  const runs: DayName[][] = [];
-  let run: DayName[] = [sorted[0]!];
+  const runs: number[][] = [];
+  let run: number[] = [sorted[0]!];
   for (let i = 1; i < sorted.length; i++) {
-    if (DAY_ORDER.indexOf(sorted[i]!) === DAY_ORDER.indexOf(sorted[i - 1]!) + 1) {
+    if (sorted[i]! === sorted[i - 1]! + 1) {
       run.push(sorted[i]!);
     } else {
       runs.push(run);
@@ -79,25 +81,27 @@ function collapseDays(days: DayName[]): string {
   }
   runs.push(run);
   return runs.map(r =>
-    r.length === 1 ? DAY_ABBR[r[0]!] :
-    r.length === 2 ? `${DAY_ABBR[r[0]!]} & ${DAY_ABBR[r[1]!]}` :
-    `${DAY_ABBR[r[0]!]}–${DAY_ABBR[r[r.length - 1]!]}`
+    r.length === 1 ? DAY_NUM_ABBR[r[0]!] :
+    r.length === 2 ? `${DAY_NUM_ABBR[r[0]!]} & ${DAY_NUM_ABBR[r[1]!]}` :
+    `${DAY_NUM_ABBR[r[0]!]}–${DAY_NUM_ABBR[r[r.length - 1]!]}`
   ).join(', ');
 }
 
-export function fmtWorkingHours(windows: AvailabilityWindow[] | undefined): string {
+export function fmtWorkingHours(windows: OpenHours[] | undefined): string {
   if (!windows || windows.length === 0) return '—';
   // Group by start/end time and collapse days within each group.
-  const groups = new Map<string, DayName[]>();
+  const groups = new Map<string, number[]>();
   for (const w of windows) {
-    const key = `${w.start_time}-${w.end_time}`;
+    const key = `${w.start}-${w.end}`;
     const existing = groups.get(key) ?? [];
     groups.set(key, [...existing, ...w.days]);
   }
   return [...groups.entries()]
     .map(([key, days]) => {
-      const [start, end] = key.split('-');
-      return `${collapseDays(days)} · ${fmtTime(start ?? '')}–${fmtTime(end ?? '')}`;
+      const dashIdx = key.indexOf('-', 3); // skip past "HH:" to find the separator dash
+      const start = key.slice(0, dashIdx);
+      const end = key.slice(dashIdx + 1);
+      return `${collapseDayNums(days)} · ${fmtTime(start)}–${fmtTime(end)}`;
     })
     .join('; ');
 }
@@ -114,11 +118,13 @@ export function fmtBreak(minutes: number | undefined): string {
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-export function fmtExceptions(dateHours: DateSpecificHours[] | undefined): string {
-  if (!dateHours || dateHours.length === 0) return 'None';
+// Takes a flat list of exception date strings ("YYYY-MM-DD") from both
+// exdates and specific_time_availability, deduplicates, and formats.
+export function fmtExceptions(dates: string[] | undefined): string {
+  if (!dates || dates.length === 0) return 'None';
   const today = new Date();
-  const upcoming = dateHours
-    .map(d => new Date(d.date + 'T00:00:00'))
+  const upcoming = [...new Set(dates)]
+    .map(d => new Date(d + 'T00:00:00'))
     .filter(d => d >= today)
     .sort((a, b) => a.getTime() - b.getTime());
   if (upcoming.length === 0) return 'None upcoming';
@@ -141,10 +147,17 @@ export async function fetchSchedulerSummary(configId: string, grantId: string): 
 
   const cfg = result.data;
   const rules = cfg.availability?.availability_rules;
+  const openHours = rules?.default_open_hours ?? [];
+
+  // Collect all exception dates: exdates from open-hours entries (all-day
+  // blocks) + specific_time_availability dates (partial-day overrides).
+  const exdates = openHours.flatMap(h => h.exdates ?? []);
+  const partialDates = (cfg.participants?.[0]?.specific_time_availability ?? []).map(s => s.date);
+  const allExceptionDates = [...new Set([...exdates, ...partialDates])];
 
   return {
-    workingHours: fmtWorkingHours(rules?.availability_windows),
-    exceptions:   fmtExceptions(rules?.date_specific_hours),
+    workingHours:  fmtWorkingHours(openHours),
+    exceptions:    fmtExceptions(allExceptionDates),
     breakDuration: fmtBreak(cfg.availability?.interval_minutes),
   };
 }
