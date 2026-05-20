@@ -60,7 +60,7 @@ export function ConsiderRequestClient({ request: r, tutors, coordinatorTz }: Pro
   return (
     <div className="flex flex-1 overflow-hidden min-h-0">
       {/* ── Left: request summary + suggestions ───────────────────────────── */}
-      <aside className="w-[360px] border-r border-border-default bg-surface-1 flex flex-col shrink-0 min-h-0 overflow-y-auto">
+      <aside className="w-[360px] border-r border-border-default bg-surface-1 flex flex-col shrink-0 min-h-0">
         {/* Back link */}
         <div className="px-4 pt-3 pb-0 shrink-0">
           <a href="/dashboard/requests" className="inline-flex items-center gap-1 text-[11px] text-fg-3 hover:text-fg-1 transition-colors">
@@ -115,7 +115,7 @@ export function ConsiderRequestClient({ request: r, tutors, coordinatorTz }: Pro
         </div>
 
         {/* Suggestions */}
-        <div className="flex-1 p-4 flex flex-col gap-2">
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col gap-2">
           <div className="text-[10px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-1">
             Suggested tutors · {suggestions.length}
           </div>
