@@ -116,10 +116,8 @@ const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 
 export function fmtExceptions(dateHours: DateSpecificHours[] | undefined): string {
   if (!dateHours || dateHours.length === 0) return 'None';
-  // Only count dates where hours is empty (full-day block).
   const today = new Date();
   const upcoming = dateHours
-    .filter(d => d.hours.length === 0)
     .map(d => new Date(d.date + 'T00:00:00'))
     .filter(d => d >= today)
     .sort((a, b) => a.getTime() - b.getTime());
