@@ -9,7 +9,7 @@ export async function POST() {
 
   const { data: row, error } = await supabase
     .from('users')
-    .select('nylas_scheduler_config_id, name, email, timezone, meeting_link')
+    .select('nylas_scheduler_config_id, nylas_grant_id, name, email, timezone, meeting_link')
     .eq('id', user.id)
     .single();
 
@@ -43,10 +43,14 @@ export async function POST() {
   }
 
   // Create a fresh Scheduler configuration and persist it.
+  if (!row.nylas_grant_id) {
+    return NextResponse.json({ error: 'Calendar not connected — connect your calendar before editing scheduling preferences.', status: 400 }, { status: 400 });
+  }
   const created = await createSchedulerConfig({
     tutorName:   row.name,
     tutorEmail:  row.email,
     timezone:    row.timezone ?? 'America/New_York',
+    grantId:     row.nylas_grant_id,
     meetingLink: row.meeting_link ?? undefined,
   });
 

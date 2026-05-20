@@ -4,7 +4,7 @@
 // Fetch and format Nylas Scheduler v3 configuration for read-only display
 // on the tutor settings page.
 
-import { nylasGet, nylasPost, nylasPatch } from './client';
+import { nylasGet, nylasPost, nylasPut, nylasPatch } from './client';
 
 // ── Nylas Scheduler config types (v3) ────────────────────────────────────────
 
@@ -192,15 +192,25 @@ export async function mintSchedulerEditUrl(
  * Returns true on success.
  */
 export async function enableSchedulerSessionAuth(configId: string): Promise<boolean> {
-  // PATCH only the flag — avoids sending read-only fields (id, created_at, etc.)
-  // or clobbering tutor-customised fields (participants, availability windows, etc.)
-  // that aren't represented in our local SchedulerConfig type.
-  const updated = await nylasPatch<CreatedConfig>(
+  // Nylas v3 Scheduler API only supports PUT (full replace) — not PATCH.
+  // Fetch the existing config as an opaque record, strip the server-managed
+  // read-only fields, then PUT it back with requires_session_auth: true.
+  const current = await nylasGet<Record<string, unknown>>(
     `/v3/scheduling/configurations/${configId}`,
-    { requires_session_auth: true },
+  );
+  if (!current.ok) {
+    console.error('[nylas/scheduler] enableSchedulerSessionAuth GET failed:', current.statusCode, current.error);
+    return false;
+  }
+  // Omit fields Nylas rejects in a PUT body.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _id, created_at: _ca, updated_at: _ua, ...body } = current.data;
+  const updated = await nylasPut<CreatedConfig>(
+    `/v3/scheduling/configurations/${configId}`,
+    { ...body, requires_session_auth: true },
   );
   if (!updated.ok) {
-    console.error('[nylas/scheduler] enableSchedulerSessionAuth PATCH failed:', updated.statusCode, updated.error);
+    console.error('[nylas/scheduler] enableSchedulerSessionAuth PUT failed:', updated.statusCode, updated.error);
   }
   return updated.ok;
 }
@@ -216,6 +226,7 @@ export async function createSchedulerConfig(params: {
   tutorName: string;
   tutorEmail: string;
   timezone: string;
+  grantId: string;
   meetingLink?: string;
 }): Promise<{ configId: string; bookingUrl: string } | { configId: null; error: string }> {
   const apiUri = process.env.NYLAS_API_URI ?? 'https://api.us.nylas.com';
@@ -227,6 +238,7 @@ export async function createSchedulerConfig(params: {
       name: params.tutorName,
       email: params.tutorEmail,
       is_organizer: true,
+      grant_id: params.grantId,
       availability: { calendar_ids: ['primary'] },
       booking:      { calendar_id: 'primary' },
     }],
