@@ -9,7 +9,6 @@ export const NAV_TABS: Record<UserRole, NavTab[]> = {
   coordinator: [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Matcher', href: '/dashboard/tutors' },
-    { label: 'Calendar', href: '/dashboard/calendar' },
     { label: 'Requests', href: '/dashboard/requests' },
     { label: 'Subjects', href: '/dashboard/subjects' },
     { label: 'Proposals', href: '/dashboard/proposals' },
