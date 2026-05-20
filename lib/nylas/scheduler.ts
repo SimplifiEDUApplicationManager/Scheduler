@@ -202,6 +202,10 @@ export async function enableSchedulerSessionAuth(configId: string): Promise<bool
     console.error('[nylas/scheduler] enableSchedulerSessionAuth GET failed:', current.statusCode, current.error);
     return false;
   }
+  if (!current.data || typeof current.data !== 'object') {
+    console.error('[nylas/scheduler] enableSchedulerSessionAuth: unexpected GET response shape');
+    return false;
+  }
   // Omit fields Nylas rejects in a PUT body.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id: _id, created_at: _ca, updated_at: _ua, ...body } = current.data;
