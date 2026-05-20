@@ -191,12 +191,12 @@ export async function mintSchedulerEditUrl(
  *
  * Returns true on success.
  */
-export async function enableSchedulerSessionAuth(configId: string): Promise<boolean> {
+export async function enableSchedulerSessionAuth(configId: string, grantId: string): Promise<boolean> {
   // Nylas v3 Scheduler API only supports PUT (full replace) — not PATCH.
   // Fetch the existing config as an opaque record, strip the server-managed
   // read-only fields, then PUT it back with requires_session_auth: true.
   const current = await nylasGet<Record<string, unknown>>(
-    `/v3/scheduling/configurations/${configId}`,
+    `/v3/grants/${grantId}/scheduling/configurations/${configId}`,
   );
   if (!current.ok) {
     console.error('[nylas/scheduler] enableSchedulerSessionAuth GET failed:', current.statusCode, current.error);
@@ -210,7 +210,7 @@ export async function enableSchedulerSessionAuth(configId: string): Promise<bool
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id: _id, created_at: _ca, updated_at: _ua, ...body } = current.data;
   const updated = await nylasPut<CreatedConfig>(
-    `/v3/scheduling/configurations/${configId}`,
+    `/v3/grants/${grantId}/scheduling/configurations/${configId}`,
     { ...body, requires_session_auth: true },
   );
   if (!updated.ok) {
@@ -236,13 +236,12 @@ export async function createSchedulerConfig(params: {
   const apiUri = process.env.NYLAS_API_URI ?? 'https://api.us.nylas.com';
   const region = apiUri.includes('.eu.') ? 'eu' : 'us';
 
-  const result = await nylasPost<CreatedConfig>('/v3/scheduling/configurations', {
+  const result = await nylasPost<CreatedConfig>(`/v3/grants/${params.grantId}/scheduling/configurations`, {
     requires_session_auth: true,
     participants: [{
       name: params.tutorName,
       email: params.tutorEmail,
       is_organizer: true,
-      grant_id: params.grantId,
       availability: { calendar_ids: ['primary'] },
       booking:      { calendar_id: 'primary' },
     }],
