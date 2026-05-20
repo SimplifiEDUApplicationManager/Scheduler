@@ -29,8 +29,12 @@ export async function POST() {
       if (patched) {
         const retry = await mintSchedulerEditUrl(row.nylas_scheduler_config_id);
         if (retry.url !== null) return NextResponse.json({ url: retry.url });
+        // Only fall through to recreate if Nylas confirmed the config is gone.
+        if (!retry.configGone) {
+          return NextResponse.json({ error: retry.error, status: 502 }, { status: 502 });
+        }
       }
-      // Patch failed or retry still failed — fall through to recreate the config.
+      // Patch failed or config confirmed gone after retry — fall through to recreate.
     } else if (!mint.configGone) {
       // Any other error (rate limit, server error) — surface it immediately so
       // we don't orphan a config the tutor has already customised.
