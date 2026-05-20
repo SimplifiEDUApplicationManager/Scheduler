@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import { mintSchedulerEditUrl, createSchedulerConfig, enableSchedulerSessionAuth } from '@/lib/nylas/scheduler';
 
 export async function POST() {
+  try {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;
@@ -73,4 +74,9 @@ export async function POST() {
   }
 
   return NextResponse.json({ url: mint.url });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[scheduler-edit-link] Unhandled error:', msg);
+    return NextResponse.json({ error: `[unhandled] ${msg}` }, { status: 502 });
+  }
 }
