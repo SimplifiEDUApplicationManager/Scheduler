@@ -4,7 +4,7 @@
 // Fetch and format Nylas Scheduler v3 configuration for read-only display
 // on the tutor settings page.
 
-import { nylasGet, nylasPost } from './client';
+import { nylasGet, nylasPost, nylasPut } from './client';
 
 // ── Nylas Scheduler config types (v3) ────────────────────────────────────────
 
@@ -164,20 +164,41 @@ interface CreatedConfig {
 
 /**
  * Mint a short-lived Nylas Scheduler edit session for the given configuration.
- * Returns { url } on success or { url: null, error } on failure.
+ * Returns { url } on success or { url: null, error, configGone, sessionAuthDisabled } on failure.
+ *
+ * sessionAuthDisabled is true when the config exists but was created without
+ * requires_session_auth: true. Call enableSchedulerSessionAuth then retry.
  */
 export async function mintSchedulerEditUrl(
   configId: string,
-): Promise<{ url: string } | { url: null; error: string; configGone: boolean }> {
+): Promise<{ url: string } | { url: null; error: string; configGone: boolean; sessionAuthDisabled: boolean }> {
   const result = await nylasPost<SchedulingSession>(
     '/v3/scheduling/sessions',
     { configuration_id: configId },
   );
   if (!result.ok) {
     console.error('[nylas/scheduler] Failed to mint session:', result.error);
-    return { url: null, error: result.error, configGone: result.statusCode === 404 };
+    const sessionAuthDisabled = result.error.toLowerCase().includes('session');
+    return { url: null, error: result.error, configGone: result.statusCode === 404, sessionAuthDisabled };
   }
   return { url: result.data.url };
+}
+
+/**
+ * Patches an existing Nylas Scheduler configuration to enable session-based
+ * editing (requires_session_auth: true). Fetches the current config first so
+ * the PUT preserves all existing tutor customisations.
+ *
+ * Returns true on success.
+ */
+export async function enableSchedulerSessionAuth(configId: string): Promise<boolean> {
+  const current = await nylasGet<SchedulerConfig>(`/v3/scheduling/configurations/${configId}`);
+  if (!current.ok) return false;
+  const updated = await nylasPut<CreatedConfig>(
+    `/v3/scheduling/configurations/${configId}`,
+    { ...current.data, requires_session_auth: true },
+  );
+  return updated.ok;
 }
 
 /**
