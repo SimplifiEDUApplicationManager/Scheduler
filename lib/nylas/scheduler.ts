@@ -199,6 +199,9 @@ export async function enableSchedulerSessionAuth(configId: string): Promise<bool
     `/v3/scheduling/configurations/${configId}`,
     { requires_session_auth: true },
   );
+  if (!updated.ok) {
+    console.error('[nylas/scheduler] enableSchedulerSessionAuth PATCH failed:', updated.statusCode, updated.error);
+  }
   return updated.ok;
 }
 
@@ -214,7 +217,7 @@ export async function createSchedulerConfig(params: {
   tutorEmail: string;
   timezone: string;
   meetingLink?: string;
-}): Promise<{ configId: string; bookingUrl: string } | null> {
+}): Promise<{ configId: string; bookingUrl: string } | { configId: null; error: string }> {
   const apiUri = process.env.NYLAS_API_URI ?? 'https://api.us.nylas.com';
   const region = apiUri.includes('.eu.') ? 'eu' : 'us';
 
@@ -236,8 +239,8 @@ export async function createSchedulerConfig(params: {
   });
 
   if (!result.ok) {
-    console.error('[nylas/scheduler] Failed to create config:', result.error);
-    return null;
+    console.error('[nylas/scheduler] Failed to create config:', result.statusCode, result.error);
+    return { configId: null, error: result.error };
   }
 
   const configId = result.data.id;
