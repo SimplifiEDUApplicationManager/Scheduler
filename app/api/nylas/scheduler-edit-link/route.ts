@@ -26,7 +26,7 @@ export async function POST() {
     if (mint.sessionAuthDisabled) {
       // Config exists but was created without requires_session_auth: true.
       // Patch it to enable session auth, then retry once.
-      const patched = await enableSchedulerSessionAuth(row.nylas_scheduler_config_id);
+      const patched = await enableSchedulerSessionAuth(row.nylas_scheduler_config_id, row.nylas_grant_id);
       if (patched) {
         const retry = await mintSchedulerEditUrl(row.nylas_scheduler_config_id);
         if (retry.url !== null) return NextResponse.json({ url: retry.url });

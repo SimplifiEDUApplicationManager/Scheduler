@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mintSchedulerEditUrl, createSchedulerConfig } from '@/lib/nylas/scheduler';
+import { mintSchedulerEditUrl, createSchedulerConfig, enableSchedulerSessionAuth } from '@/lib/nylas/scheduler';
 
 function mockFetch(status: number, body: unknown) {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
@@ -7,6 +7,18 @@ function mockFetch(status: number, body: unknown) {
     headers: { get: () => null },
     json: async () => body,
   }));
+}
+
+function mockFetchSequence(...calls: Array<{ status: number; body: unknown }>) {
+  let mock = vi.fn();
+  for (const call of calls) {
+    mock = mock.mockResolvedValueOnce({
+      status: call.status,
+      headers: { get: () => null },
+      json: async () => call.body,
+    });
+  }
+  vi.stubGlobal('fetch', mock);
 }
 
 beforeEach(() => {
@@ -53,6 +65,29 @@ describe('mintSchedulerEditUrl', () => {
   });
 });
 
+// ── enableSchedulerSessionAuth ────────────────────────────────────────────────
+
+describe('enableSchedulerSessionAuth', () => {
+  it('GETs and PUTs to grant-scoped endpoints and returns true on success', async () => {
+    mockFetchSequence(
+      { status: 200, body: { data: { id: 'cfg-1', name: 'Test', requires_session_auth: false }, request_id: 'r1' } },
+      { status: 200, body: { data: { id: 'cfg-1' }, request_id: 'r2' } },
+    );
+    const fetchSpy = vi.mocked(fetch);
+    const result = await enableSchedulerSessionAuth('cfg-1', 'grant-abc');
+    expect(result).toBe(true);
+    // Verify grant-scoped URLs were used
+    expect((fetchSpy.mock.calls[0]![0] as string)).toContain('/v3/grants/grant-abc/scheduling/configurations/cfg-1');
+    expect((fetchSpy.mock.calls[1]![0] as string)).toContain('/v3/grants/grant-abc/scheduling/configurations/cfg-1');
+  });
+
+  it('returns false when the GET fails', async () => {
+    mockFetch(404, { error: { type: 'not_found', message: 'Not found' }, request_id: 'r3' });
+    const result = await enableSchedulerSessionAuth('cfg-missing', 'grant-abc');
+    expect(result).toBe(false);
+  });
+});
+
 // ── createSchedulerConfig ─────────────────────────────────────────────────────
 
 describe('createSchedulerConfig', () => {
@@ -68,6 +103,21 @@ describe('createSchedulerConfig', () => {
       configId: 'new-cfg-id',
       bookingUrl: 'https://book.nylas.com/us/new-cfg-id',
     });
+  });
+
+  it('POSTs to grant-scoped endpoint and excludes grant_id from participants', async () => {
+    mockFetch(200, { data: { id: 'new-cfg-id' }, request_id: 'r3b' });
+    const fetchSpy = vi.mocked(fetch);
+    await createSchedulerConfig({
+      tutorName: 'Jane Doe',
+      tutorEmail: 'jane@example.com',
+      timezone: 'America/New_York',
+      grantId: 'grant-123',
+    });
+    const url = fetchSpy.mock.calls[0]![0] as string;
+    expect(url).toContain('/v3/grants/grant-123/scheduling/configurations');
+    const body = JSON.parse(fetchSpy.mock.calls[0]![1]?.body as string);
+    expect(body.participants[0]).not.toHaveProperty('grant_id');
   });
 
   it('uses eu region when API URI points to EU', async () => {
