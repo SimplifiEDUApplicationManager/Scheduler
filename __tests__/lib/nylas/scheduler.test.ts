@@ -135,6 +135,18 @@ describe('createSchedulerConfig', () => {
     expect(result?.configId ? result.bookingUrl : null).toBe('https://book.nylas.com/eu/test-client-id/jane');
   });
 
+  it('returns error when NYLAS_CLIENT_ID is not set', async () => {
+    vi.stubEnv('NYLAS_CLIENT_ID', '');
+    const result = await createSchedulerConfig({
+      tutorName: 'Jane Doe',
+      tutorEmail: 'jane@example.com',
+      timezone: 'America/New_York',
+      grantId: 'grant-123',
+    });
+    expect(result.configId).toBeNull();
+    expect((result as { error: string }).error).toMatch(/NYLAS_CLIENT_ID/);
+  });
+
   it('returns null when Nylas rejects the config creation', async () => {
     mockFetch(422, {
       error: { type: 'invalid_request', message: 'Invalid participant email' },

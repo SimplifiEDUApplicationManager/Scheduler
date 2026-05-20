@@ -234,7 +234,11 @@ export async function createSchedulerConfig(params: {
   meetingLink?: string;
 }): Promise<{ configId: string; bookingUrl: string } | { configId: null; error: string }> {
   const apiUri = process.env.NYLAS_API_URI ?? 'https://api.us.nylas.com';
-  const clientId = process.env.NYLAS_CLIENT_ID ?? '';
+  const clientId = process.env.NYLAS_CLIENT_ID;
+  if (!clientId) {
+    console.error('[nylas/scheduler] NYLAS_CLIENT_ID is not set — cannot construct booking URL');
+    return { configId: null, error: 'Server misconfiguration: NYLAS_CLIENT_ID is not set' };
+  }
   const region = apiUri.includes('.eu.') ? 'eu' : 'us';
 
   // Slug: derived from email local-part (unique per tutor), alphanumeric + hyphens only.
