@@ -86,6 +86,7 @@ export async function GET() {
 
     const avail = result.data.availability as Record<string, unknown> | undefined;
     const rules = avail?.availability_rules as Record<string, unknown> | undefined;
+    console.error('[scheduler GET] avail keys:', avail ? Object.keys(avail) : 'undefined', '| rules keys:', rules ? Object.keys(rules) : 'undefined', '| windows count:', (rules?.availability_windows as unknown[] | undefined)?.length ?? 0);
 
     return NextResponse.json({
       hours:      fromNylasWindows((rules?.availability_windows ?? []) as NylasWindow[]),

@@ -15,8 +15,28 @@ interface Props {
   onSaved: (summary: SchedulerSummary) => void;
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#3F3F46', marginBottom: 10 }}>{children}</div>;
+function InfoTooltip({ text }: { text: string }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <span onMouseEnter={() => setVisible(true)} onMouseLeave={() => setVisible(false)}
+        style={{ width: 16, height: 16, borderRadius: 999, background: '#E4E4E7', color: '#71717A', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'default', flexShrink: 0 }}>?</span>
+      {visible && (
+        <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 6, background: '#18181B', color: '#fff', fontSize: 12, lineHeight: 1.5, padding: '8px 12px', borderRadius: 8, width: 240, zIndex: 100, pointerEvents: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+          {text}
+        </div>
+      )}
+    </span>
+  );
+}
+
+function SectionLabel({ children, tooltip }: { children: React.ReactNode; tooltip?: string }) {
+  return (
+    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#3F3F46', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+      {children}
+      {tooltip && <InfoTooltip text={tooltip} />}
+    </div>
+  );
 }
 
 export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
@@ -45,10 +65,34 @@ export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
       .finally(() => setLoading(false));
   }, [open]);
 
+  function windowsOverlap(ws: { start: string; end: string }[]): boolean {
+    for (let i = 0; i < ws.length; i++) {
+      for (let j = i + 1; j < ws.length; j++) {
+        const a = ws[i]!, b = ws[j]!;
+        if (a.start < b.end && b.start < a.end) return true;
+      }
+    }
+    return false;
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
     try {
+      for (const [day, windows] of Object.entries(hours)) {
+        if (windows.length > 1 && windowsOverlap(windows)) {
+          setError(`Overlapping time windows on ${day.charAt(0).toUpperCase() + day.slice(1)}. Please fix before saving.`);
+          setSaving(false);
+          return;
+        }
+      }
+      for (const ex of exceptions) {
+        if (ex.windows.length > 1 && windowsOverlap(ex.windows)) {
+          setError(`Overlapping time windows on ${ex.date}. Please fix before saving.`);
+          setSaving(false);
+          return;
+        }
+      }
       const res = await fetch('/api/nylas/scheduler', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -85,7 +129,7 @@ export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
 
             <div style={{ margin: '24px 0', borderTop: '1px solid #F4F4F5' }} />
 
-            <SectionLabel>Session cushion</SectionLabel>
+            <SectionLabel tooltip="A buffer added between back-to-back tutoring sessions. Use this to give yourself a short break or travel time between appointments.">Session cushion</SectionLabel>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
               {CUSHION_OPTIONS.map(v => (
                 <button key={v} onClick={() => setCushion(v)} type="button"
@@ -96,7 +140,7 @@ export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
             </div>
             <div style={{ fontSize: 11, color: '#A1A1AA', marginBottom: 24, lineHeight: 1.4 }}>Minimum gap between back-to-back sessions. Does not add buffer around existing calendar events.</div>
 
-            <SectionLabel>Exceptions to my upcoming availability</SectionLabel>
+            <SectionLabel tooltip="Override your weekly schedule for specific dates — mark a day as fully unavailable, or set different available hours for that day only.">Exceptions to my upcoming availability</SectionLabel>
             <ExceptionsEditor exceptions={exceptions} onChange={setExceptions} />
           </>
         )}
