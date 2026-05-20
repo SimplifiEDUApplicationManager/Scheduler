@@ -200,6 +200,7 @@ export async function PUT(request: Request) {
       `/v3/grants/${row.nylas_grant_id}/scheduling/configurations/${configId}`,
       {
         ...cfg,
+        requires_session_auth: false,
         participants: updatedParticipants,
         availability: {
           ...existingAvail,

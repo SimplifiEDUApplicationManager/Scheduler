@@ -555,7 +555,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
               ) : (
                 <div style={{ fontSize: 12, color: '#71717A', padding: '8px 0' }}>No booking page connected yet.</div>
               )}
-              <BookingPagePreview tutor={me} />
+              <BookingPagePreview tutor={me} bookingUrl={bookingUrl ?? undefined} />
             </Row>
           </Card>
 
