@@ -31,7 +31,7 @@ export async function POST() {
         if (retry.url !== null) return NextResponse.json({ url: retry.url });
         // Only fall through to recreate if Nylas confirmed the config is gone.
         if (!retry.configGone) {
-          return NextResponse.json({ error: retry.error, status: 502 }, { status: 502 });
+          return NextResponse.json({ error: `[post-patch mint] ${retry.error}`, status: 502 }, { status: 502 });
         }
       }
       // Patch failed or config confirmed gone after retry — fall through to recreate.
@@ -50,20 +50,20 @@ export async function POST() {
     meetingLink: row.meeting_link ?? undefined,
   });
 
-  if (!created) {
-    return NextResponse.json({ error: 'Failed to create scheduler configuration', status: 502 }, { status: 502 });
+  if (created.configId === null) {
+    return NextResponse.json({ error: `[create config] ${created.error}`, status: 502 }, { status: 502 });
   }
 
   const { error: updateError } = await supabase
     .from('users')
-    .update({ nylas_scheduler_config_id: created.configId, booking_page_url: created.bookingUrl })
+    .update({ nylas_scheduler_config_id: created.configId!, booking_page_url: created.bookingUrl })
     .eq('id', user.id);
 
   if (updateError) {
     return NextResponse.json({ error: 'Failed to persist scheduler configuration', status: 502 }, { status: 502 });
   }
 
-  const mint = await mintSchedulerEditUrl(created.configId);
+  const mint = await mintSchedulerEditUrl(created.configId!);
   if (mint.url === null) {
     return NextResponse.json({ error: mint.error, status: 502 }, { status: 502 });
   }

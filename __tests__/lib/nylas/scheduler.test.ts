@@ -77,7 +77,7 @@ describe('createSchedulerConfig', () => {
       tutorEmail: 'jane@example.com',
       timezone: 'Europe/London',
     });
-    expect(result?.bookingUrl).toBe('https://book.nylas.com/eu/eu-cfg-id');
+    expect(result?.configId ? result.bookingUrl : null).toBe('https://book.nylas.com/eu/eu-cfg-id');
   });
 
   it('returns null when Nylas rejects the config creation', async () => {
@@ -90,6 +90,6 @@ describe('createSchedulerConfig', () => {
       tutorEmail: 'jane@example.com',
       timezone: 'America/New_York',
     });
-    expect(result).toBeNull();
+    expect(result?.configId).toBeNull();
   });
 });
