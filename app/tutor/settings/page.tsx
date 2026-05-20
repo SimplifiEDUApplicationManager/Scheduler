@@ -36,9 +36,10 @@ export default async function TutorSettingsPage() {
 
   // Fetch the Nylas Scheduler config for the read-only summary card.
   // If the tutor hasn't linked a config yet, pass null — the card shows a prompt.
-  const schedulerSummary: SchedulerSummary | null = me.nylasSchedulerConfigId
-    ? await fetchSchedulerSummary(me.nylasSchedulerConfigId)
-    : null;
+  const schedulerSummary: SchedulerSummary | null =
+    me.nylasSchedulerConfigId && me.nylasGrantId
+      ? await fetchSchedulerSummary(me.nylasSchedulerConfigId, me.nylasGrantId)
+      : null;
 
   return (
     <Suspense>
