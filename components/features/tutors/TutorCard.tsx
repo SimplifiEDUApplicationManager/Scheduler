@@ -11,6 +11,7 @@ interface TutorCardProps {
   activeTuples: Tuple[];
   activeSubjectId: string | undefined;
   selected: boolean;
+  canPropose: boolean;
   onSelect: () => void;
   onPropose: () => void;
   onProfile: () => void;
@@ -22,6 +23,7 @@ export function TutorCard({
   activeTuples,
   activeSubjectId,
   selected,
+  canPropose,
   onSelect,
   onPropose,
   onProfile,
@@ -144,15 +146,20 @@ export function TutorCard({
           {/* Expanded actions when selected */}
           {selected && (
             <div className="mt-2.5 flex gap-1.5">
-              <button
-                onClick={e => { e.stopPropagation(); onPropose(); }}
-                className="flex-1 h-7 rounded-md bg-surface-1 text-brand-ink text-[11px] font-semibold hover:bg-surface-2 transition-colors"
-              >
-                Propose
-              </button>
+              {canPropose && (
+                <button
+                  onClick={e => { e.stopPropagation(); onPropose(); }}
+                  className="flex-1 h-7 rounded-md bg-surface-1 text-brand-ink text-[11px] font-semibold hover:bg-surface-2 transition-colors"
+                >
+                  Propose
+                </button>
+              )}
               <button
                 onClick={e => { e.stopPropagation(); onProfile(); }}
-                className="flex-1 h-7 rounded-md border border-neutral-600 text-fg-on-brand text-[11px] font-semibold hover:bg-neutral-700 transition-colors"
+                className={cn(
+                  'h-7 rounded-md border border-neutral-600 text-fg-on-brand text-[11px] font-semibold hover:bg-neutral-700 transition-colors',
+                  canPropose ? 'flex-1' : 'flex-1',
+                )}
               >
                 Profile
               </button>

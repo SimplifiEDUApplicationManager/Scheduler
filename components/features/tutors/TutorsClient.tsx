@@ -121,6 +121,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
               activeTuples={filters.tuples}
               activeSubjectId={filters.subjects[0]}
               selected={selectedTutorId === t.id}
+              canPropose={!!activeReq}
               onSelect={() => setSelectedTutorId(prev => prev === t.id ? null : t.id)}
               onPropose={() => setProposeFor(t)}
               onProfile={() => setProfileTutor(t)}

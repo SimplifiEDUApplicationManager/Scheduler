@@ -3,14 +3,12 @@ import {
   TUTORS,
   REQUESTS,
   INVITATIONS,
-  AT_RISK_STUDENTS,
 } from '@/lib/data/mock';
 import { createClient } from '@/lib/supabase/server';
 import { KpiTile } from '@/components/features/dashboard/KpiTile';
 import { AlertsStrip } from '@/components/features/dashboard/AlertsStrip';
 import { DashCard } from '@/components/features/dashboard/DashCard';
 import { AttentionList } from '@/components/features/dashboard/AttentionList';
-import { AtRiskList } from '@/components/features/dashboard/AtRiskList';
 import { TeamSnapshot } from '@/components/features/dashboard/TeamSnapshot';
 import { PendingReviewList } from '@/components/features/dashboard/PendingReviewList';
 import type { PendingReviewItem } from '@/components/features/dashboard/PendingReviewList';
@@ -172,14 +170,6 @@ export default async function DashboardPage() {
               expired={expired}
               tutors={TUTORS}
             />
-          </DashCard>
-
-          <DashCard
-            title="At-risk students"
-            subtitle="Flagged by tutor check-ins or parent feedback"
-            action={<span className="text-[11px] text-fg-muted">Beta · from Tutor Notes</span>}
-          >
-            <AtRiskList items={AT_RISK_STUDENTS} />
           </DashCard>
 
           <DashCard
