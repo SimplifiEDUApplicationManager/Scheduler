@@ -497,7 +497,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
                         tint,
                       ].join(' ')}
                     >
-                      <Avatar initials={claim.tutorInitials} tone={avatarTone(idx)} size="md" />
+                      <Avatar initials={claim.tutorInitials} src={claim.photoUrl} tone={avatarTone(idx)} size="md" />
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">

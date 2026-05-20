@@ -23,6 +23,7 @@ export interface TutorClaim {
   tutorName: string;
   tutorInitials: string;
   tutorBio: string;
+  photoUrl?: string;
   /** Tutor's own self-reported confidence. */
   selfConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
   /** Coordinator's graded confidence. */
@@ -72,7 +73,7 @@ export default async function SubjectsPage() {
       .order('name'),
     supabase
       .from('tutor_subjects')
-      .select('id, tutor_confidence, coordinator_confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio)')
+      .select('id, tutor_confidence, coordinator_confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio, photo_url)')
       .order('created_at'),
     supabase
       .from('tutor_subject_changes')
@@ -100,7 +101,7 @@ export default async function SubjectsPage() {
   // Build map: subject_id → claims
   const claimsBySubject: Record<string, TutorClaim[]> = {};
   for (const row of claimRows ?? []) {
-    const tutorInfo = row.users as { name: string; bio: string | null } | null;
+    const tutorInfo = row.users as { name: string; bio: string | null; photo_url: string | null } | null;
     const name = tutorInfo?.name ?? 'Unknown';
     const claim: TutorClaim = {
       rowId:             row.id,
@@ -108,6 +109,7 @@ export default async function SubjectsPage() {
       tutorName:         name,
       tutorInitials:     initials(name),
       tutorBio:          tutorInfo?.bio ?? '',
+      photoUrl:          tutorInfo?.photo_url ?? undefined,
       selfConfidence:    (row.tutor_confidence as TutorClaim['selfConfidence']) ?? 'MEDIUM',
       coordConfidence:   row.coordinator_confidence as TutorClaim['coordConfidence'],
       qualificationNote: row.qualification_note ?? '',
