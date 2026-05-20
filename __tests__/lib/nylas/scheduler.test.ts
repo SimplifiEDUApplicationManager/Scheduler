@@ -62,6 +62,7 @@ describe('createSchedulerConfig', () => {
       tutorName: 'Jane Doe',
       tutorEmail: 'jane@example.com',
       timezone: 'America/New_York',
+      grantId: 'grant-123',
     });
     expect(result).toEqual({
       configId: 'new-cfg-id',
@@ -76,6 +77,7 @@ describe('createSchedulerConfig', () => {
       tutorName: 'Jane Doe',
       tutorEmail: 'jane@example.com',
       timezone: 'Europe/London',
+      grantId: 'grant-123',
     });
     expect(result?.configId ? result.bookingUrl : null).toBe('https://book.nylas.com/eu/eu-cfg-id');
   });
@@ -89,6 +91,7 @@ describe('createSchedulerConfig', () => {
       tutorName: 'Jane Doe',
       tutorEmail: 'jane@example.com',
       timezone: 'America/New_York',
+      grantId: 'grant-123',
     });
     expect(result?.configId).toBeNull();
   });
