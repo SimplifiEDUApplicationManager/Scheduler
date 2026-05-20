@@ -120,6 +120,13 @@ export async function nylasPut<T>(path: string, body: unknown): Promise<NylasRes
   return { ok: true, data: (raw as NylasSingleResponse<T>).data, requestId };
 }
 
+/** PATCH a resource (partial update). */
+export async function nylasPatch<T>(path: string, body: unknown): Promise<NylasResult<T>> {
+  const { raw, status, requestId } = await nylasRequest('PATCH', path, body);
+  if (status >= 400) return extractError(raw, requestId, status);
+  return { ok: true, data: (raw as NylasSingleResponse<T>).data, requestId };
+}
+
 /** DELETE a resource. Returns ok:true with data:null on 204. */
 export async function nylasDelete(path: string): Promise<NylasResult<null>> {
   const { raw, status, requestId } = await nylasRequest('DELETE', path);

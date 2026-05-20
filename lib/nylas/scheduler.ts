@@ -4,7 +4,7 @@
 // Fetch and format Nylas Scheduler v3 configuration for read-only display
 // on the tutor settings page.
 
-import { nylasGet, nylasPost, nylasPut } from './client';
+import { nylasGet, nylasPost, nylasPatch } from './client';
 
 // ── Nylas Scheduler config types (v3) ────────────────────────────────────────
 
@@ -192,11 +192,12 @@ export async function mintSchedulerEditUrl(
  * Returns true on success.
  */
 export async function enableSchedulerSessionAuth(configId: string): Promise<boolean> {
-  const current = await nylasGet<SchedulerConfig>(`/v3/scheduling/configurations/${configId}`);
-  if (!current.ok) return false;
-  const updated = await nylasPut<CreatedConfig>(
+  // PATCH only the flag — avoids sending read-only fields (id, created_at, etc.)
+  // or clobbering tutor-customised fields (participants, availability windows, etc.)
+  // that aren't represented in our local SchedulerConfig type.
+  const updated = await nylasPatch<CreatedConfig>(
     `/v3/scheduling/configurations/${configId}`,
-    { ...current.data, requires_session_auth: true },
+    { requires_session_auth: true },
   );
   return updated.ok;
 }
