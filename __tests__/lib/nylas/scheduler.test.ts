@@ -24,6 +24,7 @@ function mockFetchSequence(...calls: Array<{ status: number; body: unknown }>) {
 beforeEach(() => {
   vi.stubEnv('NYLAS_API_KEY', 'test-key');
   vi.stubEnv('NYLAS_API_URI', 'https://api.us.nylas.com');
+  vi.stubEnv('NYLAS_CLIENT_ID', 'test-client-id');
 });
 
 afterEach(() => {
@@ -91,7 +92,7 @@ describe('enableSchedulerSessionAuth', () => {
 // ── createSchedulerConfig ─────────────────────────────────────────────────────
 
 describe('createSchedulerConfig', () => {
-  it('returns configId and bookingUrl using the us region', async () => {
+  it('returns configId and bookingUrl with region/clientId/slug format', async () => {
     mockFetch(200, { data: { id: 'new-cfg-id' }, request_id: 'r3' });
     const result = await createSchedulerConfig({
       tutorName: 'Jane Doe',
@@ -101,16 +102,16 @@ describe('createSchedulerConfig', () => {
     });
     expect(result).toEqual({
       configId: 'new-cfg-id',
-      bookingUrl: 'https://book.nylas.com/us/new-cfg-id',
+      bookingUrl: 'https://book.nylas.com/us/test-client-id/jane',
     });
   });
 
-  it('POSTs to grant-scoped endpoint and excludes grant_id from participants', async () => {
+  it('POSTs to grant-scoped endpoint, includes slug, and excludes grant_id from participants', async () => {
     mockFetch(200, { data: { id: 'new-cfg-id' }, request_id: 'r3b' });
     const fetchSpy = vi.mocked(fetch);
     await createSchedulerConfig({
       tutorName: 'Jane Doe',
-      tutorEmail: 'jane@example.com',
+      tutorEmail: 'jane.doe@example.com',
       timezone: 'America/New_York',
       grantId: 'grant-123',
     });
@@ -118,6 +119,8 @@ describe('createSchedulerConfig', () => {
     expect(url).toContain('/v3/grants/grant-123/scheduling/configurations');
     const body = JSON.parse(fetchSpy.mock.calls[0]![1]?.body as string);
     expect(body.participants[0]).not.toHaveProperty('grant_id');
+    // Slug derived from email local-part; dots become hyphens
+    expect(body.slug).toBe('jane-doe');
   });
 
   it('uses eu region when API URI points to EU', async () => {
@@ -129,7 +132,7 @@ describe('createSchedulerConfig', () => {
       timezone: 'Europe/London',
       grantId: 'grant-123',
     });
-    expect(result?.configId ? result.bookingUrl : null).toBe('https://book.nylas.com/eu/eu-cfg-id');
+    expect(result?.configId ? result.bookingUrl : null).toBe('https://book.nylas.com/eu/test-client-id/jane');
   });
 
   it('returns null when Nylas rejects the config creation', async () => {
