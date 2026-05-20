@@ -253,7 +253,7 @@ export async function createSchedulerConfig(params: {
       availability: { calendar_ids: ['primary'] },
       booking:      { calendar_id: 'primary' },
     }],
-    availability: { duration_minutes: 60 },
+    availability: { duration_minutes: 60, interval_minutes: 0 },
     event_booking: {
       title: 'Tutoring Session',
       timezone: params.timezone || 'America/New_York',

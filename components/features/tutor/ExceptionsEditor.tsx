@@ -56,6 +56,7 @@ export function ExceptionsEditor({ exceptions, onChange }: Props) {
             </div>
             {!allDay && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontSize: 11, color: '#71717A', marginBottom: 2 }}>Available hours this day:</div>
                 {ex.windows.map((w, j) => (
                   <WindowRow key={j} w={w}
                     onChange={updated => updateAt(i, { ...ex, windows: ex.windows.map((x, k) => k === j ? updated : x) })}
