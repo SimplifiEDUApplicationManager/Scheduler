@@ -59,7 +59,10 @@ export function ExceptionsEditor({ exceptions, onChange }: Props) {
                 {ex.windows.map((w, j) => (
                   <WindowRow key={j} w={w}
                     onChange={updated => updateAt(i, { ...ex, windows: ex.windows.map((x, k) => k === j ? updated : x) })}
-                    onRemove={() => updateAt(i, { ...ex, windows: ex.windows.filter((_, k) => k !== j) })} />
+                    onRemove={() => {
+                      const next = ex.windows.filter((_, k) => k !== j);
+                      if (next.length === 0) removeAt(i); else updateAt(i, { ...ex, windows: next });
+                    }} />
                 ))}
                 <button onClick={() => updateAt(i, { ...ex, windows: [...ex.windows, { start: '09:00', end: '17:00' }] })} type="button"
                   style={{ alignSelf: 'flex-start', height: 24, padding: '0 10px', borderRadius: 6, border: '1px dashed #D4D4D8', background: '#fff', color: '#71717A', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
