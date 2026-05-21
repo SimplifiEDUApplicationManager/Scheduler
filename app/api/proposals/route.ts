@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields', status: 400 }, { status: 400 });
   }
 
-  if (offered_rate !== undefined && !isValidRate(offered_rate)) {
+  if (offered_rate != null && !isValidRate(offered_rate)) {
     return NextResponse.json({ error: 'offered_rate must be 20, 25, 30, 35, or 40', status: 422 }, { status: 422 });
   }
 
