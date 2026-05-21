@@ -124,6 +124,20 @@ export async function GET() {
   }
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function computeTotalWeeklyHours(hours: HoursMap): number {
+  let total = 0;
+  for (const windows of Object.values(hours)) {
+    for (const w of windows) {
+      const [sh, sm] = w.start.split(':').map(Number);
+      const [eh, em] = w.end.split(':').map(Number);
+      total += (eh! * 60 + em!) - (sh! * 60 + sm!);
+    }
+  }
+  return total / 60;
+}
+
 // ── PUT — save scheduler preferences ────────────────────────────────────────
 
 export async function PUT(request: Request) {
@@ -134,6 +148,52 @@ export async function PUT(request: Request) {
 
     const body = await request.json() as SchedulerPrefs;
     const { hours, exceptions, cushionMin } = body;
+
+    // ── Check total availability hours ──────────────────────────────────────
+    const totalHours = computeTotalWeeklyHours(hours);
+
+    if (totalHours < 10) {
+      // Block the save — create an approval request instead.
+      // The pending prefs are stored in details.prefs so the coordinator can
+      // apply them to Nylas when approving.
+      const { data: existingReq } = await supabase
+        .from('tutor_availability_requests')
+        .select('id')
+        .eq('tutor_id', user.id)
+        .eq('request_type', 'LOW_AVAILABILITY_WINDOWS')
+        .eq('status', 'PENDING')
+        .maybeSingle();
+
+      if (existingReq) {
+        return NextResponse.json(
+          { error: 'A pending request for low availability windows already exists. Wait for coordinator review.' },
+          { status: 409 },
+        );
+      }
+
+      const { data: newReq, error: insertErr } = await supabase
+        .from('tutor_availability_requests')
+        .insert({
+          tutor_id:     user.id,
+          request_type: 'LOW_AVAILABILITY_WINDOWS',
+          reason:       'Submitted via scheduling preferences editor',
+          details:      { total_hours: totalHours, prefs: { hours, exceptions, cushionMin } },
+          status:       'PENDING',
+        })
+        .select('id')
+        .single();
+
+      if (insertErr) {
+        return NextResponse.json({ error: 'Failed to create approval request' }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        ok:           false,
+        needs_approval: true,
+        request_id:   newReq.id,
+        total_hours:  totalHours,
+      });
+    }
 
     const { data: row } = await supabase
       .from('users')
@@ -217,15 +277,37 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: updated.error, status: 502 }, { status: 502 });
     }
 
-    // Return formatted summary so the settings card updates without a page reload.
+    // Update stored total availability hours and log activity.
     const allExceptionDates = [
       ...allDayDates,
       ...partialExceptions.map(e => e.date),
     ];
+    const workingHoursFmt  = fmtWorkingHours(openHours);
+    const breakDurationFmt = fmtBreak(cushionMin);
+    const exceptionsFmt    = fmtExceptions(allExceptionDates);
+
+    await Promise.all([
+      supabase
+        .from('users')
+        .update({ total_availability_hours: totalHours })
+        .eq('id', user.id),
+      supabase.from('tutor_availability_activity').insert({
+        tutor_id:   user.id,
+        event_type: 'scheduling_prefs_updated',
+        summary:    `Scheduling preferences updated · ${workingHoursFmt}`,
+        details: {
+          working_hours:  workingHoursFmt,
+          break_duration: breakDurationFmt,
+          exceptions:     exceptionsFmt,
+          total_hours:    totalHours,
+        },
+      }),
+    ]);
+
     const summary: SchedulerSummary = {
-      workingHours:  fmtWorkingHours(openHours),
-      exceptions:    fmtExceptions(allExceptionDates),
-      breakDuration: fmtBreak(cushionMin),
+      workingHours:  workingHoursFmt,
+      exceptions:    exceptionsFmt,
+      breakDuration: breakDurationFmt,
     };
 
     return NextResponse.json({ ok: true, summary });
