@@ -244,16 +244,10 @@ export async function createSchedulerConfig(params: {
   grantId: string;
   meetingLink?: string;
 }): Promise<{ configId: string; bookingUrl: string } | { configId: null; error: string }> {
-  const apiUri = process.env.NYLAS_API_URI ?? 'https://api.us.nylas.com';
-  const clientId = process.env.NYLAS_CLIENT_ID;
-  if (!clientId) {
-    console.error('[nylas/scheduler] NYLAS_CLIENT_ID is not set — cannot construct booking URL');
-    return { configId: null, error: 'Server misconfiguration: NYLAS_CLIENT_ID is not set' };
-  }
-  const region = apiUri.includes('.eu.') ? 'eu' : 'us';
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://simplifi-scheduler.vercel.app').replace(/\/$/, '');
 
   // Slug: derived from email local-part (unique per tutor), alphanumeric + hyphens only.
-  // Used in the hosted booking URL: https://book.nylas.com/<region>/<clientId>/<slug>
+  // Used as the path segment in the booking URL: <appUrl>/book/<slug>
   const slug = params.tutorEmail.split('@')[0]!.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   const result = await nylasPost<CreatedConfig>(`/v3/grants/${params.grantId}/scheduling/configurations`, {
@@ -280,5 +274,5 @@ export async function createSchedulerConfig(params: {
   }
 
   const configId = result.data.id;
-  return { configId, bookingUrl: `https://book.nylas.com/${region}/${clientId}/${slug}` };
+  return { configId, bookingUrl: `${appUrl}/book/${slug}` };
 }
