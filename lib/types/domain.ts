@@ -102,6 +102,7 @@ export interface Tutor {
   hoursCurrent: number;
   hoursMax: number;
   hoursMin: number;
+  minRate: number;
   meetingLink?: string;
   bookingPageUrl?: string;
   nylasSchedulerConfigId?: string;
@@ -130,6 +131,7 @@ export interface TuitionRequest {
   status: RequestStatus;
   matchedTutorId?: string;
   asanaTaskId?: string;
+  offeredRate?: number;
 }
 
 // ── Invitation (system onboarding — not a Proposal) ────────────────────────

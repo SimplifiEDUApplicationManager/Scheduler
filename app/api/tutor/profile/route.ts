@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
+import { isValidRate } from '@/lib/utils/rate';
 
 export async function PATCH(request: Request) {
   const auth = await requireActiveRole(['TUTOR', 'COORDINATOR', 'SUPER_ADMIN']);
@@ -20,6 +21,7 @@ export async function PATCH(request: Request) {
     timezone:        'timezone',
     maxWeeklyHours:  'max_weekly_hours',
     minWeeklyHours:  'min_weekly_hours',
+    minRate:         'min_rate',
     meetingLink:     'meeting_link',
     isPaused:        'is_paused',
   };
@@ -37,6 +39,13 @@ export async function PATCH(request: Request) {
   if ('is_paused' in update) {
     if (update['is_paused'] !== false) {
       return NextResponse.json({ error: 'Submit a pause request to pause availability', status: 422 }, { status: 422 });
+    }
+  }
+
+  // Validate min_rate
+  if ('min_rate' in update) {
+    if (!isValidRate(update['min_rate'])) {
+      return NextResponse.json({ error: 'min_rate must be 20, 25, 30, 35, or 40', status: 422 }, { status: 422 });
     }
   }
 

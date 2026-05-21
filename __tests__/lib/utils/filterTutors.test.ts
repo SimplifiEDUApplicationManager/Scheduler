@@ -9,7 +9,6 @@ const noFilters: FilterState = {
   subjects: [],
   conf: [],
   tuples: [],
-  hideAtCap: false,
   reqId: null,
 };
 
@@ -28,6 +27,7 @@ function makeTutor(overrides: Partial<Tutor> = {}): Tutor {
     hoursCurrent: 0,
     hoursMax: 20,
     hoursMin: 6,
+    minRate: 20,
     ...overrides,
   };
 }
@@ -135,28 +135,6 @@ describe('filterTutors — subject filter', () => {
     });
     const result = filterTutors([tutor], { ...noFilters, subjects: ['subj-math'], conf: ['HIGH'] });
     expect(result).toHaveLength(0);
-  });
-});
-
-// ── Behavior 3: hideAtCap ─────────────────────────────────────────────────
-
-describe('filterTutors — hideAtCap', () => {
-  it('includes a tutor exactly at max hours (at-cap is not hidden)', () => {
-    const tutor = makeTutor({ hoursCurrent: 20, hoursMax: 20 });
-    const result = filterTutors([tutor], { ...noFilters, hideAtCap: true });
-    expect(result).toHaveLength(1);
-  });
-
-  it('hides a tutor strictly over max hours', () => {
-    const tutor = makeTutor({ hoursCurrent: 21, hoursMax: 20 });
-    const result = filterTutors([tutor], { ...noFilters, hideAtCap: true });
-    expect(result).toHaveLength(0);
-  });
-
-  it('includes a tutor under max hours', () => {
-    const tutor = makeTutor({ hoursCurrent: 15, hoursMax: 20 });
-    const result = filterTutors([tutor], { ...noFilters, hideAtCap: true });
-    expect(result).toHaveLength(1);
   });
 });
 

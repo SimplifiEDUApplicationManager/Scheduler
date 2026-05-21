@@ -55,6 +55,7 @@ export type Database = {
           start_date: string | null
           notes: string | null
           matched_proposal_id: string | null
+          offered_rate: number | null
           created_at: string
           updated_at: string
         }
@@ -73,6 +74,7 @@ export type Database = {
           start_date?: string | null
           notes?: string | null
           matched_proposal_id?: string | null
+          offered_rate?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -91,6 +93,7 @@ export type Database = {
           start_date?: string | null
           notes?: string | null
           matched_proposal_id?: string | null
+          offered_rate?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -386,6 +389,7 @@ export type Database = {
           invited_by: string | null
           max_weekly_hours: number
           meeting_link: string | null
+          min_rate: number
           min_weekly_hours: number
           name: string
           nylas_grant_id: string | null
@@ -408,6 +412,7 @@ export type Database = {
           invited_by?: string | null
           max_weekly_hours: number
           meeting_link?: string | null
+          min_rate?: number
           min_weekly_hours?: number
           name: string
           nylas_grant_id?: string | null
@@ -430,6 +435,7 @@ export type Database = {
           invited_by?: string | null
           max_weekly_hours?: number
           meeting_link?: string | null
+          min_rate?: number
           min_weekly_hours?: number
           name?: string
           nylas_grant_id?: string | null

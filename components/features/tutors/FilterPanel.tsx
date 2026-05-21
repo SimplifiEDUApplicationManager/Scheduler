@@ -161,16 +161,6 @@ export function FilterPanel({ filters, subjects, onChange }: FilterPanelProps) {
         </div>
       </div>
 
-      {/* Capacity toggle */}
-      <label className="flex items-center gap-2 text-[11px] text-fg-2 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={filters.hideAtCap}
-          onChange={e => set('hideAtCap', e.target.checked)}
-          className="rounded"
-        />
-        Hide at-capacity tutors
-      </label>
     </div>
   );
 }

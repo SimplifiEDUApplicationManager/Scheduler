@@ -25,7 +25,6 @@ export function CalendarClient({ tutors, requests }: CalendarClientProps) {
   const filtered = useMemo(() => tutors.filter(t => {
 
     if (filters.q && !t.name.toLowerCase().includes(filters.q.toLowerCase())) return false;
-    if (filters.hideAtCap && t.hoursCurrent >= t.hoursMax) return false;
     if (filters.subjects.length > 0) {
       if (!t.subjects.some(ts => filters.subjects.includes(ts.id) && filters.conf.includes(ts.conf))) return false;
     }

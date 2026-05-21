@@ -15,6 +15,7 @@ export function NewRequestModal({ onClose, onCreate }: Props) {
   const [timezone,     setTimezone]     = useState('America/New_York');
   const [startDate,    setStartDate]    = useState('');
   const [notes,        setNotes]        = useState('');
+  const [offeredRate,  setOfferedRate]  = useState<number>(20);
   const [submitting,   setSubmitting]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
 
@@ -33,6 +34,7 @@ export function NewRequestModal({ onClose, onCreate }: Props) {
           timezone:      timezone || null,
           start_date:    startDate || null,
           notes:         notes.trim() || null,
+          offered_rate:  offeredRate,
         }),
       });
       const body = await res.json() as { id?: string; error?: string };
@@ -53,6 +55,7 @@ export function NewRequestModal({ onClose, onCreate }: Props) {
         startDate:    startDate || '—',
         notes:        notes.trim(),
         receivedAt:   'Just now',
+        offeredRate,
       };
       onCreate(newRequest);
     } catch {
@@ -100,6 +103,25 @@ export function NewRequestModal({ onClose, onCreate }: Props) {
               placeholder="AP Calculus BC"
               className={inputCls}
             />
+          </Field>
+
+          <Field label="Offered rate">
+            <div className="flex gap-1.5">
+              {[20, 25, 30, 35, 40].map(r => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setOfferedRate(r)}
+                  className={`flex-1 h-8 rounded-lg text-[12px] font-semibold border transition-colors ${
+                    offeredRate === r
+                      ? 'bg-brand-ink text-white border-brand-ink'
+                      : 'bg-surface-1 text-fg-2 border-border-default hover:bg-surface-2'
+                  }`}
+                >
+                  ${r}
+                </button>
+              ))}
+            </div>
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
