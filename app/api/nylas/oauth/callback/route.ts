@@ -56,10 +56,13 @@ export async function GET(request: Request) {
       meetingLink: (userRow.meeting_link as string | null) ?? undefined,
     });
     if (created.configId !== null) {
-      await supabase
+      const { error: configSaveError } = await supabase
         .from('users')
         .update({ nylas_scheduler_config_id: created.configId, booking_page_url: created.bookingUrl })
         .eq('id', decoded.userId);
+      if (configSaveError) {
+        console.error('[nylas/oauth/callback] Failed to save scheduler config id:', configSaveError);
+      }
     } else {
       console.error('[nylas/oauth/callback] Failed to create scheduler config:', created.error);
     }
