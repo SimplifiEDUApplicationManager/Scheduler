@@ -1,13 +1,16 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { TutorCalendarClient } from '@/components/features/tutor/TutorCalendarClient';
+import { TutorCalendarClient, type ResponseTimeStat } from '@/components/features/tutor/TutorCalendarClient';
 import { fetchTutorEvents, weekRange } from '@/lib/nylas/events';
 import { getTutorProposals } from '@/lib/data/proposals';
 import { TUTORS, TUTOR_EVENTS, TUTOR_PROPOSALS, ME_TUTOR_ID } from '@/lib/data/mock';
 import { DEV_BYPASS } from '@/lib/env';
+import { computeLeaderboard } from '@/lib/utils/responseTime';
 import type { Tutor } from '@/lib/types/domain';
 
 export default async function TutorCalendarPage() {
+  const emptyResponseTimeStat: ResponseTimeStat = { rank: null, avgMs: null, count: 0, totalRanked: 0 };
+
   if (DEV_BYPASS) {
     const me = TUTORS.find(t => t.id === ME_TUTOR_ID) ?? TUTORS[0];
     return (
@@ -15,6 +18,7 @@ export default async function TutorCalendarPage() {
         me={me}
         initialEvents={TUTOR_EVENTS}
         initialProposals={TUTOR_PROPOSALS}
+        responseTimeStat={emptyResponseTimeStat}
       />
     );
   }
@@ -72,6 +76,7 @@ export default async function TutorCalendarPage() {
       me={me}
       initialEvents={initialEvents}
       initialProposals={initialProposals}
+      responseTimeStat={emptyResponseTimeStat}
     />
   );
 }
