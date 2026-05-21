@@ -71,12 +71,33 @@ export default async function TutorCalendarPage() {
 
   const initialProposals = await getTutorProposals(row.id, supabase);
 
+  // Fetch all resolved proposals in the rolling 90-day window to compute the leaderboard.
+  const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: resolvedProposals } = await supabase
+    .from('proposals')
+    .select('tutor_id, created_at, resolved_at')
+    .in('status', ['ACCEPTED', 'DECLINED'])
+    .not('resolved_at', 'is', null)
+    .gte('created_at', windowStart);
+
+  const leaderboard = computeLeaderboard(
+    (resolvedProposals ?? []).map(p => ({
+      tutorId:    p.tutor_id,
+      createdAt:  p.created_at,
+      resolvedAt: p.resolved_at!,
+    }))
+  );
+  const myEntry = leaderboard.get(row.id);
+  const responseTimeStat: ResponseTimeStat = myEntry
+    ? { rank: myEntry.rank, avgMs: myEntry.avgMs, count: myEntry.count, totalRanked: myEntry.totalRanked }
+    : emptyResponseTimeStat;
+
   return (
     <TutorCalendarClient
       me={me}
       initialEvents={initialEvents}
       initialProposals={initialProposals}
-      responseTimeStat={emptyResponseTimeStat}
+      responseTimeStat={responseTimeStat}
     />
   );
 }

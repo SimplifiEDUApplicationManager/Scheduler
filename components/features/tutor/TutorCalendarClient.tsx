@@ -11,18 +11,27 @@ import { TutorWeekView } from './TutorWeekView';
 import { TutorMonthView } from './TutorMonthView';
 import { getWeekLabel, getMonthLabel } from '@/lib/utils/tutors';
 import { ConsiderModal } from './consider/ConsiderModal';
+import { formatResponseTime } from '@/lib/utils/responseTime';
 
 type CalView = 'week' | 'month';
 
 interface Toast { type: 'accept' | 'decline' | 'cancel' | 'error'; name: string; undo?: () => void; }
 
+export interface ResponseTimeStat {
+  rank:         number | null;
+  avgMs:        number | null;  // null = no proposals yet
+  count:        number;
+  totalRanked:  number;
+}
+
 interface Props {
   me: Tutor;
   initialEvents: TutorEvent[];
   initialProposals: TutorProposal[];
+  responseTimeStat: ResponseTimeStat;
 }
 
-export function TutorCalendarClient({ me, initialEvents, initialProposals }: Props) {
+export function TutorCalendarClient({ me, initialEvents, initialProposals, responseTimeStat }: Props) {
   const [events, setEvents]           = useState<TutorEvent[]>(initialEvents);
   const [eventsLoading, setEventsLoading] = useState(false);
   // Track which week the current events slice belongs to so we can refetch
@@ -153,6 +162,36 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals }: Pro
               <div className="text-[11px] text-fg-3 mt-0.5">{me.hoursMax - me.hoursCurrent} remaining</div>
             </div>
             <CapacityBar current={me.hoursCurrent} max={me.hoursMax} showLabel={false} className="w-24" />
+          </div>
+
+          {/* Response time leaderboard widget */}
+          <div className="mt-2 p-3 bg-surface-2 rounded-xl">
+            <div className="text-[9px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-1.5">Response time · 90 days</div>
+            {responseTimeStat.avgMs === null ? (
+              <div className="text-[11px] text-fg-3">No proposals yet — respond to earn a rank.</div>
+            ) : responseTimeStat.rank === null ? (
+              <div>
+                <div className="flex items-baseline gap-1.5 mb-0.5">
+                  <span className="text-[18px] font-bold text-fg-1 tabular-nums">{formatResponseTime(responseTimeStat.avgMs)}</span>
+                  <span className="text-[11px] text-fg-3">avg</span>
+                </div>
+                <div className="text-[11px] text-fg-3">Respond to {3 - responseTimeStat.count} more proposal{3 - responseTimeStat.count === 1 ? '' : 's'} to earn a rank.</div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-baseline gap-1.5 mb-0.5">
+                    <span className="text-[18px] font-bold text-fg-1 tabular-nums">{formatResponseTime(responseTimeStat.avgMs)}</span>
+                    <span className="text-[11px] text-fg-3">avg</span>
+                  </div>
+                  <div className="text-[11px] text-fg-3">of {responseTimeStat.totalRanked} tutors</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[9px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-0.5">Rank</div>
+                  <div className="text-[22px] font-extrabold text-brand-primary-ink tabular-nums">#{responseTimeStat.rank}</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
