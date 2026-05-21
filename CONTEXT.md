@@ -55,10 +55,17 @@ A tutor's weekly hours ceiling (`max_weekly_hours`). Compared against current se
 _Avoid_: bandwidth, availability (availability refers to open calendar slots, not hours headroom)
 
 **At Capacity**:
-When a tutor's current weekly session hours ≥ `max_weekly_hours`. Shown with a badge; tutor remains visible to coordinators.
+When a tutor's current weekly session hours ≥ `max_weekly_hours`. Shown as an inline badge on the tutor card; tutor remains visible to coordinators. There is no hide-toggle — coordinators see all tutors and decide manually.
 
 **Near Capacity**:
-When a tutor's current weekly session hours ≥ 80% of `max_weekly_hours`. Shown as a yellow indicator.
+When a tutor's current weekly session hours ≥ 80% of `max_weekly_hours`. Shown as a yellow indicator on the tutor card.
+
+**Minimum Rate**:
+The lowest hourly rate a tutor will accept, set by the tutor in their Settings page. Range: $20–$40/hr in $5 increments. Stored as `min_rate` (integer) on the `users` table. Default: $20. When a request with an offered rate is active in the Matcher, tutors whose `min_rate` exceeds the offered rate are shown with an "Over budget" badge on their card. No badge is shown when no request is selected.
+
+**Offered Rate**:
+The hourly rate a coordinator is offering for a specific tutoring request. Set by the coordinator when creating a new request (in the New Request modal). Range: $20–$40/hr in $5 increments. Stored as `offered_rate` (integer) on the `requests` table. Used by the Matcher to surface the "Over budget" badge on tutor cards whose `min_rate` exceeds it.
+_Avoid_: budget, pay rate, compensation
 
 ### Subjects
 

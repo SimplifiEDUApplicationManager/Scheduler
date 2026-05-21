@@ -100,7 +100,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
               Matching · {filtered.length} of {tutors.length}
             </span>
             <button
-              onClick={() => setFilters({ q: '', subjects: [], conf: ['HIGH', 'MEDIUM'], tuples: [], hideAtCap: true, reqId: null })}
+              onClick={() => setFilters({ q: '', subjects: [], conf: ['HIGH', 'MEDIUM'], tuples: [], reqId: null })}
               className="text-[11px] text-fg-3 hover:text-fg-1 transition-colors"
             >
               Clear
@@ -122,6 +122,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
               activeSubjectId={filters.subjects[0]}
               selected={selectedTutorId === t.id}
               canPropose={!!activeReq}
+              offeredRate={activeReq?.offeredRate}
               onSelect={() => setSelectedTutorId(prev => prev === t.id ? null : t.id)}
               onPropose={() => setProposeFor(t)}
               onProfile={() => setProfileTutor(t)}

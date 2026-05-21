@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import type { Json } from '@/lib/types/database';
+import { isValidRate } from '@/lib/utils/rate';
 
 /**
  * GET /api/requests
@@ -39,11 +40,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as Record<string, unknown>;
   const {
     student_name, student_email, subject, requested_schedule, timezone,
-    start_date, notes, asana_task_id, asana_task_url,
+    start_date, notes, asana_task_id, asana_task_url, offered_rate,
   } = body;
 
   if (!student_name || typeof student_name !== 'string') {
     return NextResponse.json({ error: 'student_name is required', status: 400 }, { status: 400 });
+  }
+
+  if (offered_rate !== undefined && !isValidRate(offered_rate)) {
+    return NextResponse.json({ error: 'offered_rate must be 20, 25, 30, 35, or 40', status: 422 }, { status: 422 });
   }
 
   const baseRow = {
@@ -58,6 +63,7 @@ export async function POST(req: NextRequest) {
     notes:              typeof notes           === 'string' ? notes           : null,
     asana_task_id:      typeof asana_task_id   === 'string' ? asana_task_id   : null,
     asana_task_url:     typeof asana_task_url  === 'string' ? asana_task_url  : null,
+    offered_rate:       isValidRate(offered_rate) ? offered_rate : null,
   };
 
   // Upsert when an asana_task_id is provided so re-running the skill is idempotent.

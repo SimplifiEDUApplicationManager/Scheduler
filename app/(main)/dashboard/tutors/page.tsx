@@ -31,6 +31,7 @@ function rowToRequest(
     notes:        row.notes ?? '',
     receivedAt:   '',
     asanaTaskId:  row.asana_task_id ?? undefined,
+    offeredRate:  row.offered_rate ?? undefined,
   };
 }
 

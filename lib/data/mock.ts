@@ -46,7 +46,7 @@ export const TUTORS: Tutor[] = [
       { id: 'apchem',   conf: 'MEDIUM' },
     ],
     availability: { 1: [[15,20]], 2: [[9,12],[16,19]], 3: [[15,20]], 4: [[9,12]], 5: [[13,17]] },
-    hoursCurrent: 14, hoursMax: 20, hoursMin: 6,
+    hoursCurrent: 14, hoursMax: 20, hoursMin: 6, minRate: 20,
     isPaused: false, totalAvailabilityHours: 20, availabilityRequests: [],
   },
   {
@@ -60,7 +60,7 @@ export const TUTORS: Tutor[] = [
       { id: 'mcat',   conf: 'HIGH' },
     ],
     availability: { 1: [[17,21]], 3: [[17,21]], 6: [[10,14]] },
-    hoursCurrent: 18, hoursMax: 20, hoursMin: 6,
+    hoursCurrent: 18, hoursMax: 20, hoursMin: 6, minRate: 25,
     isPaused: false, totalAvailabilityHours: 12, availabilityRequests: [],
   },
   {
@@ -74,7 +74,7 @@ export const TUTORS: Tutor[] = [
       { id: 'writing', conf: 'MEDIUM' },
     ],
     availability: { 1: [[14,19]], 2: [[14,19]], 3: [[14,19]], 4: [[14,19]] },
-    hoursCurrent: 10, hoursMax: 22, hoursMin: 6,
+    hoursCurrent: 10, hoursMax: 22, hoursMin: 6, minRate: 20,
     isPaused: false, totalAvailabilityHours: 20, availabilityRequests: [],
   },
   {
@@ -89,7 +89,7 @@ export const TUTORS: Tutor[] = [
       { id: 'algii',   conf: 'HIGH'   },
     ],
     availability: { 1: [[16,20]], 2: [[16,20]], 3: [[16,20]], 4: [[16,20]], 5: [[10,14]] },
-    hoursCurrent: 6, hoursMax: 25, hoursMin: 6,
+    hoursCurrent: 6, hoursMax: 25, hoursMin: 6, minRate: 30,
     isPaused: false, totalAvailabilityHours: 20, availabilityRequests: [],
   },
   {
@@ -103,7 +103,7 @@ export const TUTORS: Tutor[] = [
       { id: 'satverb',   conf: 'MEDIUM' },
     ],
     availability: { 2: [[18,21]], 3: [[18,21]], 6: [[9,13]] },
-    hoursCurrent: 4, hoursMax: 18, hoursMin: 6,
+    hoursCurrent: 4, hoursMax: 18, hoursMin: 6, minRate: 20,
     isPaused: false, totalAvailabilityHours: 10, availabilityRequests: [],
   },
   {
@@ -116,7 +116,7 @@ export const TUTORS: Tutor[] = [
       { id: 'apenglang', conf: 'HIGH' },
     ],
     availability: { 1: [[15,19]], 2: [[15,19]], 4: [[15,19]], 6: [[10,14]] },
-    hoursCurrent: 12, hoursMax: 20, hoursMin: 6,
+    hoursCurrent: 12, hoursMax: 20, hoursMin: 6, minRate: 25,
     isPaused: false, totalAvailabilityHours: 16, availabilityRequests: [],
   },
   {
@@ -130,7 +130,7 @@ export const TUTORS: Tutor[] = [
       { id: 'satmath',  conf: 'MEDIUM' },
     ],
     availability: { 1: [[9,12]], 3: [[9,12]], 5: [[14,18]] },
-    hoursCurrent: 22, hoursMax: 22, hoursMin: 6,
+    hoursCurrent: 22, hoursMax: 22, hoursMin: 6, minRate: 35,
     isPaused: false, totalAvailabilityHours: 10, availabilityRequests: [],
   },
   {
@@ -144,7 +144,7 @@ export const TUTORS: Tutor[] = [
       { id: 'apchem',  conf: 'MEDIUM' },
     ],
     availability: { 0: [[10,14]], 2: [[16,21]], 4: [[16,21]] },
-    hoursCurrent: 8, hoursMax: 24, hoursMin: 6,
+    hoursCurrent: 8, hoursMax: 24, hoursMin: 6, minRate: 20,
     isPaused: false, totalAvailabilityHours: 14, availabilityRequests: [],
   },
 ];

@@ -42,6 +42,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const [meetingLink, setLink]    = useState(me.meetingLink ?? '');
   const [maxHours, setMax]        = useState(me.hoursMax);
   const [minHours, setMin]        = useState(me.hoursMin);
+  const [minRate, setMinRate]     = useState(me.minRate);
   const [photoUrl, setPhotoUrl]   = useState(me.photoUrl ?? null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef              = useRef<HTMLInputElement>(null);
@@ -272,6 +273,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           // Skip maxHours if ≤ 5 — those go through the approval request flow.
           ...(maxHours > 5 ? { maxWeeklyHours: maxHours } : {}),
           minWeeklyHours: minHours,
+          minRate,
           meetingLink,
         }),
       });
@@ -451,6 +453,35 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 </div>
               </div>
               <CapacityBar current={me.hoursCurrent} max={maxHours} showLabel={false} className="w-40" />
+            </div>
+
+            {/* Minimum rate */}
+            <div style={{ marginTop: 16 }}>
+              <label style={metaLabel}>Minimum hourly rate</label>
+              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                {[20, 25, 30, 35, 40].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => { setMinRate(r); touch(); }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      border: '1px solid',
+                      fontSize: 13,
+                      fontWeight: minRate === r ? 600 : 400,
+                      cursor: 'pointer',
+                      background: minRate === r ? '#18181B' : '#FFFFFF',
+                      color: minRate === r ? '#FFFFFF' : '#3F3F46',
+                      borderColor: minRate === r ? '#18181B' : '#E4E4E7',
+                      transition: 'all 0.1s',
+                    }}
+                  >
+                    ${r}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 4 }}>Proposals below this rate will show as &quot;Over budget&quot; on coordinator screens.</div>
             </div>
           </Card>
 

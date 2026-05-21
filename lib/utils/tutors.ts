@@ -60,7 +60,6 @@ export function fmtRange(start: number, end: number): string {
 export function filterTutors(tutors: Tutor[], filters: FilterState): Tutor[] {
   return tutors.filter(t => {
     if (filters.q && !t.name.toLowerCase().includes(filters.q.toLowerCase())) return false;
-    if (filters.hideAtCap && t.hoursCurrent > t.hoursMax) return false;
     if (filters.subjects.length > 0) {
       const hasMatch = t.subjects.some(
         ts => filters.subjects.includes(ts.id) && filters.conf.includes(ts.conf),
@@ -82,7 +81,6 @@ export interface FilterState {
   subjects: string[];
   conf: string[];
   tuples: Tuple[];
-  hideAtCap: boolean;
   reqId: string | null;
 }
 
@@ -95,7 +93,6 @@ export function parseFilters(params: URLSearchParams): FilterState {
     subjects:  params.getAll('subject'),
     conf:      params.has('conf') ? confRaw.filter(Boolean) : DEFAULT_CONF,
     tuples:    params.getAll('tuple').map(parseTuple).filter((t): t is Tuple => t !== null),
-    hideAtCap: params.get('cap') !== '0',
     reqId:     params.get('req'),
   };
 }
@@ -110,7 +107,6 @@ export function filtersToParams(f: FilterState): URLSearchParams {
     p.set('conf', ''); // sentinel: conf explicitly cleared (deselect-all)
   }
   f.tuples.forEach(t => p.append('tuple', `${t.day}:${t.start}:${t.end}`));
-  if (!f.hideAtCap) p.set('cap', '0');
   if (f.reqId) p.set('req', f.reqId);
   return p;
 }

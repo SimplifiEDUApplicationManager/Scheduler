@@ -122,6 +122,7 @@ On decline: the coordinator is notified and the request returns to the unassigne
 ### Profile Settings
 - **Name**, **timezone** (IANA dropdown)
 - **Permanent meeting link** — video-conferencing agnostic (Zoom, Google Meet, etc.). Auto-populates in all calendar invites to students.
+- **Minimum rate** — the lowest hourly rate the tutor will accept. Segmented control at $5 increments ($20 / $25 / $30 / $35 / $40). Stored as `min_rate` on the `users` row. Default: $20.
 - **Bio** — read-only for the tutor. Admin-controlled. Displayed on the tutor's personal booking page.
 - **Calendar connection status** — connected provider, reconnect button
 - **Personal booking page URL** — the Nylas-hosted booking link. Copy button.
@@ -130,7 +131,7 @@ On decline: the coordinator is notified and the request returns to the unassigne
 - **Maximum weekly hours** — required field, 6–40 range with form validation. Cannot be blank or "unlimited." Exceeding 40 shows an error dialog.
 - **Minimum weekly hours** — 6 hours (approximately one hour per weekday plus one weekend hour). Enforced as a floor.
 - **Current usage** — calculated from Nylas events tagged as tutoring sessions. Shows "X of Y hours this week" with a progress bar.
-- **At capacity indicator** — when current ≥ max, the tutor is shown as "At Capacity" throughout the system. They remain visible to coordinators (not hidden) but with a clear badge.
+- **At capacity indicator** — when current ≥ max, the tutor is shown as "At Capacity" throughout the system. They remain visible to coordinators (not hidden) but with a clear inline badge. No hide-toggle exists.
 
 ---
 
@@ -144,7 +145,8 @@ The primary coordinator tool. A panel (sidebar or top bar) with filters:
 - **Availability** — up to 4 day-of-week / start-time / end-time tuples (OR logic). Mirrors how client requests come in.
 - **Start date** — when the student wants to begin. "Start ASAP" toggle sets to today.
 - **Request timezone** — the student's timezone. Tuples are interpreted in this timezone.
-- **Capacity** — toggle to hide tutors at or near capacity.
+
+There are no hide-toggles for capacity or rate. Instead, warnings appear inline on tutor cards (see Tutor Cards below).
 
 Filters are applied client-side for speed. Active filter state reflected in URL query params (shareable/bookmarkable).
 
@@ -157,7 +159,8 @@ When hovering over a tutor's availability block, only the **overlapping portion*
 A scrollable list (left panel in a two-panel layout) showing tutor profile cards. Each card shows:
 - Name, photo (if available)
 - Subjects taught (with confidence badges)
-- Capacity status ("Available — 12 of 20 hrs" or "At Capacity")
+- Capacity status ("Available — 12 of 20 hrs" or "At Capacity" / "Near cap" badge)
+- **Over budget** badge — shown only when a request is actively selected and the tutor's `min_rate` exceeds the request's `offered_rate`. Not shown when no request is selected.
 - Quick action buttons: View Calendar, Propose Client, Block Time
 
 Cards update in real time as filters are applied.
@@ -264,6 +267,7 @@ The coordinator can then `/propose` any of the top 3 directly.
 | `photo_url` | text nullable | |
 | `max_weekly_hours` | integer | Required. Range: 6–40. |
 | `min_weekly_hours` | integer default 6 | Floor. |
+| `min_rate` | smallint default 20 | Tutor's minimum acceptable hourly rate. Range: 20–40. |
 | `invited_by` | uuid FK → users.id nullable | |
 | `asana_project_id` | text nullable | Coordinator only. Connected Asana project. |
 | `created_at` | timestamptz | |
@@ -313,6 +317,27 @@ The `context` JSONB has no enforced schema — coordinators can store whatever i
   "notes": "Prefers morning sessions. Has a dog that occasionally barks."
 }
 ```
+
+### `requests`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `coordinator_id` | uuid FK → users.id | |
+| `source` | text | `'manual'` or `'asana'` |
+| `status` | text | `'open'` or `'matched'` |
+| `student_name` | text | |
+| `student_email` | text nullable | |
+| `subject` | text nullable | |
+| `requested_schedule` | jsonb nullable | Array of day/time tuples |
+| `timezone` | text (IANA) nullable | Student's timezone |
+| `start_date` | date nullable | |
+| `notes` | text nullable | |
+| `offered_rate` | smallint nullable | Coordinator's offered hourly rate. Range: 20–40. Set at request creation. |
+| `asana_task_id` | text nullable | |
+| `matched_proposal_id` | uuid FK → proposals.id nullable | |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
 ### `proposals`
 
@@ -526,7 +551,7 @@ SIMPLIFI_CALLER_EMAIL=           # V1 auth shim for Claude skills
 - Don't hardcode environment-specific values.
 - Don't introduce new dependencies without flagging them first.
 - Don't let tutors see other tutors' data.
-- Don't hide at-capacity tutors from coordinators. Show them with a badge.
+- Don't hide at-capacity or over-budget tutors from coordinators. Show inline warning badges on cards instead.
 - Don't let the monolith grow. If a feature doesn't fit cleanly, make it a separate module.
 
 ---

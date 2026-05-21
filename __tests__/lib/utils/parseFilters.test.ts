@@ -3,7 +3,7 @@ import { parseFilters, filtersToParams, DEFAULT_CONF, type FilterState } from '@
 
 const emptyParams = new URLSearchParams();
 
-// ── Behavior 7: full round-trip ──────────────────────────────────────────
+// ── Behavior 6: full round-trip ──────────────────────────────────────────
 
 describe('parseFilters / filtersToParams — full round-trip', () => {
   it('round-trips a non-trivial FilterState through params', () => {
@@ -12,7 +12,6 @@ describe('parseFilters / filtersToParams — full round-trip', () => {
       subjects: ['subj-1', 'subj-2'],
       conf: ['HIGH'],
       tuples: [{ day: 1, start: 14, end: 18 }, { day: 5, start: 9, end: 11 }],
-      hideAtCap: false,
       reqId: 'req-xyz',
     };
     const result = parseFilters(filtersToParams(original));
@@ -25,7 +24,6 @@ describe('parseFilters / filtersToParams — full round-trip', () => {
       subjects: [],
       conf: DEFAULT_CONF,
       tuples: [],
-      hideAtCap: true,
       reqId: null,
     };
     expect(parseFilters(filtersToParams(defaults))).toEqual(defaults);
@@ -49,7 +47,7 @@ describe('parseFilters — valid tuples', () => {
   });
 
   it('serialises a tuple as day:start:end', () => {
-    const f: FilterState = { q: '', subjects: [], conf: DEFAULT_CONF, tuples: [{ day: 2, start: 10, end: 12 }], hideAtCap: true, reqId: null };
+    const f: FilterState = { q: '', subjects: [], conf: DEFAULT_CONF, tuples: [{ day: 2, start: 10, end: 12 }], reqId: null };
     expect(filtersToParams(f).getAll('tuple')).toEqual(['2:10:12']);
   });
 });
@@ -97,22 +95,22 @@ describe('parseFilters — invalid tuples dropped', () => {
 
 describe('filtersToParams — conf', () => {
   it('writes conf params even when conf matches the default', () => {
-    const params = filtersToParams({ q: '', subjects: [], conf: ['HIGH', 'MEDIUM'], tuples: [], hideAtCap: true, reqId: null });
+    const params = filtersToParams({ q: '', subjects: [], conf: ['HIGH', 'MEDIUM'], tuples: [], reqId: null });
     expect(params.getAll('conf')).toEqual(['HIGH', 'MEDIUM']);
   });
 
   it('writes conf params regardless of value order', () => {
-    const params = filtersToParams({ q: '', subjects: [], conf: ['MEDIUM', 'HIGH'], tuples: [], hideAtCap: true, reqId: null });
+    const params = filtersToParams({ q: '', subjects: [], conf: ['MEDIUM', 'HIGH'], tuples: [], reqId: null });
     expect(params.getAll('conf')).toEqual(['MEDIUM', 'HIGH']);
   });
 
   it('writes conf params when they differ from the default', () => {
-    const params = filtersToParams({ q: '', subjects: [], conf: ['HIGH'], tuples: [], hideAtCap: true, reqId: null });
+    const params = filtersToParams({ q: '', subjects: [], conf: ['HIGH'], tuples: [], reqId: null });
     expect(params.getAll('conf')).toEqual(['HIGH']);
   });
 
   it('writes an empty sentinel when conf is empty so deselect-all round-trips correctly', () => {
-    const params = filtersToParams({ q: '', subjects: [], conf: [], tuples: [], hideAtCap: true, reqId: null });
+    const params = filtersToParams({ q: '', subjects: [], conf: [], tuples: [], reqId: null });
     expect(params.has('conf')).toBe(true);
     expect(params.getAll('conf').filter(Boolean)).toHaveLength(0);
   });
@@ -129,36 +127,8 @@ describe('parseFilters — conf', () => {
   });
 
   it('returns empty array when conf sentinel is present (deselect-all round-trip)', () => {
-    const state = { q: '', subjects: [], conf: [], tuples: [], hideAtCap: true, reqId: null };
+    const state = { q: '', subjects: [], conf: [], tuples: [], reqId: null };
     expect(parseFilters(filtersToParams(state)).conf).toEqual([]);
-  });
-});
-
-// ── Behavior 2: hideAtCap ─────────────────────────────────────────────────
-
-describe('parseFilters — hideAtCap', () => {
-  it('defaults to true when cap param is absent', () => {
-    expect(parseFilters(emptyParams).hideAtCap).toBe(true);
-  });
-
-  it('is false when cap=0', () => {
-    expect(parseFilters(new URLSearchParams('cap=0')).hideAtCap).toBe(false);
-  });
-
-  it('is true for any cap value other than 0', () => {
-    expect(parseFilters(new URLSearchParams('cap=1')).hideAtCap).toBe(true);
-  });
-});
-
-describe('filtersToParams — hideAtCap', () => {
-  it('omits cap param when hideAtCap is true', () => {
-    const params = filtersToParams({ q: '', subjects: [], conf: DEFAULT_CONF, tuples: [], hideAtCap: true, reqId: null });
-    expect(params.get('cap')).toBeNull();
-  });
-
-  it('sets cap=0 when hideAtCap is false', () => {
-    const params = filtersToParams({ q: '', subjects: [], conf: DEFAULT_CONF, tuples: [], hideAtCap: false, reqId: null });
-    expect(params.get('cap')).toBe('0');
   });
 });
 
@@ -172,7 +142,6 @@ describe('parseFilters — empty params', () => {
       subjects: [],
       conf: DEFAULT_CONF,
       tuples: [],
-      hideAtCap: true,
       reqId: null,
     });
   });

@@ -20,6 +20,7 @@ const SELECT_TUTOR = [
   'bio',
   'max_weekly_hours',
   'min_weekly_hours',
+  'min_rate',
   'meeting_link',
   'booking_page_url',
   'nylas_scheduler_config_id',
@@ -45,6 +46,7 @@ type RawTutorRow = {
   bio: string | null;
   max_weekly_hours: number;
   min_weekly_hours: number;
+  min_rate: number;
   meeting_link: string | null;
   booking_page_url: string | null;
   nylas_scheduler_config_id: string | null;
@@ -154,6 +156,7 @@ function rowToTutor(row: RawTutorRow, pendingChanges: RawChangeRow[], availabili
     hoursCurrent:           0,
     hoursMax:               row.max_weekly_hours,
     hoursMin:               row.min_weekly_hours,
+    minRate:                row.min_rate,
     meetingLink:            row.meeting_link ?? undefined,
     bookingPageUrl:         row.booking_page_url ?? undefined,
     nylasSchedulerConfigId: row.nylas_scheduler_config_id ?? undefined,
