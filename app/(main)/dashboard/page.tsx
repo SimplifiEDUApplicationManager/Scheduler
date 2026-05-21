@@ -14,6 +14,9 @@ import { PendingReviewList } from '@/components/features/dashboard/PendingReview
 import type { PendingReviewItem } from '@/components/features/dashboard/PendingReviewList';
 import { PendingAvailabilityList } from '@/components/features/dashboard/PendingAvailabilityList';
 import type { PendingAvailabilityItem } from '@/components/features/dashboard/PendingAvailabilityList';
+import { ResponseTimeLeaderboard } from '@/components/features/dashboard/ResponseTimeLeaderboard';
+import type { LeaderboardRow } from '@/components/features/dashboard/ResponseTimeLeaderboard';
+import { computeLeaderboard } from '@/lib/utils/responseTime';
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -30,7 +33,8 @@ function initials(name: string): string {
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ data: reviewRows }, { data: availRows }] = await Promise.all([
+  const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
       .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
@@ -41,6 +45,12 @@ export default async function DashboardPage() {
       .select('id, tutor_id, request_type, reason')
       .eq('status', 'PENDING')
       .order('created_at'),
+    supabase
+      .from('proposals')
+      .select('tutor_id, created_at, resolved_at')
+      .in('status', ['ACCEPTED', 'DECLINED'])
+      .not('resolved_at', 'is', null)
+      .gte('created_at', windowStart),
   ]);
 
   // Fetch tutor names for availability requests
@@ -60,6 +70,37 @@ export default async function DashboardPage() {
       reason:        r.reason,
     };
   });
+
+  // Build response time leaderboard for all tutors with activity in the 90-day window
+  const leaderboard = computeLeaderboard(
+    (resolvedProposals ?? []).map(p => ({
+      tutorId:    p.tutor_id,
+      createdAt:  p.created_at,
+      resolvedAt: p.resolved_at!,
+    }))
+  );
+
+  // Fetch names for all tutors in the leaderboard (may differ from availTutorIds)
+  const leaderboardTutorIds = [...leaderboard.keys()];
+  const leaderboardNameMap = new Map<string, string>(tutorNameMap);
+  const missingIds = leaderboardTutorIds.filter(id => !leaderboardNameMap.has(id));
+  if (missingIds.length > 0) {
+    const { data: extraRows } = await supabase.from('users').select('id, name').in('id', missingIds);
+    for (const t of extraRows ?? []) leaderboardNameMap.set(t.id, t.name);
+  }
+
+  // Sort: ranked tutors first (ascending rank), then unranked by avgMs ascending
+  const leaderboardRows: LeaderboardRow[] = leaderboardTutorIds
+    .map(id => {
+      const entry = leaderboard.get(id)!;
+      return { tutorId: id, tutorName: leaderboardNameMap.get(id) ?? 'Unknown', ...entry };
+    })
+    .sort((a, b) => {
+      if (a.rank !== null && b.rank !== null) return a.rank - b.rank;
+      if (a.rank !== null) return -1;
+      if (b.rank !== null) return 1;
+      return a.avgMs - b.avgMs;
+    });
 
   const pendingReviewItems: PendingReviewItem[] = (reviewRows ?? []).map(r => {
     const tutorName  = (r.users as { name: string } | null)?.name ?? 'Unknown';
@@ -236,6 +277,16 @@ export default async function DashboardPage() {
             subtitle="Tutor availability changes awaiting approval"
           >
             <PendingAvailabilityList items={pendingAvailabilityItems} />
+          </DashCard>
+        </div>
+
+        {/* ── Response time leaderboard ──────────────────────────────────────── */}
+        <div className="mt-4">
+          <DashCard
+            title="Response time leaderboard"
+            subtitle="Average time to accept or decline a proposal · last 90 days · ranked tutors have 3+ proposals"
+          >
+            <ResponseTimeLeaderboard rows={leaderboardRows} />
           </DashCard>
         </div>
 
