@@ -39,78 +39,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      requests: {
-        Row: {
-          id: string
-          coordinator_id: string
-          asana_task_id: string | null
-          asana_task_url: string | null
-          source: string
-          status: string
-          student_name: string
-          student_email: string
-          subject: string | null
-          requested_schedule: Json | null
-          timezone: string | null
-          start_date: string | null
-          notes: string | null
-          matched_proposal_id: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          coordinator_id: string
-          asana_task_id?: string | null
-          asana_task_url?: string | null
-          source?: string
-          status?: string
-          student_name: string
-          student_email?: string
-          subject?: string | null
-          requested_schedule?: Json | null
-          timezone?: string | null
-          start_date?: string | null
-          notes?: string | null
-          matched_proposal_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          coordinator_id?: string
-          asana_task_id?: string | null
-          asana_task_url?: string | null
-          source?: string
-          status?: string
-          student_name?: string
-          student_email?: string
-          subject?: string | null
-          requested_schedule?: Json | null
-          timezone?: string | null
-          start_date?: string | null
-          notes?: string | null
-          matched_proposal_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "requests_coordinator_id_fkey"
-            columns: ["coordinator_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "requests_matched_proposal_id_fkey"
-            columns: ["matched_proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       proposals: {
         Row: {
           asana_task_id: string | null
@@ -186,6 +114,78 @@ export type Database = {
           },
         ]
       }
+      requests: {
+        Row: {
+          asana_task_id: string | null
+          asana_task_url: string | null
+          coordinator_id: string
+          created_at: string
+          id: string
+          matched_proposal_id: string | null
+          notes: string | null
+          requested_schedule: Json | null
+          source: string
+          start_date: string | null
+          status: string
+          student_email: string
+          student_name: string
+          subject: string | null
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          asana_task_id?: string | null
+          asana_task_url?: string | null
+          coordinator_id: string
+          created_at?: string
+          id?: string
+          matched_proposal_id?: string | null
+          notes?: string | null
+          requested_schedule?: Json | null
+          source?: string
+          start_date?: string | null
+          status?: string
+          student_email?: string
+          student_name: string
+          subject?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asana_task_id?: string | null
+          asana_task_url?: string | null
+          coordinator_id?: string
+          created_at?: string
+          id?: string
+          matched_proposal_id?: string | null
+          notes?: string | null
+          requested_schedule?: Json | null
+          source?: string
+          start_date?: string | null
+          status?: string
+          student_email?: string
+          student_name?: string
+          subject?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_coordinator_id_fkey"
+            columns: ["coordinator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_matched_proposal_id_fkey"
+            columns: ["matched_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           category: string
@@ -206,173 +206,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      tutor_context: {
-        Row: {
-          context: Json
-          id: string
-          tutor_id: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          context?: Json
-          id?: string
-          tutor_id: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          context?: Json
-          id?: string
-          tutor_id?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tutor_context_tutor_id_fkey"
-            columns: ["tutor_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tutor_context_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tutor_subject_changes: {
-        Row: {
-          id: string
-          tutor_id: string
-          subject_id: string
-          tutor_subject_id: string | null
-          change_type: string
-          requested_confidence: string | null
-          requested_note: string | null
-          status: string
-          reviewed_by: string | null
-          reviewed_at: string | null
-          decline_reason: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          tutor_id: string
-          subject_id: string
-          tutor_subject_id?: string | null
-          change_type: string
-          requested_confidence?: string | null
-          requested_note?: string | null
-          status?: string
-          reviewed_by?: string | null
-          reviewed_at?: string | null
-          decline_reason?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          tutor_id?: string
-          subject_id?: string
-          tutor_subject_id?: string | null
-          change_type?: string
-          requested_confidence?: string | null
-          requested_note?: string | null
-          status?: string
-          reviewed_by?: string | null
-          reviewed_at?: string | null
-          decline_reason?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tutor_subject_changes_tutor_id_fkey"
-            columns: ["tutor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tutor_subject_changes_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tutor_subject_changes_tutor_subject_id_fkey"
-            columns: ["tutor_subject_id"]
-            isOneToOne: false
-            referencedRelation: "tutor_subjects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tutor_subjects: {
-        Row: {
-          coordinator_confidence: string
-          created_at: string
-          graded_by: string | null
-          id: string
-          qualification_note: string | null
-          subject_id: string
-          tutor_confidence: string
-          tutor_id: string
-          updated_at: string
-        }
-        Insert: {
-          coordinator_confidence?: string
-          created_at?: string
-          graded_by?: string | null
-          id?: string
-          qualification_note?: string | null
-          subject_id: string
-          tutor_confidence?: string
-          tutor_id: string
-          updated_at?: string
-        }
-        Update: {
-          coordinator_confidence?: string
-          created_at?: string
-          graded_by?: string | null
-          id?: string
-          qualification_note?: string | null
-          subject_id?: string
-          tutor_confidence?: string
-          tutor_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tutor_subjects_graded_by_fkey"
-            columns: ["graded_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tutor_subjects_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tutor_subjects_tutor_id_fkey"
-            columns: ["tutor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       tutor_availability_activity: {
         Row: {
@@ -456,6 +289,180 @@ export type Database = {
           },
           {
             foreignKeyName: "tutor_availability_requests_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tutor_context: {
+        Row: {
+          context: Json
+          id: string
+          tutor_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          context?: Json
+          id?: string
+          tutor_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          context?: Json
+          id?: string
+          tutor_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_context_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_context_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tutor_subject_changes: {
+        Row: {
+          change_type: string
+          created_at: string
+          decline_reason: string | null
+          id: string
+          requested_confidence: string | null
+          requested_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          subject_id: string
+          tutor_id: string
+          tutor_subject_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          change_type: string
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
+          requested_confidence?: string | null
+          requested_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subject_id: string
+          tutor_id: string
+          tutor_subject_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
+          requested_confidence?: string | null
+          requested_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subject_id?: string
+          tutor_id?: string
+          tutor_subject_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_subject_changes_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_subject_changes_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_subject_changes_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_subject_changes_tutor_subject_id_fkey"
+            columns: ["tutor_subject_id"]
+            isOneToOne: false
+            referencedRelation: "tutor_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tutor_subjects: {
+        Row: {
+          coordinator_confidence: string
+          created_at: string
+          graded_by: string | null
+          id: string
+          qualification_note: string | null
+          subject_id: string
+          tutor_confidence: string
+          tutor_id: string
+          updated_at: string
+        }
+        Insert: {
+          coordinator_confidence?: string
+          created_at?: string
+          graded_by?: string | null
+          id?: string
+          qualification_note?: string | null
+          subject_id: string
+          tutor_confidence?: string
+          tutor_id: string
+          updated_at?: string
+        }
+        Update: {
+          coordinator_confidence?: string
+          created_at?: string
+          graded_by?: string | null
+          id?: string
+          qualification_note?: string | null
+          subject_id?: string
+          tutor_confidence?: string
+          tutor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_subjects_graded_by_fkey"
+            columns: ["graded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_subjects_tutor_id_fkey"
             columns: ["tutor_id"]
             isOneToOne: false
             referencedRelation: "users"
