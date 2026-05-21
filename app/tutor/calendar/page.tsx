@@ -26,7 +26,7 @@ export default async function TutorCalendarPage() {
 
   const { data: row } = await supabase
     .from('users')
-    .select('id, name, email, timezone, nylas_grant_id, max_weekly_hours, min_weekly_hours')
+    .select('id, name, email, timezone, nylas_grant_id, max_weekly_hours, min_weekly_hours, min_rate')
     .eq('id', user.id)
     .single();
 
