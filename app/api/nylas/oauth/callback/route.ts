@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { decodeOAuthState, exchangeCodeForGrant } from '@/lib/nylas';
+import { createSchedulerConfig } from '@/lib/nylas/scheduler';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -22,11 +23,11 @@ export async function GET(request: Request) {
   const decoded = decodeOAuthState(state);
   if (!decoded.ok) return errRedirect('invalid_state');
 
-  // Look up the user's role now so all remaining error redirects are role-aware.
+  // Fetch role + fields needed to create a scheduler config for tutors.
   const supabase = createServiceClient();
   const { data: userRow } = await supabase
     .from('users')
-    .select('role')
+    .select('role, name, email, timezone, meeting_link, nylas_scheduler_config_id')
     .eq('id', decoded.userId)
     .single();
   const role = userRow?.role as string | undefined;
@@ -42,6 +43,26 @@ export async function GET(request: Request) {
   if (updateError) {
     console.error('[nylas/oauth/callback] Failed to save grant_id:', updateError);
     return errRedirect('db_update_failed', role);
+  }
+
+  // Auto-create a Nylas Scheduler config the first time a tutor connects.
+  // This gives them a booking page URL immediately without any extra steps.
+  if (role === 'TUTOR' && !userRow?.nylas_scheduler_config_id && userRow?.name && userRow?.email) {
+    const created = await createSchedulerConfig({
+      tutorName:   userRow.name,
+      tutorEmail:  userRow.email,
+      timezone:    (userRow.timezone as string | null) ?? 'America/New_York',
+      grantId:     exchange.grantId,
+      meetingLink: (userRow.meeting_link as string | null) ?? undefined,
+    });
+    if (created.configId !== null) {
+      await supabase
+        .from('users')
+        .update({ nylas_scheduler_config_id: created.configId, booking_page_url: created.bookingUrl })
+        .eq('id', decoded.userId);
+    } else {
+      console.error('[nylas/oauth/callback] Failed to create scheduler config:', created.error);
+    }
   }
 
   const home = role === 'TUTOR' ? '/tutor/settings' : '/dashboard';
