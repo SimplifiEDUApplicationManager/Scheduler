@@ -12,6 +12,8 @@ import { AttentionList } from '@/components/features/dashboard/AttentionList';
 import { TeamSnapshot } from '@/components/features/dashboard/TeamSnapshot';
 import { PendingReviewList } from '@/components/features/dashboard/PendingReviewList';
 import type { PendingReviewItem } from '@/components/features/dashboard/PendingReviewList';
+import { PendingAvailabilityList } from '@/components/features/dashboard/PendingAvailabilityList';
+import type { PendingAvailabilityItem } from '@/components/features/dashboard/PendingAvailabilityList';
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -28,11 +30,36 @@ function initials(name: string): string {
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const { data: reviewRows } = await supabase
-    .from('tutor_subject_changes')
-    .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
-    .eq('status', 'PENDING')
-    .order('created_at');
+  const [{ data: reviewRows }, { data: availRows }] = await Promise.all([
+    supabase
+      .from('tutor_subject_changes')
+      .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
+      .eq('status', 'PENDING')
+      .order('created_at'),
+    supabase
+      .from('tutor_availability_requests')
+      .select('id, tutor_id, request_type, reason')
+      .eq('status', 'PENDING')
+      .order('created_at'),
+  ]);
+
+  // Fetch tutor names for availability requests
+  const availTutorIds = [...new Set((availRows ?? []).map(r => r.tutor_id))];
+  const tutorNameMap = new Map<string, string>();
+  if (availTutorIds.length > 0) {
+    const { data: tutorRows } = await supabase.from('users').select('id, name').in('id', availTutorIds);
+    for (const t of tutorRows ?? []) tutorNameMap.set(t.id, t.name);
+  }
+
+  const pendingAvailabilityItems: PendingAvailabilityItem[] = (availRows ?? []).map(r => {
+    const name = tutorNameMap.get(r.tutor_id) ?? 'Unknown';
+    return {
+      tutorName:     name,
+      tutorInitials: initials(name),
+      requestType:   r.request_type,
+      reason:        r.reason,
+    };
+  });
 
   const pendingReviewItems: PendingReviewItem[] = (reviewRows ?? []).map(r => {
     const tutorName  = (r.users as { name: string } | null)?.name ?? 'Unknown';
@@ -55,8 +82,9 @@ export default async function DashboardPage() {
   const capacityPct  = Math.round((totalCurrent / totalMax) * 100);
 
   const pendingReviews = pendingReviewItems.length;
+  const pendingAvailability = pendingAvailabilityItems.length;
 
-  const hasAlerts = declined.length > 0 || expired.length > 0 || pendingReviews > 0;
+  const hasAlerts = declined.length > 0 || expired.length > 0 || pendingReviews > 0 || pendingAvailability > 0;
 
   return (
     <div className="flex-1 overflow-auto">
@@ -154,6 +182,7 @@ export default async function DashboardPage() {
               declined={declined.length}
               expired={expired.length}
               pendingReviews={pendingReviews}
+              pendingAvailabilityRequests={pendingAvailability}
             />
           </div>
         )}
@@ -200,6 +229,21 @@ export default async function DashboardPage() {
             }
           >
             <PendingReviewList items={pendingReviewItems} />
+          </DashCard>
+
+          <DashCard
+            title="Availability requests"
+            subtitle="Tutor availability changes awaiting approval"
+            action={
+              <Link
+                href="/dashboard/tutor-updates"
+                className="text-[11px] font-bold text-brand-primary-ink hover:text-brand-primary-deep transition-colors"
+              >
+                Review →
+              </Link>
+            }
+          >
+            <PendingAvailabilityList items={pendingAvailabilityItems} />
           </DashCard>
         </div>
 
