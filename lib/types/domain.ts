@@ -8,6 +8,8 @@ export type SubjectConf        = 'HIGH' | 'MEDIUM' | 'LOW';
 export type CoordConf          = 'HIGH' | 'MEDIUM' | 'UNPROVEN' | 'LOW';
 export type SubjectChangeType   = 'ADD' | 'EDIT' | 'REMOVE';
 export type SubjectChangeStatus = 'PENDING' | 'APPROVED' | 'DECLINED';
+export type AvailabilityRequestType   = 'PAUSE' | 'LOW_MAX_HOURS' | 'LOW_AVAILABILITY_WINDOWS';
+export type AvailabilityRequestStatus = 'PENDING' | 'APPROVED' | 'DECLINED';
 export type TutorStatus    = 'active' | 'onboarding';
 export type RequestSource  = 'asana' | 'manual';
 export type RequestStatus  = 'open' | 'matched';
@@ -58,6 +60,32 @@ export interface TutorSubject {
   pendingChange?: TutorSubjectChange;
 }
 
+// ── Availability requests & activity ────────────────────────────────────────
+
+export interface TutorAvailabilityRequest {
+  id: string;
+  tutorId: string;
+  requestType: AvailabilityRequestType;
+  reason: string;
+  /** For LOW_MAX_HOURS: { requestedHours: number }
+   *  For LOW_AVAILABILITY_WINDOWS: { totalHours: number; prefs: unknown } */
+  details?: Record<string, unknown>;
+  status: AvailabilityRequestStatus;
+  declineReason?: string;
+  createdAt: string;
+}
+
+export interface TutorAvailabilityActivity {
+  id: string;
+  tutorId: string;
+  tutorName: string;
+  tutorInitials: string;
+  eventType: string;
+  summary: string;
+  details?: Record<string, unknown>;
+  createdAt: string;
+}
+
 // ── Tutor ───────────────────────────────────────────────────────────────────
 
 export interface Tutor {
@@ -79,6 +107,10 @@ export interface Tutor {
   nylasSchedulerConfigId?: string;
   nylasGrantId?: string;
   photoUrl?: string;
+  isPaused: boolean;
+  totalAvailabilityHours: number;
+  /** Active PENDING or most-recent DECLINED availability requests for this tutor. */
+  availabilityRequests: TutorAvailabilityRequest[];
 }
 
 // ── Request ─────────────────────────────────────────────────────────────────

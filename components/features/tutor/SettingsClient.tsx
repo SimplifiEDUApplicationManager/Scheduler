@@ -49,11 +49,13 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const [mySubjects, setSubjects] = useState<TutorSubject[]>(me.subjects);
   const [notifs, setNotifs]       = useState({ newRequest: true, reminders: true, coordMessages: true, cancellations: true, weeklySummary: false });
   const [dirty, setDirty]         = useState(false);
-  const [isPaused, setIsPaused]   = useState(false);
+  const [isPaused, setIsPaused]   = useState(me.isPaused);
+  const [availReqs, setAvailReqs] = useState(me.availabilityRequests);
   const [addOpen, setAddOpen]       = useState(false);
   const [editingTs, setEditingTs]   = useState<TutorSubject | null>(null);
   const [deletingTs, setDeletingTs] = useState<TutorSubject | null>(null);
   const [pauseOpen, setPauseOpen]   = useState(false);
+  const [lowHoursOpen, setLowHoursOpen] = useState(false);
   const [toast, setToast]         = useState<string | null>(null);
   const [activeSection, setActive] = useState<SectionId>('profile');
   const [schedulerSummaryState, setSchedulerSummary] = useState<SchedulerSummary | null>(schedulerSummary);
@@ -62,6 +64,55 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const searchParams = useSearchParams();
 
   const touch = () => setDirty(true);
+
+  // Derived availability request states
+  const pendingPause        = availReqs.find(r => r.requestType === 'PAUSE' && r.status === 'PENDING');
+  const declinedPause       = availReqs.find(r => r.requestType === 'PAUSE' && r.status === 'DECLINED');
+  const pendingLowHours     = availReqs.find(r => r.requestType === 'LOW_MAX_HOURS' && r.status === 'PENDING');
+  const declinedLowHours    = availReqs.find(r => r.requestType === 'LOW_MAX_HOURS' && r.status === 'DECLINED');
+  const pendingLowWindows   = availReqs.find(r => r.requestType === 'LOW_AVAILABILITY_WINDOWS' && r.status === 'PENDING');
+
+  // Max hours input is "locked" when a LOW_MAX_HOURS request is pending
+  const maxHoursLocked = !!pendingLowHours;
+
+  // Hard validation: max > total availability hours (only if tutor has set prefs)
+  const totalAvail = me.totalAvailabilityHours;
+  const maxExceedsAvail = totalAvail > 0 && maxHours > totalAvail;
+  const maxError = maxHours < 1 || maxHours > 40 || maxExceedsAvail;
+
+  async function handleResume() {
+    try {
+      const res = await fetch('/api/tutor/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPaused: false }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error ?? 'Failed to resume');
+        return;
+      }
+      setIsPaused(false);
+      showToast('Availability resumed');
+    } catch {
+      showToast('Failed to resume — check your connection and try again');
+    }
+  }
+
+  async function handleCancelAvailRequest(id: string) {
+    try {
+      const res = await fetch(`/api/tutor/availability-request/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error ?? 'Failed to cancel request');
+        return;
+      }
+      setAvailReqs(prev => prev.filter(r => r.id !== id));
+      showToast('Request cancelled');
+    } catch {
+      showToast('Failed to cancel request — check your connection and try again');
+    }
+  }
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -82,7 +133,6 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const openSchedulerEdit = useCallback(() => {
     setShowSchedulerModal(true);
   }, []);
-  const maxError = maxHours < 6 || maxHours > 40;
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
 
@@ -219,7 +269,8 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
         body: JSON.stringify({
           name,
           timezone: tz,
-          maxWeeklyHours: maxHours,
+          // Skip maxHours if ≤ 5 — those go through the approval request flow.
+          ...(maxHours > 5 ? { maxWeeklyHours: maxHours } : {}),
           minWeeklyHours: minHours,
           meetingLink,
         }),
@@ -309,7 +360,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B' }}>Your availability is paused</div>
                 <div style={{ fontSize: 12, color: '#B91C1C' }}>Coordinators can&apos;t see your calendar. Existing sessions stay booked.</div>
               </div>
-              <button onClick={() => { setIsPaused(false); save('Availability resumed'); }} style={btn('secondary')}>Resume</button>
+              <button onClick={handleResume} style={btn('secondary')}>Resume</button>
             </div>
           )}
 
@@ -357,13 +408,33 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           </Card>
 
           {/* Capacity */}
-          <Card id="capacity" title="Capacity" subtitle="Coordinators use these numbers to decide how many sessions to route to you. Max is required and must be between 6 and 40.">
+          <Card id="capacity" title="Capacity" subtitle="Coordinators use these numbers to decide how many sessions to route to you. Max is required and must be between 1 and 40.">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div>
                 <label style={metaLabel}>Maximum weekly hours</label>
-                <input type="number" min={6} max={40} value={maxHours} onChange={e => { setMax(+e.target.value); touch(); }} style={{ ...input(), borderColor: maxError ? '#DC2626' : '#E4E4E7' }} />
+                {maxHoursLocked ? (
+                  <div style={{ padding: '8px 10px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, fontSize: 13, color: '#78350F' }}>
+                    {pendingLowHours!.details?.requested_hours as number} hrs — pending coordinator approval
+                    <button onClick={() => handleCancelAvailRequest(pendingLowHours!.id)} style={{ marginLeft: 10, fontSize: 11, color: '#B45309', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>Cancel request</button>
+                  </div>
+                ) : (
+                  <input type="number" min={1} max={40} value={maxHours} onChange={e => { setMax(+e.target.value); touch(); }} style={{ ...input(), borderColor: maxError ? '#DC2626' : '#E4E4E7' }} />
+                )}
                 <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 4 }}>Hard ceiling. Coordinators can&apos;t schedule past this.</div>
-                {maxError && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Must be between 6 and 40 hours.</div>}
+                {maxExceedsAvail && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Cannot exceed your {totalAvail} hrs/week of availability windows.</div>}
+                {!maxExceedsAvail && maxHours < 1 && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Must be at least 1 hour.</div>}
+                {!maxExceedsAvail && maxHours > 40 && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Must be 40 hours or less.</div>}
+                {!maxHoursLocked && maxHours <= 5 && maxHours >= 1 && (
+                  <div style={{ marginTop: 6, padding: '8px 10px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, fontSize: 12, color: '#78350F' }}>
+                    Hours of 5 or below require coordinator approval.{' '}
+                    <button onClick={() => setLowHoursOpen(true)} style={{ fontWeight: 700, color: '#B45309', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, padding: 0, textDecoration: 'underline' }}>Submit for approval</button>
+                  </div>
+                )}
+                {declinedLowHours && !pendingLowHours && (
+                  <div style={{ marginTop: 6, padding: '8px 10px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 12, color: '#991B1B' }}>
+                    Previous request declined{declinedLowHours.declineReason ? ` — ${declinedLowHours.declineReason}` : ''}.
+                  </div>
+                )}
               </div>
               <div>
                 <label style={metaLabel}>Minimum weekly hours</label>
@@ -503,6 +574,15 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 No scheduling preferences configured yet. Click below to set them up.
               </div>
             )}
+            {pendingLowWindows && (
+              <div style={{ padding: '10px 12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, marginBottom: 10, fontSize: 12, color: '#78350F', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontWeight: 700, marginBottom: 2 }}>Scheduling change pending coordinator approval</div>
+                  <div style={{ color: '#92400E' }}>Proposed availability totals {(pendingLowWindows.details?.total_hours as number | undefined)?.toFixed(1)} hrs/week (below 10-hour minimum).</div>
+                </div>
+                <button onClick={() => handleCancelAvailRequest(pendingLowWindows.id)} style={{ ...btn('secondary'), marginLeft: 12, color: '#B45309', borderColor: '#FDE68A', flexShrink: 0 }}>Cancel</button>
+              </div>
+            )}
             <button
               onClick={openSchedulerEdit}
               disabled={!me.nylasGrantId}
@@ -570,14 +650,33 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
 
           {/* Pause */}
           <Card id="pause" title="Pause tutoring" subtitle="Temporarily hide your availability from all coordinator views. Existing confirmed sessions stay booked." danger>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <button onClick={() => setPauseOpen(true)} style={{ ...btn('primary'), background: isPaused ? '#fff' : '#DC2626', color: isPaused ? '#991B1B' : '#fff', border: isPaused ? '1px solid #FECACA' : 'none' }}>
-                {isPaused ? 'Resume availability' : 'Pause my availability'}
-              </button>
-              <div style={{ fontSize: 12, color: '#71717A' }}>
-                {isPaused ? "You're currently paused. Click Resume to make yourself available again." : "You'll stop receiving new proposals until you resume."}
+            {isPaused ? (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button onClick={handleResume} style={{ ...btn('primary'), background: '#16A34A' }}>Resume availability</button>
+                <div style={{ fontSize: 12, color: '#71717A' }}>You&apos;re currently paused. Coordinators can&apos;t see your calendar.</div>
               </div>
-            </div>
+            ) : pendingPause ? (
+              <div>
+                <div style={{ padding: '12px 14px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#78350F', marginBottom: 4 }}>Pause request pending coordinator approval</div>
+                  <div style={{ fontSize: 12, color: '#92400E', marginBottom: 2 }}>Reason: {pendingPause.reason}</div>
+                  <div style={{ fontSize: 11, color: '#A1A1AA' }}>Submitted {new Date(pendingPause.createdAt).toLocaleDateString()}</div>
+                </div>
+                <button onClick={() => handleCancelAvailRequest(pendingPause.id)} style={{ ...btn('secondary'), color: '#DC2626', borderColor: '#FECACA' }}>Cancel request</button>
+              </div>
+            ) : (
+              <div>
+                {declinedPause && (
+                  <div style={{ padding: '10px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, marginBottom: 12, fontSize: 12, color: '#991B1B' }}>
+                    Previous pause request declined{declinedPause.declineReason ? ` — ${declinedPause.declineReason}` : ''}. You may submit a new request.
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <button onClick={() => setPauseOpen(true)} style={{ ...btn('primary'), background: '#DC2626' }}>Pause my availability</button>
+                  <div style={{ fontSize: 12, color: '#71717A' }}>You&apos;ll stop receiving new proposals until a coordinator approves the pause.</div>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </div>
@@ -591,7 +690,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button disabled={!dirty} onClick={() => { setDirty(false); showToast('Changes discarded'); }} style={{ ...btn('secondary'), opacity: dirty ? 1 : 0.5 }}>Discard</button>
-            <button disabled={!dirty || maxError} onClick={() => save('Changes saved')} style={{ ...btn('primary'), opacity: (!dirty || maxError) ? 0.5 : 1, cursor: (!dirty || maxError) ? 'not-allowed' : 'pointer' }}>Save changes</button>
+            <button disabled={!dirty || maxExceedsAvail} onClick={() => save('Changes saved')} style={{ ...btn('primary'), opacity: (!dirty || maxExceedsAvail) ? 0.5 : 1, cursor: (!dirty || maxExceedsAvail) ? 'not-allowed' : 'pointer' }}>Save changes</button>
           </div>
         </div>
       </div>
@@ -636,9 +735,61 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
 
       {pauseOpen && (
         <PauseModal
-          isPaused={isPaused}
           onClose={() => setPauseOpen(false)}
-          onConfirm={() => { setIsPaused(p => !p); setPauseOpen(false); save(isPaused ? 'Availability resumed' : 'Availability paused'); }}
+          onConfirm={async (reason) => {
+            try {
+              const res = await fetch('/api/tutor/availability-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ request_type: 'PAUSE', reason }),
+              });
+              const data = await res.json() as Record<string, unknown>;
+              if (!res.ok) { showToast(String(data.error ?? 'Failed to submit request')); return; }
+              setAvailReqs(prev => [...prev, {
+                id:          String(data.id),
+                tutorId:     me.id,
+                requestType: 'PAUSE' as const,
+                reason,
+                status:      'PENDING' as const,
+                createdAt:   String(data.created_at ?? new Date().toISOString()),
+              }]);
+              setPauseOpen(false);
+              showToast('Pause request submitted for coordinator approval');
+            } catch {
+              showToast('Failed to submit request — check your connection and try again');
+            }
+          }}
+        />
+      )}
+
+      {lowHoursOpen && (
+        <LowHoursModal
+          requestedHours={maxHours}
+          onClose={() => setLowHoursOpen(false)}
+          onConfirm={async (reason) => {
+            try {
+              const res = await fetch('/api/tutor/availability-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ request_type: 'LOW_MAX_HOURS', reason, details: { requested_hours: maxHours } }),
+              });
+              const data = await res.json() as Record<string, unknown>;
+              if (!res.ok) { showToast(String(data.error ?? 'Failed to submit request')); return; }
+              setAvailReqs(prev => [...prev, {
+                id:          String(data.id),
+                tutorId:     me.id,
+                requestType: 'LOW_MAX_HOURS' as const,
+                reason,
+                details:     { requested_hours: maxHours },
+                status:      'PENDING' as const,
+                createdAt:   String(data.created_at ?? new Date().toISOString()),
+              }]);
+              setLowHoursOpen(false);
+              showToast('Request submitted for coordinator approval');
+            } catch {
+              showToast('Failed to submit request — check your connection and try again');
+            }
+          }}
         />
       )}
 
@@ -700,22 +851,80 @@ function NotifRow({ label, sub, detail, value, onChange, last }: { label: string
   );
 }
 
-function PauseModal({ isPaused, onClose, onConfirm }: { isPaused: boolean; onClose: () => void; onConfirm: () => void }) {
+function PauseModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (reason: string) => Promise<void> }) {
+  const [reason, setReason]   = useState('');
+  const [saving, setSaving]   = useState(false);
+  const tooShort              = reason.trim().length < 5;
+
+  async function handleConfirm() {
+    setSaving(true);
+    await onConfirm(reason.trim());
+    setSaving(false);
+  }
+
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: 460, padding: 24, boxShadow: '0 16px 34px rgba(22,32,51,0.18)' }}>
-        <div style={{ width: 44, height: 44, borderRadius: 10, background: isPaused ? '#ECFDF5' : '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-          {isPaused
-            ? <svg width={20} height={20} viewBox="0 0 20 20" fill="none" stroke="#16A34A" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M4 10l5 5 7-8" /></svg>
-            : <svg width={20} height={20} viewBox="0 0 20 20" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M10 6v4M10 13v1" /><circle cx={10} cy={10} r={8.5} /></svg>}
+      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: 480, padding: 24, boxShadow: '0 16px 34px rgba(22,32,51,0.18)' }}>
+        <div style={{ width: 44, height: 44, borderRadius: 10, background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+          <svg width={20} height={20} viewBox="0 0 20 20" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M10 6v4M10 13v1" /><circle cx={10} cy={10} r={8.5} /></svg>
         </div>
-        <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>{isPaused ? 'Resume your availability?' : 'Pause your availability?'}</h2>
-        <p style={{ fontSize: 13, color: '#52525B', margin: '8px 0 0', lineHeight: 1.55 }}>
-          {isPaused ? 'Coordinators will be able to see your calendar and send you new proposals again.' : "Coordinators won't see your calendar or be able to send you new proposals until you resume. Existing confirmed sessions stay booked."}
+        <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Request to pause your availability?</h2>
+        <p style={{ fontSize: 13, color: '#52525B', margin: '8px 0 16px', lineHeight: 1.55 }}>
+          A coordinator will need to approve this before your availability is hidden. Existing confirmed sessions stay booked.
         </p>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
-          <button onClick={onClose} style={btn('secondary')}>Cancel</button>
-          <button onClick={onConfirm} style={{ ...btn('primary'), background: isPaused ? '#16A34A' : '#DC2626' }}>{isPaused ? 'Resume' : 'Pause availability'}</button>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#3F3F46', marginBottom: 6 }}>Reason for pausing <span style={{ color: '#A1A1AA', fontWeight: 400 }}>(required)</span></label>
+        <textarea
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          placeholder="e.g. Taking a vacation, medical leave, reducing workload…"
+          rows={3}
+          style={{ width: '100%', padding: '8px 10px', border: '1px solid #E4E4E7', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button onClick={onClose} disabled={saving} style={btn('secondary')}>Cancel</button>
+          <button onClick={handleConfirm} disabled={tooShort || saving} style={{ ...btn('primary'), background: '#DC2626', opacity: (tooShort || saving) ? 0.5 : 1, cursor: (tooShort || saving) ? 'not-allowed' : 'pointer' }}>
+            {saving ? 'Submitting…' : 'Submit pause request'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LowHoursModal({ requestedHours, onClose, onConfirm }: { requestedHours: number; onClose: () => void; onConfirm: (reason: string) => Promise<void> }) {
+  const [reason, setReason]   = useState('');
+  const [saving, setSaving]   = useState(false);
+  const tooShort              = reason.trim().length < 5;
+
+  async function handleConfirm() {
+    setSaving(true);
+    await onConfirm(reason.trim());
+    setSaving(false);
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: 480, padding: 24, boxShadow: '0 16px 34px rgba(22,32,51,0.18)' }}>
+        <div style={{ width: 44, height: 44, borderRadius: 10, background: '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+          <svg width={20} height={20} viewBox="0 0 20 20" fill="none" stroke="#D97706" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M10 6v4M10 13v1" /><circle cx={10} cy={10} r={8.5} /></svg>
+        </div>
+        <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Request max of {requestedHours} hrs/week?</h2>
+        <p style={{ fontSize: 13, color: '#52525B', margin: '8px 0 16px', lineHeight: 1.55 }}>
+          Hours of 5 or below require coordinator approval before taking effect. Your current max stays active until approved.
+        </p>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#3F3F46', marginBottom: 6 }}>Reason <span style={{ color: '#A1A1AA', fontWeight: 400 }}>(required)</span></label>
+        <textarea
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          placeholder="e.g. Reducing workload for the semester, recovering from an injury…"
+          rows={3}
+          style={{ width: '100%', padding: '8px 10px', border: '1px solid #E4E4E7', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button onClick={onClose} disabled={saving} style={btn('secondary')}>Cancel</button>
+          <button onClick={handleConfirm} disabled={tooShort || saving} style={{ ...btn('primary'), background: '#D97706', opacity: (tooShort || saving) ? 0.5 : 1, cursor: (tooShort || saving) ? 'not-allowed' : 'pointer' }}>
+            {saving ? 'Submitting…' : 'Submit request'}
+          </button>
         </div>
       </div>
     </div>

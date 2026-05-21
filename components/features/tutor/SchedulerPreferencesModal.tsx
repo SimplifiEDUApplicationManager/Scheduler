@@ -98,8 +98,13 @@ export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hours, exceptions, cushionMin }),
       });
-      const data = await res.json() as { ok?: boolean; summary?: SchedulerSummary; error?: string };
-      if (!res.ok || !data.ok) { setError(data.error ?? 'Failed to save preferences.'); return; }
+      const data = await res.json() as { ok?: boolean; needs_approval?: boolean; total_hours?: number; summary?: SchedulerSummary; error?: string };
+      if (!res.ok) { setError(data.error ?? 'Failed to save preferences.'); return; }
+      if (data.needs_approval) {
+        setError(`Your availability windows total ${data.total_hours?.toFixed(1)} hrs/week, which is below the 10-hour minimum. Your request has been submitted for coordinator approval.`);
+        setSaving(false);
+        return;
+      }
       onSaved(data.summary!);
       onClose();
     } catch {

@@ -21,6 +21,7 @@ export async function PATCH(request: Request) {
     maxWeeklyHours:  'max_weekly_hours',
     minWeeklyHours:  'min_weekly_hours',
     meetingLink:     'meeting_link',
+    isPaused:        'is_paused',
   };
 
   const update: Record<string, unknown> = {};
@@ -32,11 +33,35 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'No valid fields provided', status: 400 }, { status: 400 });
   }
 
-  // Validate hours
+  // is_paused: tutors may only set this to false (resume). Pausing requires an availability request.
+  if ('is_paused' in update) {
+    if (update['is_paused'] !== false) {
+      return NextResponse.json({ error: 'Submit a pause request to pause availability', status: 422 }, { status: 422 });
+    }
+  }
+
+  // Validate max hours
   if ('max_weekly_hours' in update) {
     const v = Number(update['max_weekly_hours']);
-    if (!Number.isInteger(v) || v < 6 || v > 40) {
-      return NextResponse.json({ error: 'max_weekly_hours must be an integer between 6 and 40', status: 422 }, { status: 422 });
+    if (!Number.isInteger(v) || v < 1 || v > 40) {
+      return NextResponse.json({ error: 'max_weekly_hours must be an integer between 1 and 40', status: 422 }, { status: 422 });
+    }
+    // Values ≤ 5 must go through the approval flow — block direct save.
+    if (v <= 5) {
+      return NextResponse.json({ error: 'Hours of 5 or below require coordinator approval. Submit an availability request instead.', status: 422 }, { status: 422 });
+    }
+    // Max hours cannot exceed total availability hours (if the tutor has set scheduling prefs).
+    const { data: tutorRow } = await supabase
+      .from('users')
+      .select('total_availability_hours')
+      .eq('id', user.id)
+      .single();
+    const totalAvail = Number(tutorRow?.total_availability_hours ?? 0);
+    if (totalAvail > 0 && v > totalAvail) {
+      return NextResponse.json(
+        { error: `Max hours (${v}) cannot exceed your total available windows (${totalAvail} hrs/week)`, status: 422 },
+        { status: 422 },
+      );
     }
   }
 
@@ -48,6 +73,37 @@ export async function PATCH(request: Request) {
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message, status: 500 }, { status: 500 });
+  }
+
+  // ── Activity logging ───────────────────────────────────────────────────────
+
+  if ('timezone' in update) {
+    await supabase.from('tutor_availability_activity').insert({
+      tutor_id:   user.id,
+      event_type: 'timezone_changed',
+      summary:    `Timezone changed to ${String(update['timezone'])}`,
+      details:    { new_timezone: update['timezone'] },
+    });
+  }
+
+  if ('max_weekly_hours' in update || 'min_weekly_hours' in update) {
+    await supabase.from('tutor_availability_activity').insert({
+      tutor_id:   user.id,
+      event_type: 'hours_changed',
+      summary:    'Weekly hour limits updated',
+      details: {
+        ...('max_weekly_hours' in update ? { new_max_hours: update['max_weekly_hours'] } : {}),
+        ...('min_weekly_hours' in update ? { new_min_hours: update['min_weekly_hours'] } : {}),
+      },
+    });
+  }
+
+  if ('is_paused' in update && update['is_paused'] === false) {
+    await supabase.from('tutor_availability_activity').insert({
+      tutor_id:   user.id,
+      event_type: 'resumed',
+      summary:    'Availability resumed',
+    });
   }
 
   return NextResponse.json({ ok: true });

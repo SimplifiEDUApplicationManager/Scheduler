@@ -12,6 +12,7 @@ export const NAV_TABS: Record<UserRole, NavTab[]> = {
     { label: 'Requests', href: '/dashboard/requests' },
     { label: 'Subjects', href: '/dashboard/subjects' },
     { label: 'Proposals', href: '/dashboard/proposals' },
+    { label: 'Updates', href: '/dashboard/tutor-updates' },
     { label: 'Settings', href: '/dashboard/settings' },
   ],
   tutor: [
