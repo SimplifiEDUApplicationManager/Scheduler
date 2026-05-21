@@ -51,6 +51,7 @@ export default async function TutorCalendarPage() {
     hoursCurrent: 0,
     hoursMax:     row.max_weekly_hours ?? 20,
     hoursMin:     row.min_weekly_hours ?? 6,
+    minRate:      row.min_rate ?? 20,
     isPaused:     false,
     totalAvailabilityHours: 0,
     availabilityRequests:   [],
