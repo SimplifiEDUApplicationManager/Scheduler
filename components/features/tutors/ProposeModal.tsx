@@ -39,6 +39,7 @@ export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: P
           start_date:         toIsoDate(request?.startDate),
           notes:              notes.trim() || null,
           asana_task_id:      asanaTaskId ?? null,
+          offered_rate:       request?.offeredRate ?? null,
         }),
       });
       const body = await res.json() as { id?: string; error?: string };

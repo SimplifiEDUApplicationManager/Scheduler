@@ -196,6 +196,7 @@ export interface TutorProposal {
   tz: string;
   rationale?: string;
   studentGrade?: string;
+  offeredRate?: number;
 }
 
 // ── Coordinator management ──────────────────────────────────────────────────

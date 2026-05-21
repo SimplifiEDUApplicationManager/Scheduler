@@ -49,6 +49,7 @@ export type Database = {
           id: string
           notes: string | null
           nylas_event_id: string | null
+          offered_rate: number | null
           requested_schedule: Json
           resolved_at: string | null
           start_date: string | null
@@ -68,6 +69,7 @@ export type Database = {
           id?: string
           notes?: string | null
           nylas_event_id?: string | null
+          offered_rate?: number | null
           requested_schedule?: Json
           resolved_at?: string | null
           start_date?: string | null
@@ -87,6 +89,7 @@ export type Database = {
           id?: string
           notes?: string | null
           nylas_event_id?: string | null
+          offered_rate?: number | null
           requested_schedule?: Json
           resolved_at?: string | null
           start_date?: string | null
