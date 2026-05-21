@@ -272,6 +272,7 @@ export const TUTOR_PROPOSALS: TutorProposal[] = [
     coordinator: 'Meg Adams', coordinatorEmail: 'meg@simplifiedu.com',
     studentGrade: 'Junior',
     rationale: 'Julia has high confidence in Calculus BC and strong availability overlap on Mon/Wed evenings — a clean match for Ava\'s study window before the May exam.',
+    offeredRate: 30,
   },
   {
     id: 'tp-2', status: 'pending', sentAt: '1d ago',
@@ -282,6 +283,7 @@ export const TUTOR_PROPOSALS: TutorProposal[] = [
     notes: 'Senior. First AP. Nervous. Mechanics focus.',
     coordinator: 'Austin R.', coordinatorEmail: 'austin@simplifiedu.com',
     studentGrade: 'Senior',
+    offeredRate: 25,
   },
   {
     id: 'tp-3', status: 'accepted', sentAt: '3d ago',

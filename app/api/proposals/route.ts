@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import type { Json } from '@/lib/types/database';
+import { isValidRate } from '@/lib/utils/rate';
 
 /**
  * POST /api/proposals
@@ -15,11 +16,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as Record<string, unknown>;
   const {
     tutor_id, student_name, student_email, subject,
-    requested_schedule, timezone, start_date, notes, asana_task_id,
+    requested_schedule, timezone, start_date, notes, asana_task_id, offered_rate,
   } = body;
 
   if (!tutor_id || !student_name || !student_email || !subject || !requested_schedule || !timezone) {
     return NextResponse.json({ error: 'Missing required fields', status: 400 }, { status: 400 });
+  }
+
+  if (offered_rate !== undefined && !isValidRate(offered_rate)) {
+    return NextResponse.json({ error: 'offered_rate must be 20, 25, 30, 35, or 40', status: 422 }, { status: 422 });
   }
 
   const { data, error } = await supabase
@@ -35,6 +40,7 @@ export async function POST(req: NextRequest) {
       start_date:         (start_date as string | undefined) ?? null,
       notes:              (notes as string | undefined) ?? null,
       asana_task_id:      (asana_task_id as string | undefined) ?? null,
+      offered_rate:       isValidRate(offered_rate) ? offered_rate : null,
     })
     .select('id')
     .single();

@@ -82,6 +82,7 @@ export async function getTutorProposals(
       sentAt:           sentAgo(row.created_at),
       status:           row.status.toLowerCase() as TutorProposal['status'],
       declineReason:    row.decline_reason ?? undefined,
+      offeredRate:      row.offered_rate ?? undefined,
     };
   });
 }
