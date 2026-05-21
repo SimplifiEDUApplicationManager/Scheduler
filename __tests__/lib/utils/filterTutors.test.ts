@@ -28,6 +28,9 @@ function makeTutor(overrides: Partial<Tutor> = {}): Tutor {
     hoursMax: 20,
     hoursMin: 6,
     minRate: 20,
+    isPaused: false,
+    totalAvailabilityHours: 0,
+    availabilityRequests: [],
     ...overrides,
   };
 }

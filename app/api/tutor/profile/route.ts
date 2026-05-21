@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
+import type { Json } from '@/lib/types/database';
 import { isValidRate } from '@/lib/utils/rate';
 
 export async function PATCH(request: Request) {
@@ -91,7 +92,7 @@ export async function PATCH(request: Request) {
       tutor_id:   user.id,
       event_type: 'timezone_changed',
       summary:    `Timezone changed to ${String(update['timezone'])}`,
-      details:    { new_timezone: update['timezone'] },
+      details:    { new_timezone: update['timezone'] } as unknown as Json,
     });
   }
 
@@ -103,7 +104,7 @@ export async function PATCH(request: Request) {
       details: {
         ...('max_weekly_hours' in update ? { new_max_hours: update['max_weekly_hours'] } : {}),
         ...('min_weekly_hours' in update ? { new_min_hours: update['min_weekly_hours'] } : {}),
-      },
+      } as unknown as Json,
     });
   }
 

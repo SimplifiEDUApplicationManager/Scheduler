@@ -4,6 +4,7 @@ interface AlertsStripProps {
   declined: number;
   expired: number;
   pendingReviews: number;
+  pendingAvailabilityRequests: number;
 }
 
 interface AlertItem {
@@ -13,7 +14,7 @@ interface AlertItem {
   href: string;
 }
 
-export function AlertsStrip({ declined, expired, pendingReviews }: AlertsStripProps) {
+export function AlertsStrip({ declined, expired, pendingReviews, pendingAvailabilityRequests }: AlertsStripProps) {
   const alerts: AlertItem[] = [];
 
   if (declined > 0) alerts.push({
@@ -33,6 +34,12 @@ export function AlertsStrip({ declined, expired, pendingReviews }: AlertsStripPr
     text: `${pendingReviews} subject change request${pendingReviews === 1 ? '' : 's'} awaiting approval`,
     action: 'Review',
     href: '/dashboard/subjects',
+  });
+  if (pendingAvailabilityRequests > 0) alerts.push({
+    tone: 'warn',
+    text: `${pendingAvailabilityRequests} tutor availability request${pendingAvailabilityRequests === 1 ? '' : 's'} awaiting approval`,
+    action: 'Review',
+    href: '/dashboard/tutor-updates',
   });
 
   if (alerts.length === 0) return null;

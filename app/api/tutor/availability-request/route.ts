@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import type { AvailabilityRequestType } from '@/lib/types/domain';
+import type { Json } from '@/lib/types/database';
 
 const VALID_TYPES: AvailabilityRequestType[] = ['PAUSE', 'LOW_MAX_HOURS', 'LOW_AVAILABILITY_WINDOWS'];
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       tutor_id:     user.id,
       request_type: request_type as string,
       reason:       reason.trim(),
-      details:      details ?? null,
+      details:      (details ?? null) as Json | null,
       status:       'PENDING',
     })
     .select('id, request_type, reason, details, status, created_at')

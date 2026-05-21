@@ -31,12 +31,12 @@ export default async function TutorUpdatesPage() {
   const [{ data: reqRows, error: reqErr }, { data: actRows, error: actErr }] = await Promise.all([
     supabase
       .from('tutor_availability_requests')
-      .select('id, tutor_id, request_type, reason, details, status, created_at, users!tutor_availability_requests_tutor_id_fkey(name)')
+      .select('id, tutor_id, request_type, reason, details, status, created_at')
       .eq('status', 'PENDING')
       .order('created_at', { ascending: true }),
     supabase
       .from('tutor_availability_activity')
-      .select('id, tutor_id, event_type, summary, details, created_at, users!tutor_availability_activity_tutor_id_fkey(name)')
+      .select('id, tutor_id, event_type, summary, details, created_at')
       .order('created_at', { ascending: false })
       .limit(100),
   ]);
@@ -44,24 +44,36 @@ export default async function TutorUpdatesPage() {
   if (reqErr) throw reqErr;
   if (actErr) throw actErr;
 
+  // Fetch tutor names for all relevant tutor IDs in one query.
+  const tutorIds = [...new Set([
+    ...(reqRows ?? []).map(r => r.tutor_id),
+    ...(actRows ?? []).map(r => r.tutor_id),
+  ])];
+  const tutorNameMap = new Map<string, string>();
+  if (tutorIds.length > 0) {
+    const { data: tutorRows } = await supabase
+      .from('users')
+      .select('id, name')
+      .in('id', tutorIds);
+    for (const t of tutorRows ?? []) tutorNameMap.set(t.id, t.name);
+  }
+
   const pendingRequests: PendingAvailabilityRequest[] = (reqRows ?? []).map(row => {
-    const tutorInfo = row.users as { name: string } | null;
-    const name = tutorInfo?.name ?? 'Unknown';
+    const name = tutorNameMap.get(row.tutor_id) ?? 'Unknown';
     return {
-      id:          row.id,
-      tutorId:     row.tutor_id,
-      tutorName:   name,
+      id:            row.id,
+      tutorId:       row.tutor_id,
+      tutorName:     name,
       tutorInitials: initials(name),
-      requestType: row.request_type as PendingAvailabilityRequest['requestType'],
-      reason:      row.reason,
-      details:     row.details as Record<string, unknown> | null,
-      createdAt:   row.created_at,
+      requestType:   row.request_type as PendingAvailabilityRequest['requestType'],
+      reason:        row.reason,
+      details:       row.details as Record<string, unknown> | null,
+      createdAt:     row.created_at,
     };
   });
 
   const activityFeed: TutorAvailabilityActivity[] = (actRows ?? []).map(row => {
-    const tutorInfo = row.users as { name: string } | null;
-    const name = tutorInfo?.name ?? 'Unknown';
+    const name = tutorNameMap.get(row.tutor_id) ?? 'Unknown';
     return {
       id:            row.id,
       tutorId:       row.tutor_id,

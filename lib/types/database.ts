@@ -39,81 +39,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      requests: {
-        Row: {
-          id: string
-          coordinator_id: string
-          asana_task_id: string | null
-          asana_task_url: string | null
-          source: string
-          status: string
-          student_name: string
-          student_email: string
-          subject: string | null
-          requested_schedule: Json | null
-          timezone: string | null
-          start_date: string | null
-          notes: string | null
-          matched_proposal_id: string | null
-          offered_rate: number | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          coordinator_id: string
-          asana_task_id?: string | null
-          asana_task_url?: string | null
-          source?: string
-          status?: string
-          student_name: string
-          student_email?: string
-          subject?: string | null
-          requested_schedule?: Json | null
-          timezone?: string | null
-          start_date?: string | null
-          notes?: string | null
-          matched_proposal_id?: string | null
-          offered_rate?: number | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          coordinator_id?: string
-          asana_task_id?: string | null
-          asana_task_url?: string | null
-          source?: string
-          status?: string
-          student_name?: string
-          student_email?: string
-          subject?: string | null
-          requested_schedule?: Json | null
-          timezone?: string | null
-          start_date?: string | null
-          notes?: string | null
-          matched_proposal_id?: string | null
-          offered_rate?: number | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "requests_coordinator_id_fkey"
-            columns: ["coordinator_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "requests_matched_proposal_id_fkey"
-            columns: ["matched_proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       proposals: {
         Row: {
           asana_task_id: string | null
@@ -189,6 +114,81 @@ export type Database = {
           },
         ]
       }
+      requests: {
+        Row: {
+          asana_task_id: string | null
+          asana_task_url: string | null
+          coordinator_id: string
+          created_at: string
+          id: string
+          matched_proposal_id: string | null
+          notes: string | null
+          offered_rate: number | null
+          requested_schedule: Json | null
+          source: string
+          start_date: string | null
+          status: string
+          student_email: string
+          student_name: string
+          subject: string | null
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          asana_task_id?: string | null
+          asana_task_url?: string | null
+          coordinator_id: string
+          created_at?: string
+          id?: string
+          matched_proposal_id?: string | null
+          notes?: string | null
+          offered_rate?: number | null
+          requested_schedule?: Json | null
+          source?: string
+          start_date?: string | null
+          status?: string
+          student_email?: string
+          student_name: string
+          subject?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asana_task_id?: string | null
+          asana_task_url?: string | null
+          coordinator_id?: string
+          created_at?: string
+          id?: string
+          matched_proposal_id?: string | null
+          notes?: string | null
+          offered_rate?: number | null
+          requested_schedule?: Json | null
+          source?: string
+          start_date?: string | null
+          status?: string
+          student_email?: string
+          student_name?: string
+          subject?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_coordinator_id_fkey"
+            columns: ["coordinator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_matched_proposal_id_fkey"
+            columns: ["matched_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           category: string
@@ -209,6 +209,95 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      tutor_availability_activity: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          summary: string
+          tutor_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          summary: string
+          tutor_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          summary?: string
+          tutor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_availability_activity_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tutor_availability_requests: {
+        Row: {
+          created_at: string
+          decline_reason: string | null
+          details: Json | null
+          id: string
+          reason: string
+          request_type: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tutor_id: string
+        }
+        Insert: {
+          created_at?: string
+          decline_reason?: string | null
+          details?: Json | null
+          id?: string
+          reason: string
+          request_type: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tutor_id: string
+        }
+        Update: {
+          created_at?: string
+          decline_reason?: string | null
+          details?: Json | null
+          id?: string
+          reason?: string
+          request_type?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tutor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_availability_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_availability_requests_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tutor_context: {
         Row: {
@@ -251,54 +340,54 @@ export type Database = {
       }
       tutor_subject_changes: {
         Row: {
-          id: string
-          tutor_id: string
-          subject_id: string
-          tutor_subject_id: string | null
           change_type: string
+          created_at: string
+          decline_reason: string | null
+          id: string
           requested_confidence: string | null
           requested_note: string | null
-          status: string
-          reviewed_by: string | null
           reviewed_at: string | null
-          decline_reason: string | null
-          created_at: string
+          reviewed_by: string | null
+          status: string
+          subject_id: string
+          tutor_id: string
+          tutor_subject_id: string | null
           updated_at: string
         }
         Insert: {
-          id?: string
-          tutor_id: string
-          subject_id: string
-          tutor_subject_id?: string | null
           change_type: string
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
           requested_confidence?: string | null
           requested_note?: string | null
-          status?: string
-          reviewed_by?: string | null
           reviewed_at?: string | null
-          decline_reason?: string | null
-          created_at?: string
+          reviewed_by?: string | null
+          status?: string
+          subject_id: string
+          tutor_id: string
+          tutor_subject_id?: string | null
           updated_at?: string
         }
         Update: {
-          id?: string
-          tutor_id?: string
-          subject_id?: string
-          tutor_subject_id?: string | null
           change_type?: string
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
           requested_confidence?: string | null
           requested_note?: string | null
-          status?: string
-          reviewed_by?: string | null
           reviewed_at?: string | null
-          decline_reason?: string | null
-          created_at?: string
+          reviewed_by?: string | null
+          status?: string
+          subject_id?: string
+          tutor_id?: string
+          tutor_subject_id?: string | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "tutor_subject_changes_tutor_id_fkey"
-            columns: ["tutor_id"]
+            foreignKeyName: "tutor_subject_changes_reviewed_by_fkey"
+            columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -308,6 +397,13 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_subject_changes_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -387,6 +483,7 @@ export type Database = {
           email: string
           id: string
           invited_by: string | null
+          is_paused: boolean
           max_weekly_hours: number
           meeting_link: string | null
           min_rate: number
@@ -399,6 +496,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           status: Database["public"]["Enums"]["user_status"]
           timezone: string | null
+          total_availability_hours: number
           updated_at: string
         }
         Insert: {
@@ -410,6 +508,7 @@ export type Database = {
           email: string
           id: string
           invited_by?: string | null
+          is_paused?: boolean
           max_weekly_hours: number
           meeting_link?: string | null
           min_rate?: number
@@ -422,6 +521,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
           timezone?: string | null
+          total_availability_hours?: number
           updated_at?: string
         }
         Update: {
@@ -433,6 +533,7 @@ export type Database = {
           email?: string
           id?: string
           invited_by?: string | null
+          is_paused?: boolean
           max_weekly_hours?: number
           meeting_link?: string | null
           min_rate?: number
@@ -445,6 +546,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
           timezone?: string | null
+          total_availability_hours?: number
           updated_at?: string
         }
         Relationships: [
