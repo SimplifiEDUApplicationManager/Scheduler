@@ -96,6 +96,15 @@ export async function GET() {
     const result = await nylasGet<Record<string, unknown>>(
       `/v3/grants/${row.nylas_grant_id}/scheduling/configurations/${row.nylas_scheduler_config_id}`,
     );
+    // Config no longer exists in Nylas — clear the stale ID and return empty
+    // defaults. The modal will then prompt the tutor to save, which recreates it.
+    if (!result.ok && result.statusCode === 404) {
+      await supabase
+        .from('users')
+        .update({ nylas_scheduler_config_id: null })
+        .eq('id', user.id);
+      return NextResponse.json(defaults);
+    }
     if (!result.ok) return NextResponse.json({ error: 'Failed to load scheduling preferences' }, { status: 502 });
 
     const avail = result.data.availability as Record<string, unknown> | undefined;
@@ -229,9 +238,30 @@ export async function PUT(request: Request) {
     }
 
     // GET the full current config (opaque), then PUT back with updated availability.
-    const current = await nylasGet<Record<string, unknown>>(
+    // If the config was deleted in Nylas (404), recreate it first.
+    let current = await nylasGet<Record<string, unknown>>(
       `/v3/grants/${row.nylas_grant_id}/scheduling/configurations/${configId}`,
     );
+    if (!current.ok && current.statusCode === 404) {
+      const recreated = await createSchedulerConfig({
+        tutorName:   row.name as string,
+        tutorEmail:  row.email as string,
+        timezone,
+        grantId:     row.nylas_grant_id as string,
+        meetingLink: (row.meeting_link as string | null) ?? undefined,
+      });
+      if (recreated.configId === null) {
+        return NextResponse.json({ error: recreated.error }, { status: 502 });
+      }
+      configId = recreated.configId;
+      await supabase
+        .from('users')
+        .update({ nylas_scheduler_config_id: configId, booking_page_url: recreated.bookingUrl })
+        .eq('id', user.id);
+      current = await nylasGet<Record<string, unknown>>(
+        `/v3/grants/${row.nylas_grant_id}/scheduling/configurations/${configId}`,
+      );
+    }
     if (!current.ok) {
       return NextResponse.json({ error: current.error, status: 502 }, { status: 502 });
     }
