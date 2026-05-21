@@ -73,11 +73,13 @@ export default async function DashboardPage() {
 
   // Build response time leaderboard for all tutors with activity in the 90-day window
   const leaderboard = computeLeaderboard(
-    (resolvedProposals ?? []).map(p => ({
-      tutorId:    p.tutor_id,
-      createdAt:  p.created_at,
-      resolvedAt: p.resolved_at!,
-    }))
+    (resolvedProposals ?? [])
+      .filter((p): p is typeof p & { tutor_id: string } => p.tutor_id !== null)
+      .map(p => ({
+        tutorId:    p.tutor_id,
+        createdAt:  p.created_at,
+        resolvedAt: p.resolved_at!,
+      }))
   );
 
   // Fetch names for all tutors in the leaderboard (may differ from availTutorIds)
