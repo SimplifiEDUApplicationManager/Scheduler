@@ -374,6 +374,95 @@ export type Database = {
           },
         ]
       }
+      tutor_availability_activity: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          summary: string
+          tutor_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          summary: string
+          tutor_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          summary?: string
+          tutor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_availability_activity_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tutor_availability_requests: {
+        Row: {
+          created_at: string
+          decline_reason: string | null
+          details: Json | null
+          id: string
+          reason: string
+          request_type: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tutor_id: string
+        }
+        Insert: {
+          created_at?: string
+          decline_reason?: string | null
+          details?: Json | null
+          id?: string
+          reason: string
+          request_type: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tutor_id: string
+        }
+        Update: {
+          created_at?: string
+          decline_reason?: string | null
+          details?: Json | null
+          id?: string
+          reason?: string
+          request_type?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tutor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_availability_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_availability_requests_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           asana_access_token: string | null
@@ -384,6 +473,7 @@ export type Database = {
           email: string
           id: string
           invited_by: string | null
+          is_paused: boolean
           max_weekly_hours: number
           meeting_link: string | null
           min_weekly_hours: number
@@ -395,6 +485,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           status: Database["public"]["Enums"]["user_status"]
           timezone: string | null
+          total_availability_hours: number
           updated_at: string
         }
         Insert: {
@@ -406,6 +497,7 @@ export type Database = {
           email: string
           id: string
           invited_by?: string | null
+          is_paused?: boolean
           max_weekly_hours: number
           meeting_link?: string | null
           min_weekly_hours?: number
@@ -417,6 +509,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
           timezone?: string | null
+          total_availability_hours?: number
           updated_at?: string
         }
         Update: {
@@ -428,6 +521,7 @@ export type Database = {
           email?: string
           id?: string
           invited_by?: string | null
+          is_paused?: boolean
           max_weekly_hours?: number
           meeting_link?: string | null
           min_weekly_hours?: number
@@ -439,6 +533,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
           timezone?: string | null
+          total_availability_hours?: number
           updated_at?: string
         }
         Relationships: [
