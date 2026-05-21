@@ -234,14 +234,6 @@ export default async function DashboardPage() {
           <DashCard
             title="Availability requests"
             subtitle="Tutor availability changes awaiting approval"
-            action={
-              <Link
-                href="/dashboard/tutor-updates"
-                className="text-[11px] font-bold text-brand-primary-ink hover:text-brand-primary-deep transition-colors"
-              >
-                Review →
-              </Link>
-            }
           >
             <PendingAvailabilityList items={pendingAvailabilityItems} />
           </DashCard>
