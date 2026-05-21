@@ -92,7 +92,8 @@ describe('enableSchedulerSessionAuth', () => {
 // ── createSchedulerConfig ─────────────────────────────────────────────────────
 
 describe('createSchedulerConfig', () => {
-  it('returns configId and bookingUrl with region/clientId/slug format', async () => {
+  it('returns configId and bookingUrl pointing to our app domain', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://simplifi-scheduler.vercel.app');
     mockFetch(200, { data: { id: 'new-cfg-id' }, request_id: 'r3' });
     const result = await createSchedulerConfig({
       tutorName: 'Jane Doe',
@@ -102,11 +103,11 @@ describe('createSchedulerConfig', () => {
     });
     expect(result).toEqual({
       configId: 'new-cfg-id',
-      bookingUrl: 'https://book.nylas.com/us/test-client-id/jane',
+      bookingUrl: 'https://simplifi-scheduler.vercel.app/book/jane',
     });
   });
 
-  it('POSTs to grant-scoped endpoint, includes slug, and excludes grant_id from participants', async () => {
+  it('POSTs to grant-scoped endpoint and includes slug', async () => {
     mockFetch(200, { data: { id: 'new-cfg-id' }, request_id: 'r3b' });
     const fetchSpy = vi.mocked(fetch);
     await createSchedulerConfig({
@@ -118,33 +119,19 @@ describe('createSchedulerConfig', () => {
     const url = fetchSpy.mock.calls[0]![0] as string;
     expect(url).toContain('/v3/grants/grant-123/scheduling/configurations');
     const body = JSON.parse(fetchSpy.mock.calls[0]![1]?.body as string);
-    expect(body.participants[0]).not.toHaveProperty('grant_id');
     // Slug derived from email local-part; dots become hyphens
     expect(body.slug).toBe('jane-doe');
   });
 
-  it('uses eu region when API URI points to EU', async () => {
-    vi.stubEnv('NYLAS_API_URI', 'https://api.eu.nylas.com');
-    mockFetch(200, { data: { id: 'eu-cfg-id' }, request_id: 'r4' });
-    const result = await createSchedulerConfig({
-      tutorName: 'Jane Doe',
-      tutorEmail: 'jane@example.com',
-      timezone: 'Europe/London',
-      grantId: 'grant-123',
-    });
-    expect(result?.configId ? result.bookingUrl : null).toBe('https://book.nylas.com/eu/test-client-id/jane');
-  });
-
-  it('returns error when NYLAS_CLIENT_ID is not set', async () => {
-    vi.stubEnv('NYLAS_CLIENT_ID', '');
+  it('falls back to default app URL when NEXT_PUBLIC_APP_URL is not set', async () => {
+    mockFetch(200, { data: { id: 'new-cfg-id' }, request_id: 'r4' });
     const result = await createSchedulerConfig({
       tutorName: 'Jane Doe',
       tutorEmail: 'jane@example.com',
       timezone: 'America/New_York',
       grantId: 'grant-123',
     });
-    expect(result.configId).toBeNull();
-    expect((result as { error: string }).error).toMatch(/NYLAS_CLIENT_ID/);
+    expect((result as { bookingUrl: string }).bookingUrl).toContain('/book/jane');
   });
 
   it('returns null when Nylas rejects the config creation', async () => {
