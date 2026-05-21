@@ -5,6 +5,7 @@ import { createSchedulerConfig, fmtWorkingHours, fmtBreak, fmtExceptions } from 
 import type { SchedulerSummary, OpenHours } from '@/lib/nylas/scheduler';
 import type { DayKey, HoursMap, SchedulerException, SchedulerPrefs } from '@/lib/types/scheduler';
 import { EMPTY_HOURS_MAP } from '@/lib/types/scheduler';
+import type { Json } from '@/lib/types/database';
 
 // ── Nylas ↔ SchedulerPrefs conversions ──────────────────────────────────────
 //
@@ -177,7 +178,7 @@ export async function PUT(request: Request) {
           tutor_id:     user.id,
           request_type: 'LOW_AVAILABILITY_WINDOWS',
           reason:       'Submitted via scheduling preferences editor',
-          details:      { total_hours: totalHours, prefs: { hours, exceptions, cushionMin } },
+          details:      { total_hours: totalHours, prefs: { hours, exceptions, cushionMin } } as unknown as Json,
           status:       'PENDING',
         })
         .select('id')
