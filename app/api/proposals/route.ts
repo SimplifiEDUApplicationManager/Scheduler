@@ -6,7 +6,9 @@ import { isValidRate } from '@/lib/utils/rate';
 /**
  * POST /api/proposals
  * Coordinator creates a proposal for a tutor.
- * Body: { tutor_id, student_name, student_email, subject, requested_schedule, timezone, start_date?, notes?, asana_task_id? }
+ * Body: { tutor_id, student_name, student_email, subject, requested_schedule, timezone, start_date?, notes?,
+ *         asana_task_id?, offered_rate?, student_grade?, parent_name?, test_name?, starting_score?,
+ *         goal_score?, test_dates?, accommodations?, schedule_notes? }
  */
 export async function POST(req: NextRequest) {
   const auth = await requireActiveRole(['COORDINATOR', 'SUPER_ADMIN']);
@@ -17,6 +19,8 @@ export async function POST(req: NextRequest) {
   const {
     tutor_id, student_name, student_email, subject,
     requested_schedule, timezone, start_date, notes, asana_task_id, offered_rate,
+    student_grade, parent_name, test_name, starting_score, goal_score,
+    test_dates, accommodations, schedule_notes,
   } = body;
 
   if (!tutor_id || !student_name || !student_email || !subject || !requested_schedule || !timezone) {
@@ -41,6 +45,14 @@ export async function POST(req: NextRequest) {
       notes:              (notes as string | undefined) ?? null,
       asana_task_id:      (asana_task_id as string | undefined) ?? null,
       offered_rate:       isValidRate(offered_rate) ? offered_rate : null,
+      student_grade:      (student_grade as string | undefined) ?? null,
+      parent_name:        (parent_name as string | undefined) ?? null,
+      test_name:          (test_name as string | undefined) ?? null,
+      starting_score:     (starting_score as number | undefined) ?? null,
+      goal_score:         (goal_score as number | undefined) ?? null,
+      test_dates:         (test_dates as string | undefined) ?? null,
+      accommodations:     (accommodations as string | undefined) ?? null,
+      schedule_notes:     (schedule_notes as string | undefined) ?? null,
     })
     .select('id')
     .single();

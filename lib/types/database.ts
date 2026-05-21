@@ -41,62 +41,86 @@ export type Database = {
     Tables: {
       proposals: {
         Row: {
+          accommodations: string | null
           asana_task_id: string | null
           coordinator_id: string | null
           created_at: string
           decline_reason: string | null
           expires_at: string
+          goal_score: number | null
           id: string
           notes: string | null
           nylas_event_id: string | null
           offered_rate: number | null
+          parent_name: string | null
           requested_schedule: Json
           resolved_at: string | null
+          schedule_notes: string | null
           start_date: string | null
+          starting_score: number | null
           status: Database["public"]["Enums"]["proposal_status"]
           student_email: string
+          student_grade: string | null
           student_name: string
           subject: string
+          test_dates: string | null
+          test_name: string | null
           timezone: string
           tutor_id: string | null
         }
         Insert: {
+          accommodations?: string | null
           asana_task_id?: string | null
           coordinator_id?: string | null
           created_at?: string
           decline_reason?: string | null
           expires_at?: string
+          goal_score?: number | null
           id?: string
           notes?: string | null
           nylas_event_id?: string | null
           offered_rate?: number | null
+          parent_name?: string | null
           requested_schedule?: Json
           resolved_at?: string | null
+          schedule_notes?: string | null
           start_date?: string | null
+          starting_score?: number | null
           status?: Database["public"]["Enums"]["proposal_status"]
           student_email: string
+          student_grade?: string | null
           student_name: string
           subject: string
+          test_dates?: string | null
+          test_name?: string | null
           timezone: string
           tutor_id?: string | null
         }
         Update: {
+          accommodations?: string | null
           asana_task_id?: string | null
           coordinator_id?: string | null
           created_at?: string
           decline_reason?: string | null
           expires_at?: string
+          goal_score?: number | null
           id?: string
           notes?: string | null
           nylas_event_id?: string | null
           offered_rate?: number | null
+          parent_name?: string | null
           requested_schedule?: Json
           resolved_at?: string | null
+          schedule_notes?: string | null
           start_date?: string | null
+          starting_score?: number | null
           status?: Database["public"]["Enums"]["proposal_status"]
           student_email?: string
+          student_grade?: string | null
           student_name?: string
           subject?: string
+          test_dates?: string | null
+          test_name?: string | null
           timezone?: string
           tutor_id?: string | null
         }

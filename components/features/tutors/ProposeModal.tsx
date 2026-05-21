@@ -18,7 +18,15 @@ interface ProposeModalProps {
 import { toIsoDate } from '@/lib/utils/dates';
 
 export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: ProposeModalProps) {
-  const [notes,      setNotes]      = useState(request?.notes ?? '');
+  const [notes,          setNotes]          = useState(request?.notes ?? '');
+  const [studentGrade,   setStudentGrade]   = useState('');
+  const [parentName,     setParentName]     = useState('');
+  const [testName,       setTestName]       = useState('');
+  const [startingScore,  setStartingScore]  = useState('');
+  const [goalScore,      setGoalScore]      = useState('');
+  const [testDates,      setTestDates]      = useState('');
+  const [accommodations, setAccommodations] = useState('');
+  const [scheduleNotes,  setScheduleNotes]  = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error,      setError]      = useState<string | null>(null);
 
@@ -40,6 +48,14 @@ export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: P
           notes:              notes.trim() || null,
           asana_task_id:      asanaTaskId ?? null,
           offered_rate:       request?.offeredRate ?? null,
+          student_grade:      studentGrade.trim() || null,
+          parent_name:        parentName.trim() || null,
+          test_name:          testName.trim() || null,
+          starting_score:     startingScore ? Number(startingScore) : null,
+          goal_score:         goalScore ? Number(goalScore) : null,
+          test_dates:         testDates.trim() || null,
+          accommodations:     accommodations.trim() || null,
+          schedule_notes:     scheduleNotes.trim() || null,
         }),
       });
       const body = await res.json() as { id?: string; error?: string };
@@ -64,10 +80,10 @@ export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: P
       {/* Dialog */}
       <div
         onClick={e => e.stopPropagation()}
-        className="bg-surface-1 rounded-2xl w-full max-w-[480px] p-6 shadow-[0_16px_48px_rgba(22,32,51,0.20)]"
+        className="bg-surface-1 rounded-2xl w-full max-w-[540px] max-h-[90vh] overflow-y-auto p-6 shadow-[0_16px_48px_rgba(22,32,51,0.20)]"
       >
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-5">
           <Avatar initials={tutor.initials} size="lg" tone="brand" />
           <div>
             <h2 className="text-base font-semibold text-fg-1">Propose to {tutor.name}</h2>
@@ -79,7 +95,7 @@ export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: P
 
         {/* Requested windows */}
         {request && request.tuples.length > 0 && (
-          <div className="bg-surface-2 rounded-lg p-3 mb-4 text-xs text-fg-2">
+          <div className="bg-surface-2 rounded-lg p-3 mb-5 text-xs text-fg-2">
             <p className="text-[9px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-2">
               Requested windows
             </p>
@@ -99,16 +115,96 @@ export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: P
           </div>
         )}
 
-        {/* Notes */}
+        {/* Student context */}
+        <p className="text-[10px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-2">Student context</p>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="block text-[11px] font-semibold text-fg-2 mb-1">Grade level</label>
+            <input
+              value={studentGrade} onChange={e => setStudentGrade(e.target.value)}
+              placeholder="e.g. 11th grade"
+              className="w-full px-3 py-2 border border-border-default rounded-lg text-sm text-fg-1 bg-surface-1 focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-fg-2 mb-1">Parent / guardian</label>
+            <input
+              value={parentName} onChange={e => setParentName(e.target.value)}
+              placeholder="Parent name"
+              className="w-full px-3 py-2 border border-border-default rounded-lg text-sm text-fg-1 bg-surface-1 focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted"
+            />
+          </div>
+        </div>
+
+        {/* Test prep details */}
+        <p className="text-[10px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-2">Test / prep details</p>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="col-span-2">
+            <label className="block text-[11px] font-semibold text-fg-2 mb-1">Test or subject</label>
+            <input
+              value={testName} onChange={e => setTestName(e.target.value)}
+              placeholder="e.g. SAT, ACT, AP Calculus BC"
+              className="w-full px-3 py-2 border border-border-default rounded-lg text-sm text-fg-1 bg-surface-1 focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-fg-2 mb-1">Starting score</label>
+            <input
+              type="number" value={startingScore} onChange={e => setStartingScore(e.target.value)}
+              placeholder="e.g. 1180"
+              className="w-full px-3 py-2 border border-border-default rounded-lg text-sm text-fg-1 bg-surface-1 focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-fg-2 mb-1">Goal score</label>
+            <input
+              type="number" value={goalScore} onChange={e => setGoalScore(e.target.value)}
+              placeholder="e.g. 1400"
+              className="w-full px-3 py-2 border border-border-default rounded-lg text-sm text-fg-1 bg-surface-1 focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted"
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-[11px] font-semibold text-fg-2 mb-1">Test dates</label>
+            <input
+              value={testDates} onChange={e => setTestDates(e.target.value)}
+              placeholder="e.g. May 3, June 7"
+              className="w-full px-3 py-2 border border-border-default rounded-lg text-sm text-fg-1 bg-surface-1 focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted"
+            />
+          </div>
+        </div>
+
+        {/* Accommodations */}
+        <div className="mb-3">
+          <label className="block text-[11px] font-semibold text-fg-2 uppercase tracking-[0.06em] mb-1.5">Accommodations</label>
+          <textarea
+            value={accommodations} onChange={e => setAccommodations(e.target.value)}
+            rows={2}
+            placeholder="Any accommodations or special needs…"
+            className="w-full px-3 py-2.5 border border-border-default rounded-lg text-sm text-fg-1 bg-surface-1 resize-y focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted"
+          />
+        </div>
+
+        {/* Schedule notes */}
+        <div className="mb-3">
+          <label className="block text-[11px] font-semibold text-fg-2 uppercase tracking-[0.06em] mb-1.5">Availability / schedule notes</label>
+          <textarea
+            value={scheduleNotes} onChange={e => setScheduleNotes(e.target.value)}
+            rows={2}
+            placeholder="e.g. Weekday evenings 4–7:30, could stretch to 8:30 on Tues"
+            className="w-full px-3 py-2.5 border border-border-default rounded-lg text-sm text-fg-1 bg-surface-1 resize-y focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted"
+          />
+        </div>
+
+        {/* Notes / request body */}
         <label className="block text-[11px] font-semibold text-fg-2 uppercase tracking-[0.06em] mb-1.5">
-          Notes to tutor
+          Overview / context for tutor
         </label>
         <textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          rows={3}
+          rows={4}
           className="w-full px-3 py-2.5 border border-border-default rounded-lg text-sm text-fg-1 bg-surface-1 resize-y focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted"
-          placeholder="Any context for the tutor…"
+          placeholder="Focus areas, goals, background — supports Markdown formatting"
         />
 
         {error && (

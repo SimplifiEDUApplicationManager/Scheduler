@@ -83,6 +83,14 @@ export async function getTutorProposals(
       status:           row.status.toLowerCase() as TutorProposal['status'],
       declineReason:    row.decline_reason ?? undefined,
       offeredRate:      row.offered_rate ?? undefined,
+      studentGrade:     row.student_grade ?? undefined,
+      parentName:       row.parent_name ?? undefined,
+      testName:         row.test_name ?? undefined,
+      startingScore:    row.starting_score ?? undefined,
+      goalScore:        row.goal_score ?? undefined,
+      testDates:        row.test_dates ?? undefined,
+      accommodations:   row.accommodations ?? undefined,
+      scheduleNotes:    row.schedule_notes ?? undefined,
     };
   });
 }

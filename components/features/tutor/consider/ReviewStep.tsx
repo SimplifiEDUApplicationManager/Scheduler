@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import type { TutorProposal, TutorEvent, Tuple, Tutor, SubjectConf } from '@/lib/types/domain';
 import { DAY_NAMES_FULL } from '@/lib/utils/tutors';
+import { renderMarkdown } from '@/lib/utils/markdown';
 import { MiniWeekPreview } from './MiniWeekPreview';
 import { ConfirmAcceptModal } from './ConfirmAcceptModal';
 
@@ -30,6 +31,7 @@ function fmtH(h: number): string {
 
 export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf, overCap, newTotal, activeStudents, onDecline, onContinue }: Props) {
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const capPct = Math.min(100, Math.round((me.hoursCurrent / me.hoursMax) * 100));
   const newCapPct = Math.min(100, Math.round((newTotal / me.hoursMax) * 100));
   const remaining = Math.max(0, me.hoursMax - newTotal);
@@ -40,30 +42,32 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
   return (
     <>
       <div style={{ flex: 1, overflow: 'auto', padding: '28px 24px 120px' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+
+          {/* Page header */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: '#71717A', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Request from {p.coordinator}</div>
-            <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.015em', lineHeight: 1.2 }}>{p.studentName} · {p.subject}</h1>
-            <div style={{ marginTop: 8, fontSize: 13, color: '#52525B', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {p.studentGrade && <><span>{p.studentGrade}</span><span style={{ color: '#D4D4D8' }}>·</span></>}
-              <span>Start {p.startDate}</span><span style={{ color: '#D4D4D8' }}>·</span>
-              <span>1 hr/week</span><span style={{ color: '#D4D4D8' }}>·</span>
-              <span>{tz}</span>
+            <div style={{ fontSize: 11, color: '#71717A', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+              Request from {p.coordinator}
             </div>
+            <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.015em', lineHeight: 1.2 }}>
+              {p.studentName} · {p.subject}
+            </h1>
           </div>
 
+          {/* Warning banners */}
           {overBudget && (
-            <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', display: 'flex', gap: 10, marginBottom: 20 }}>
+            <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', display: 'flex', gap: 10, marginBottom: 12 }}>
               <span style={{ color: '#DC2626', flexShrink: 0, fontSize: 15 }}>⚠</span>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B' }}>Rate below your minimum</div>
-                <div style={{ fontSize: 12, color: '#7F1D1D', marginTop: 2 }}>This request offers ${p.offeredRate}/hr — below your ${me.minRate}/hr minimum. Contact your coordinator if you have questions.</div>
+                <div style={{ fontSize: 12, color: '#7F1D1D', marginTop: 2 }}>
+                  This request offers ${p.offeredRate}/hr — below your ${me.minRate}/hr minimum. Contact your coordinator if you have questions.
+                </div>
               </div>
             </div>
           )}
-
           {anyConflict && (
-            <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', display: 'flex', gap: 10, marginBottom: 20 }}>
+            <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', display: 'flex', gap: 10, marginBottom: 12 }}>
               <span style={{ color: '#DC2626', flexShrink: 0, fontSize: 15 }}>⚠</span>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B' }}>{conflictN} calendar conflict{conflictN > 1 ? 's' : ''} detected</div>
@@ -72,42 +76,127 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20, marginTop: 20 }}>
+            {/* ── Left column ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <Card title="Calendar preview" subtitle="Proposed times shown against your week">
-                <MiniWeekPreview tuples={p.tuples} conflicts={conflicts} events={events.filter(e => e.kind === 'session')} />
-              </Card>
-              <Card title="Requested windows">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {conflicts.map(({ tp, clashes }, i) => {
-                    const bad = clashes.length > 0;
-                    return (
-                      <div key={i} style={{ padding: '12px 14px', borderRadius: 10, border: `1px solid ${bad ? '#FECACA' : '#E4E4E7'}`, background: bad ? '#FEF2F2' : '#fff', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: '#18181B' }}>{DAY_NAMES_FULL[tp.day]} · {fmtH(tp.start)}–{fmtH(tp.end)}</div>
-                          <div style={{ fontSize: 11, color: '#71717A', marginTop: 2 }}>1 hr session · {tz}</div>
-                          {bad && (
-                            <div style={{ marginTop: 8, padding: '6px 8px', background: '#fff', borderRadius: 6, border: '1px solid #FECACA', fontSize: 11, color: '#7F1D1D', lineHeight: 1.4 }}>
-                              <b>Conflicts with:</b>{' '}
-                              {clashes.map((c, j) => <span key={j}>{j > 0 && ', '}{c.title} ({fmtH(c.start)}–{fmtH(c.end)})</span>)}
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ padding: '3px 8px', borderRadius: 999, background: bad ? '#DC2626' : '#ECFDF5', color: bad ? '#fff' : '#047857', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
-                          {bad ? 'Conflict' : 'Open'}
-                        </div>
-                      </div>
-                    );
-                  })}
+
+              {/* 1. Student snapshot — deterministic fields */}
+              <Card title="Student snapshot">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                  <SnapField label="Student" value={p.studentName} />
+                  {p.studentGrade && <SnapField label="Grade" value={p.studentGrade} />}
+                  {p.parentName   && <SnapField label="Parent" value={p.parentName} />}
+                  {p.testName     && <SnapField label="Test / subject" value={p.testName} />}
+                  {(p.startingScore !== undefined || p.goalScore !== undefined) && (
+                    <SnapField
+                      label="Score target"
+                      value={
+                        p.startingScore !== undefined && p.goalScore !== undefined
+                          ? `${p.startingScore} → ${p.goalScore}`
+                          : p.goalScore !== undefined
+                          ? `Goal: ${p.goalScore}`
+                          : `Current: ${p.startingScore}`
+                      }
+                    />
+                  )}
+                  {p.testDates    && <SnapField label="Test dates" value={p.testDates} />}
+                  <SnapField label="Start date" value={p.startDate} />
+                  <SnapField label="Hours / week" value="1 hr" />
+                  <SnapField label="Timezone" value={tz} />
+                  {p.offeredRate !== undefined && (
+                    <SnapField
+                      label="Offered rate"
+                      value={`$${p.offeredRate}/hr`}
+                      highlight={overBudget ? 'red' : undefined}
+                    />
+                  )}
                 </div>
+                {p.accommodations && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #F4F4F5' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Accommodations</div>
+                    <div style={{ fontSize: 13, color: '#3F3F46', lineHeight: 1.55 }}>{p.accommodations}</div>
+                  </div>
+                )}
               </Card>
+
+              {/* 2. Request body — Markdown-rendered notes (dominant) */}
               {p.notes && (
-                <Card title="Note from coordinator">
-                  <div style={{ padding: 12, borderRadius: 8, background: '#FEFCE8', border: '1px solid #FEF08A', fontSize: 13, lineHeight: 1.55, color: '#422006' }}>{p.notes}</div>
+                <Card title="Overview">
+                  <div style={{ fontSize: 13, lineHeight: 1.65, color: '#3F3F46' }}>
+                    {renderMarkdown(p.notes)}
+                  </div>
                 </Card>
               )}
+
+              {/* 3. Schedule */}
+              <Card title="Schedule">
+                {/* Free-form schedule description */}
+                {p.scheduleNotes && (
+                  <div style={{ fontSize: 13, color: '#3F3F46', lineHeight: 1.55, marginBottom: 14, padding: '10px 12px', background: '#F9FAFB', borderRadius: 8, border: '1px solid #E4E4E7' }}>
+                    {p.scheduleNotes}
+                  </div>
+                )}
+
+                {/* Requested tuples summary */}
+                <div style={{ fontSize: 12, color: '#71717A', marginBottom: 10 }}>
+                  {p.tuples.length} proposed time{p.tuples.length !== 1 ? 's' : ''} · {tz}
+                  {p.tuples.map((tp, i) => (
+                    <span key={i} style={{ display: 'block', fontWeight: 600, color: '#18181B', marginTop: 3 }}>
+                      {DAY_NAMES_FULL[tp.day]} {fmtH(tp.start)}–{fmtH(tp.end)}
+                      {conflicts[i]?.clashes.length
+                        ? <span style={{ color: '#DC2626', fontWeight: 500, marginLeft: 8 }}>conflict</span>
+                        : <span style={{ color: '#047857', fontWeight: 500, marginLeft: 8 }}>open</span>
+                      }
+                    </span>
+                  ))}
+                </div>
+
+                {/* Calendar toggle */}
+                <button
+                  onClick={() => setShowCalendar(v => !v)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: '#52525B', background: 'none', border: '1px solid #E4E4E7', borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden>
+                    <rect x={1.5} y={2} width={10} height={10} rx={1.5} />
+                    <path d="M4 1v2M9 1v2M1.5 5h10" />
+                  </svg>
+                  {showCalendar ? 'Hide calendar' : 'Show calendar verification'}
+                </button>
+
+                {showCalendar && (
+                  <div style={{ marginTop: 14 }}>
+                    <MiniWeekPreview tuples={p.tuples} conflicts={conflicts} events={events.filter(e => e.kind === 'session')} />
+                    {/* Detailed conflict breakdown */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                      {conflicts.map(({ tp, clashes }, i) => {
+                        const bad = clashes.length > 0;
+                        return (
+                          <div key={i} style={{ padding: '10px 12px', borderRadius: 8, border: `1px solid ${bad ? '#FECACA' : '#E4E4E7'}`, background: bad ? '#FEF2F2' : '#fff', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#18181B' }}>{DAY_NAMES_FULL[tp.day]} · {fmtH(tp.start)}–{fmtH(tp.end)}</div>
+                              {bad && (
+                                <div style={{ marginTop: 6, fontSize: 11, color: '#7F1D1D', lineHeight: 1.4 }}>
+                                  <b>Conflicts with:</b>{' '}
+                                  {clashes.map((c, j) => <span key={j}>{j > 0 && ', '}{c.title} ({fmtH(c.start)}–{fmtH(c.end)})</span>)}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ padding: '3px 8px', borderRadius: 999, background: bad ? '#DC2626' : '#ECFDF5', color: bad ? '#fff' : '#047857', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
+                              {bad ? 'Conflict' : 'Open'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              {/* 4. Match rationale */}
               <Card title="Match rationale">
-                {p.rationale && <div style={{ fontSize: 13, color: '#18181B', lineHeight: 1.5, padding: '10px 12px', borderRadius: 8, background: '#F4F4F5', marginBottom: 12, border: '1px solid #E4E4E7' }}>{p.rationale}</div>}
+                {p.rationale && (
+                  <div style={{ fontSize: 13, color: '#18181B', lineHeight: 1.5, padding: '10px 12px', borderRadius: 8, background: '#F4F4F5', marginBottom: 12, border: '1px solid #E4E4E7' }}>{p.rationale}</div>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <FitRow ok={!!subjectConf} label={subjectConf ? `You teach ${p.subject} · ${subjectConf.toLowerCase()} confidence` : `${p.subject} is not yet on your subject list`} />
                   <FitRow ok={!anyConflict} label={anyConflict ? `${conflictN} of ${p.tuples.length} proposed times conflict with your calendar` : 'All proposed times are open on your calendar'} />
@@ -119,28 +208,8 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
               </Card>
             </div>
 
+            {/* ── Right sidebar ── */}
             <aside style={{ position: 'sticky', top: 8, alignSelf: 'start', display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <SideCard label="Student">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 999, background: '#E8F4F1', color: '#1F5349', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>
-                    {(p.studentName || '').split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.25 }}>{p.studentName}</div>
-                    <div style={{ fontSize: 11, color: '#71717A', marginTop: 2 }}>{p.studentGrade || 'New match'}</div>
-                  </div>
-                </div>
-                <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #F5F5F5', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <Meta label="Subject" value={p.subject} />
-                  <Meta label="Start" value={p.startDate} />
-                  <Meta label="Hours/wk" value="1" />
-                  <Meta label="Timezone" value={tz} />
-                  {p.offeredRate !== undefined && (
-                    <Meta label="Offered rate" value={`$${p.offeredRate}/hr${overBudget ? ' ⚠' : ''}`} />
-                  )}
-                </div>
-              </SideCard>
-
               <SideCard label="Your capacity · this week" border={overCap ? '#FECACA' : '#E4E4E7'}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                   <div style={{ fontSize: 28, fontWeight: 800, color: '#18181B', lineHeight: 1 }}>{me.hoursCurrent}</div>
@@ -174,6 +243,7 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
         </div>
       </div>
 
+      {/* Bottom action bar */}
       <div style={{ position: 'sticky', bottom: 0, background: '#fff', borderTop: '1px solid #E4E4E7', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 -6px 16px rgba(22,32,51,0.04)' }}>
         <div style={{ flex: 1, fontSize: 12, color: '#71717A' }}>
           {overCap ? "You're at or over your weekly cap — accept only if you're sure." : 'Next: drag proposed times onto your calendar to schedule them.'}
@@ -198,13 +268,10 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
   );
 }
 
-function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div style={{ background: '#fff', borderRadius: 12, padding: 16, border: '1px solid #E4E4E7' }}>
-      <div style={{ marginBottom: 12 }}>
-        <h3 style={{ fontSize: 12, fontWeight: 700, margin: 0, color: '#18181B', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{title}</h3>
-        {subtitle && <div style={{ fontSize: 11, color: '#71717A', marginTop: 4, lineHeight: 1.4 }}>{subtitle}</div>}
-      </div>
+      <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 12px', color: '#18181B', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{title}</h3>
       {children}
     </div>
   );
@@ -219,11 +286,11 @@ function SideCard({ label, border = '#E4E4E7', children }: { label: string; bord
   );
 }
 
-function Meta({ label, value }: { label: string; value: string }) {
+function SnapField({ label, value, highlight }: { label: string; value: string; highlight?: 'red' }) {
   return (
     <div>
       <div style={{ fontSize: 10, fontWeight: 600, color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-      <div style={{ fontSize: 12, color: '#18181B', marginTop: 2, fontWeight: 500 }}>{value}</div>
+      <div style={{ fontSize: 13, color: highlight === 'red' ? '#DC2626' : '#18181B', marginTop: 2, fontWeight: 600 }}>{value}</div>
     </div>
   );
 }

@@ -197,6 +197,14 @@ export interface TutorProposal {
   rationale?: string;
   studentGrade?: string;
   offeredRate?: number;
+  // Extended student context fields (all optional — absent on older proposals)
+  parentName?: string;
+  testName?: string;
+  startingScore?: number;
+  goalScore?: number;
+  testDates?: string;
+  accommodations?: string;
+  scheduleNotes?: string;
 }
 
 // ── Coordinator management ──────────────────────────────────────────────────
