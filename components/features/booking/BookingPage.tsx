@@ -1,7 +1,7 @@
 'use client';
 
 import { NylasScheduling } from '@nylas/react';
-import '@nylas/react/dist/style.css';
+import '@nylas/react/style.css';
 
 interface Props {
   configId: string;
