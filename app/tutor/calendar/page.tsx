@@ -81,11 +81,13 @@ export default async function TutorCalendarPage() {
     .gte('created_at', windowStart);
 
   const leaderboard = computeLeaderboard(
-    (resolvedProposals ?? []).map(p => ({
-      tutorId:    p.tutor_id,
-      createdAt:  p.created_at,
-      resolvedAt: p.resolved_at!,
-    }))
+    (resolvedProposals ?? [])
+      .filter((p): p is typeof p & { tutor_id: string } => p.tutor_id !== null)
+      .map(p => ({
+        tutorId:    p.tutor_id,
+        createdAt:  p.created_at,
+        resolvedAt: p.resolved_at!,
+      }))
   );
   const myEntry = leaderboard.get(row.id);
   const responseTimeStat: ResponseTimeStat = myEntry
