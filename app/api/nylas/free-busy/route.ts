@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { nylasPost } from '@/lib/nylas/client';
 import type { Tuple } from '@/lib/types/domain';
-import { fromZonedTime } from 'date-fns-tz';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 export type CalendarStatus = 'free' | 'conflict' | 'no_calendar' | 'unknown';
 
@@ -16,14 +16,17 @@ interface FreeBusyRequest {
 type NylasTimeSlot = { start_time: number; end_time: number; status: string };
 type NylasFreeBusyEntry = { email: string; time_slots?: NylasTimeSlot[]; error?: string };
 
-// Returns the next `count` occurrences of `dayOfWeek` (0=Sun) from now.
-// The returned dates have their time component left at midnight local —
-// callers set the hour/minute themselves.
-function nextOccurrences(dayOfWeek: number, count: number): Date[] {
+// Returns the next `count` occurrences of `dayOfWeek` (0=Sun) starting from
+// tomorrow in the coordinator's timezone. Uses toZonedTime so that getDay()
+// and date arithmetic operate in `tz`, not the server's local timezone.
+function nextOccurrences(dayOfWeek: number, count: number, tz: string): Date[] {
   const dates: Date[] = [];
-  const d = new Date();
+  // toZonedTime shifts the Date so that its local-time accessors (.getDate(),
+  // .getDay() etc.) reflect wall-clock time in `tz`. Valid on UTC servers
+  // (Vercel) where local accessors == UTC accessors.
+  const d = toZonedTime(new Date(), tz);
   d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 1); // start from tomorrow
+  d.setDate(d.getDate() + 1); // start from tomorrow in `tz`
   while (dates.length < count) {
     if (d.getDay() === dayOfWeek) dates.push(new Date(d));
     d.setDate(d.getDate() + 1);
@@ -31,27 +34,31 @@ function nextOccurrences(dayOfWeek: number, count: number): Date[] {
   return dates;
 }
 
+const pad = (n: number) => String(n).padStart(2, '0');
+
 // Expand a set of tuples into concrete [startUnix, endUnix] pairs using the
-// next 2 occurrences of each requested day.
+// next 2 occurrences of each requested day (in the coordinator's timezone).
 function expandTuples(tuples: Tuple[], tz: string): { start: number; end: number }[] {
   const ranges: { start: number; end: number }[] = [];
   for (const tuple of tuples) {
-    const occurrences = nextOccurrences(tuple.day, 2);
+    const occurrences = nextOccurrences(tuple.day, 2, tz);
     for (const date of occurrences) {
       const startH = Math.floor(tuple.start);
       const startM = Math.round((tuple.start % 1) * 60);
       const endH   = Math.floor(tuple.end);
       const endM   = Math.round((tuple.end % 1) * 60);
 
-      // Build a local datetime string in the requested timezone, then convert to UTC.
-      const startLocal = new Date(date);
-      startLocal.setHours(startH, startM, 0, 0);
-      const endLocal = new Date(date);
-      endLocal.setHours(endH, endM, 0, 0);
+      // `date` is a toZonedTime result: its year/month/date parts are in `tz`.
+      // Build ISO strings with no TZ suffix so fromZonedTime interprets them
+      // as wall-clock time in `tz` — avoids the double-offset bug from
+      // passing a Date (which carries a UTC value) directly to fromZonedTime.
+      const dateStr  = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+      const startStr = `${dateStr}T${pad(startH)}:${pad(startM)}:00`;
+      const endStr   = `${dateStr}T${pad(endH)}:${pad(endM)}:00`;
 
       ranges.push({
-        start: Math.floor(fromZonedTime(startLocal, tz).getTime() / 1000),
-        end:   Math.floor(fromZonedTime(endLocal, tz).getTime() / 1000),
+        start: Math.floor(fromZonedTime(startStr, tz).getTime() / 1000),
+        end:   Math.floor(fromZonedTime(endStr, tz).getTime() / 1000),
       });
     }
   }

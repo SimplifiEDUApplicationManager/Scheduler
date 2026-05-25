@@ -70,8 +70,16 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
 
   const filtered = useMemo(() => filterTutors(tutors, filters), [tutors, filters]);
 
+  // Stable key representing the current set of filtered tutor IDs.
+  // Changes only when the actual set of IDs changes, not on every render —
+  // prevents spurious free-busy fetches when non-tuple filters change.
+  const filteredIdKey = useMemo(
+    () => [...filtered.map(t => t.id)].sort().join(','),
+    [filtered],
+  );
+
   // When tuples are active, check each filtered tutor's real calendar availability.
-  // Runs after each filter change; cancels any in-flight request.
+  // Re-runs when the tuple set, coordinator timezone, or tutor roster changes.
   const coordinatorTz = rawParams.get('tz') ?? 'America/New_York';
   useEffect(() => {
     if (filters.tuples.length === 0) {
@@ -79,11 +87,16 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
       return;
     }
 
-    const tutorIds = filtered.map(t => t.id);
+    const tutorIds = filteredIdKey ? filteredIdKey.split(',') : [];
     if (!tutorIds.length) { setCalendarStatuses({}); return; }
 
-    // Mark all as loading
-    setCalendarStatuses(Object.fromEntries(tutorIds.map(id => [id, 'unknown'])) as Record<string, CalendarStatus>);
+    // Preserve existing statuses; only mark newly-visible tutors as 'unknown'
+    // so that toggling non-tuple filters doesn't flash all badges to loading.
+    setCalendarStatuses(prev => {
+      const next: Record<string, CalendarStatus> = {};
+      for (const id of tutorIds) next[id] = prev[id] ?? 'unknown';
+      return next;
+    });
 
     freeBusyAbortRef.current?.abort();
     const ctrl = new AbortController();
@@ -100,8 +113,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
       .catch(() => { /* aborted or error — leave 'unknown' */ });
 
     return () => ctrl.abort();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, filters.tuples, coordinatorTz]);
+  }, [filteredIdKey, filters.tuples, coordinatorTz]);
 
   function handleProposeSend(tutorName: string) {
     setProposeFor(null);
