@@ -18,8 +18,12 @@ import { ResponseTimeLeaderboard } from '@/components/features/dashboard/Respons
 import type { LeaderboardRow } from '@/components/features/dashboard/ResponseTimeLeaderboard';
 import { computeLeaderboard } from '@/lib/utils/responseTime';
 
-function getGreeting(): string {
-  const h = new Date().getHours();
+function getGreeting(tz?: string | null): string {
+  const h = parseInt(
+    new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: tz ?? 'UTC' })
+      .format(new Date()),
+    10,
+  );
   if (h < 12) return 'Good morning';
   if (h < 18) return 'Good afternoon';
   return 'Good evening';
@@ -35,9 +39,10 @@ export default async function DashboardPage() {
 
   const { data: { user: authUser } } = await supabase.auth.getUser();
   const { data: userRow } = authUser
-    ? await supabase.from('users').select('name').eq('id', authUser.id).single()
+    ? await supabase.from('users').select('name, timezone').eq('id', authUser.id).single()
     : { data: null };
   const firstName = userRow?.name?.split(' ')[0] ?? 'there';
+  const userTz = userRow?.timezone;
 
   const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }] = await Promise.all([
@@ -153,7 +158,7 @@ export default async function DashboardPage() {
 
           <div className="relative z-10">
             <h1 className="text-[38px] font-extrabold tracking-[-0.025em] leading-[1.05] mb-1 text-fg-1">
-              {getGreeting()}, {firstName}
+              {getGreeting(userTz)}, {firstName}
             </h1>
             <p className="text-sm text-fg-3">
               {openRequests.length > 0 ? (
