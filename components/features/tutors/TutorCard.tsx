@@ -1,4 +1,5 @@
 import type { Tutor, Subject, Tuple } from '@/lib/types/domain';
+import type { CalendarStatus } from '@/app/api/nylas/free-busy/route';
 import { overlapHours } from '@/lib/utils/tutors';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -13,6 +14,7 @@ interface TutorCardProps {
   selected: boolean;
   canPropose: boolean;
   offeredRate?: number;
+  calendarStatus?: CalendarStatus;
   onSelect: () => void;
   onPropose: () => void;
   onProfile: () => void;
@@ -26,6 +28,7 @@ export function TutorCard({
   selected,
   canPropose,
   offeredRate,
+  calendarStatus,
   onSelect,
   onPropose,
   onProfile,
@@ -93,6 +96,22 @@ export function TutorCard({
                 selected ? 'bg-danger-ink text-danger-bg' : 'bg-danger-bg text-danger-ink',
               )}>
                 Over budget
+              </span>
+            )}
+            {calendarStatus === 'conflict' && (
+              <span className={cn(
+                'text-[9px] font-bold px-1.5 py-px rounded whitespace-nowrap',
+                selected ? 'bg-warning-ink text-warning-bg' : 'bg-warning-bg text-warning-ink',
+              )}>
+                Calendar conflict
+              </span>
+            )}
+            {calendarStatus === 'no_calendar' && (
+              <span className={cn(
+                'text-[9px] font-bold px-1.5 py-px rounded whitespace-nowrap',
+                selected ? 'bg-neutral-600 text-neutral-300' : 'bg-surface-3 text-fg-muted',
+              )}>
+                No calendar
               </span>
             )}
           </div>
