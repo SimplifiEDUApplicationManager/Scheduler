@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Tutor, Tuple } from '@/lib/types/domain';
+import type { BusyBlock } from '@/app/api/nylas/weekly-busy/route';
 import { fmtRange, getWeekDays } from '@/lib/utils/tutors';
 import { cn } from '@/lib/utils/cn';
 
@@ -9,6 +10,7 @@ interface WeekViewProps {
   tutors: Tutor[];
   requestTuples: Tuple[];
   weekOffset: number;
+  busySlotsPerTutor?: Record<string, BusyBlock[]>;
 }
 
 const ROW_H = 44;
@@ -17,7 +19,7 @@ const END_H = 21;
 const HOURS = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i);
 const PALETTE = ['#3B82F6','#16A34A','#DB2777','#D97706','#6366F1','#0891B2','#EA580C','#7C3AED'];
 
-export function WeekView({ tutors, requestTuples, weekOffset }: WeekViewProps) {
+export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor = {} }: WeekViewProps) {
   const [hoverSlot, setHoverSlot] = useState<{ day: number; start: number; end: number; free: number[] } | null>(null);
   const weekDays = getWeekDays(weekOffset);
 
@@ -28,7 +30,12 @@ export function WeekView({ tutors, requestTuples, weekOffset }: WeekViewProps) {
         const free: number[] = [];
         tutors.forEach((t, ti) => {
           const windows = t.availability[di] ?? [];
-          if (windows.some(([s, e]) => h >= s && h + 0.5 <= e)) free.push(ti);
+          const inWorkingHours = windows.some(([s, e]) => h >= s && h + 0.5 <= e);
+          if (!inWorkingHours) return;
+          // Subtract calendar events already on the tutor's calendar
+          const tutorBusy = busySlotsPerTutor[t.id] ?? [];
+          const isBusy = tutorBusy.some(b => b.day === di && h < b.endH && h + 0.5 > b.startH);
+          if (!isBusy) free.push(ti);
         });
         steps.push({ h, free });
       }
@@ -43,7 +50,7 @@ export function WeekView({ tutors, requestTuples, weekOffset }: WeekViewProps) {
       if (cur) merged.push(cur);
       return merged;
     });
-  }, [tutors]);
+  }, [tutors, busySlotsPerTutor]);
 
   const maxOverlap = Math.max(1, ...perDay.flatMap(b => b.map(x => x.free.length)));
   const tint = (n: number) => `rgba(63,156,139,${(0.08 + 0.45 * (n / maxOverlap)).toFixed(2)})`;
