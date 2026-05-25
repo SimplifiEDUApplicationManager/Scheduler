@@ -25,6 +25,25 @@ const KEY_TO_DAY_NUM: Record<DayKey, number> = {
   sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
 };
 
+/**
+ * Convert a HoursMap to the Availability format used by the coordinator
+ * matcher: Record<dayNumber, [startDecimalHour, endDecimalHour][]>.
+ * Stored on users.availability so filterTutors() can run client-side.
+ */
+function hoursMapToAvailability(hours: HoursMap): Record<number, [number, number][]> {
+  const result: Record<number, [number, number][]> = {};
+  for (const [k, windows] of Object.entries(hours) as [DayKey, { start: string; end: string }[]][]) {
+    if (windows.length === 0) continue;
+    const dayNum = KEY_TO_DAY_NUM[k];
+    result[dayNum] = windows.map(w => {
+      const [sh, sm] = w.start.split(':').map(Number);
+      const [eh, em] = w.end.split(':').map(Number);
+      return [sh! + sm! / 60, eh! + em! / 60] as [number, number];
+    });
+  }
+  return result;
+}
+
 function fromDefaultOpenHours(openHours: OpenHours[]): HoursMap {
   const map: HoursMap = { sun: [], mon: [], tue: [], wed: [], thu: [], fri: [], sat: [] };
   for (const h of openHours) {
@@ -317,10 +336,12 @@ export async function PUT(request: Request) {
     const breakDurationFmt = fmtBreak(cushionMin);
     const exceptionsFmt    = fmtExceptions(allExceptionDates);
 
+    const availabilityMap = hoursMapToAvailability(hours);
+
     await Promise.all([
       supabase
         .from('users')
-        .update({ total_availability_hours: totalHours })
+        .update({ total_availability_hours: totalHours, availability: availabilityMap as unknown as Json })
         .eq('id', user.id),
       supabase.from('tutor_availability_activity').insert({
         tutor_id:   user.id,
