@@ -100,10 +100,14 @@ export async function POST(request: Request) {
   });
 
   if (!result.ok) {
+    console.error('[weekly-busy] Nylas error:', result.statusCode, result.error);
     return NextResponse.json({ busySlots: {} });
   }
 
-  const freeBusyByEmail = new Map(result.data.map(fb => [fb.email, fb]));
+  console.log('[weekly-busy] Nylas returned', result.data?.length ?? 'undefined', 'entries for', emails.length, 'emails');
+  console.log('[weekly-busy] raw data sample:', JSON.stringify(result.data?.[0]).slice(0, 300));
+
+  const freeBusyByEmail = new Map((result.data ?? []).map(fb => [fb.email, fb]));
   const busySlots: Record<string, BusyBlock[]> = {};
 
   for (const tutorId of tutorIds) {
@@ -111,13 +115,17 @@ export async function POST(request: Request) {
     if (!email) { busySlots[tutorId] = []; continue; }
 
     const fb = freeBusyByEmail.get(email);
-    if (!fb || fb.error) { busySlots[tutorId] = []; continue; }
+    if (!fb || fb.error) {
+      console.log('[weekly-busy] no data for', email, '— fb:', fb ? `error: ${fb.error}` : 'not found');
+      busySlots[tutorId] = []; continue;
+    }
 
     const blocks: BusyBlock[] = [];
     for (const slot of fb.time_slots ?? []) {
       if (slot.status !== 'busy') continue;
       blocks.push(...splitSlot(slot.start_time, slot.end_time, tz));
     }
+    console.log('[weekly-busy] tutor', tutorId, '→', blocks.length, 'busy blocks');
     busySlots[tutorId] = blocks;
   }
 
