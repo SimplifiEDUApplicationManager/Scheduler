@@ -33,6 +33,12 @@ function initials(name: string): string {
 export default async function DashboardPage() {
   const supabase = await createClient();
 
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  const { data: userRow } = authUser
+    ? await supabase.from('users').select('name').eq('id', authUser.id).single()
+    : { data: null };
+  const firstName = userRow?.name?.split(' ')[0] ?? 'there';
+
   const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }] = await Promise.all([
     supabase
@@ -147,7 +153,7 @@ export default async function DashboardPage() {
 
           <div className="relative z-10">
             <h1 className="text-[38px] font-extrabold tracking-[-0.025em] leading-[1.05] mb-1 text-fg-1">
-              {getGreeting()}, Meg
+              {getGreeting()}, {firstName}
             </h1>
             <p className="text-sm text-fg-3">
               {openRequests.length > 0 ? (
