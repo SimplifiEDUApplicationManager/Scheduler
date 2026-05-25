@@ -28,6 +28,7 @@ const SELECT_TUTOR = [
   'photo_url',
   'is_paused',
   'total_availability_hours',
+  'availability',
   'tutor_subjects!tutor_subjects_tutor_id_fkey(id, subject_id, tutor_confidence, coordinator_confidence, qualification_note)',
 ].join(', ');
 
@@ -54,6 +55,7 @@ type RawTutorRow = {
   photo_url: string | null;
   is_paused: boolean;
   total_availability_hours: number;
+  availability: Record<string, [number, number][]> | null;
   tutor_subjects: {
     id: string;
     subject_id: string;
@@ -115,6 +117,18 @@ function rowToChange(row: RawChangeRow): TutorSubjectChange {
   };
 }
 
+/** Convert the JSONB availability stored in the DB to the domain Availability type.
+ *  Keys arrive as strings from JSON; convert them to numbers. */
+function toAvailability(raw: Record<string, [number, number][]> | null): import('@/lib/types/domain').Availability {
+  if (!raw) return {};
+  const result: import('@/lib/types/domain').Availability = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const day = parseInt(k, 10);
+    if (!isNaN(day)) result[day] = v;
+  }
+  return result;
+}
+
 function rowToTutor(row: RawTutorRow, pendingChanges: RawChangeRow[], availabilityRequests: RawAvailabilityRequestRow[]): Tutor {
   // Build a map of subjectId → pending change for quick lookup
   const changeBySubjectId = new Map<string, TutorSubjectChange>();
@@ -152,7 +166,7 @@ function rowToTutor(row: RawTutorRow, pendingChanges: RawChangeRow[], availabili
     personality:            '',
     status:                 'active',
     subjects,
-    availability:           {},
+    availability:           toAvailability(row.availability),
     hoursCurrent:           0,
     hoursMax:               row.max_weekly_hours,
     hoursMin:               row.min_weekly_hours,

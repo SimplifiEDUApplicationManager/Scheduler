@@ -504,6 +504,7 @@ export type Database = {
         Row: {
           asana_access_token: string | null
           asana_project_id: string | null
+          availability: Json | null
           bio: string | null
           booking_page_url: string | null
           created_at: string
@@ -529,6 +530,7 @@ export type Database = {
         Insert: {
           asana_access_token?: string | null
           asana_project_id?: string | null
+          availability?: Json | null
           bio?: string | null
           booking_page_url?: string | null
           created_at?: string
@@ -554,6 +556,7 @@ export type Database = {
         Update: {
           asana_access_token?: string | null
           asana_project_id?: string | null
+          availability?: Json | null
           bio?: string | null
           booking_page_url?: string | null
           created_at?: string
