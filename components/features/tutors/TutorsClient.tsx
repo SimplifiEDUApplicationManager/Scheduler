@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import type { CalendarStatus } from '@/app/api/nylas/free-busy/route';
 import type { Tutor, TuitionRequest, Subject, Invitation } from '@/lib/types/domain';
 import {
   parseFilters,
@@ -39,6 +40,8 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
   const [profileTutor, setProfileTutor]        = useState<Tutor | null>(null);
   const [toastName, setToastName]              = useState<string | null>(null);
   const [weekOffset, setWeekOffset]            = useState(0);
+  const [calendarStatuses, setCalendarStatuses] = useState<Record<string, CalendarStatus>>({});
+  const freeBusyAbortRef = useRef<AbortController | null>(null);
 
   function setFilters(next: FilterState) {
     const params = filtersToParams(next);
@@ -66,6 +69,39 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
   }
 
   const filtered = useMemo(() => filterTutors(tutors, filters), [tutors, filters]);
+
+  // When tuples are active, check each filtered tutor's real calendar availability.
+  // Runs after each filter change; cancels any in-flight request.
+  const coordinatorTz = rawParams.get('tz') ?? 'America/New_York';
+  useEffect(() => {
+    if (filters.tuples.length === 0) {
+      setCalendarStatuses({});
+      return;
+    }
+
+    const tutorIds = filtered.map(t => t.id);
+    if (!tutorIds.length) { setCalendarStatuses({}); return; }
+
+    // Mark all as loading
+    setCalendarStatuses(Object.fromEntries(tutorIds.map(id => [id, 'unknown'])) as Record<string, CalendarStatus>);
+
+    freeBusyAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    freeBusyAbortRef.current = ctrl;
+
+    fetch('/api/nylas/free-busy', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ tutorIds, tuples: filters.tuples, tz: coordinatorTz }),
+      signal:  ctrl.signal,
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then((data: { results: Record<string, CalendarStatus> }) => setCalendarStatuses(data.results))
+      .catch(() => { /* aborted or error — leave 'unknown' */ });
+
+    return () => ctrl.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, filters.tuples, coordinatorTz]);
 
   function handleProposeSend(tutorName: string) {
     setProposeFor(null);
@@ -123,6 +159,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
               selected={selectedTutorId === t.id}
               canPropose={!!activeReq}
               offeredRate={activeReq?.offeredRate}
+              calendarStatus={filters.tuples.length > 0 ? (calendarStatuses[t.id] ?? 'unknown') : undefined}
               onSelect={() => setSelectedTutorId(prev => prev === t.id ? null : t.id)}
               onPropose={() => setProposeFor(t)}
               onProfile={() => setProfileTutor(t)}
