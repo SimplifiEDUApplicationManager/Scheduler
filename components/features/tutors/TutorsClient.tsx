@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import type { CalendarStatus } from '@/app/api/nylas/free-busy/route';
+import type { BusyBlock } from '@/app/api/nylas/weekly-busy/route';
 import type { Tutor, TuitionRequest, Subject, Invitation } from '@/lib/types/domain';
 import {
   parseFilters,
@@ -41,7 +42,9 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
   const [toastName, setToastName]              = useState<string | null>(null);
   const [weekOffset, setWeekOffset]            = useState(0);
   const [calendarStatuses, setCalendarStatuses] = useState<Record<string, CalendarStatus>>({});
-  const freeBusyAbortRef = useRef<AbortController | null>(null);
+  const [weeklyBusy, setWeeklyBusy]             = useState<Record<string, BusyBlock[]>>({});
+  const freeBusyAbortRef  = useRef<AbortController | null>(null);
+  const weeklyBusyAbortRef = useRef<AbortController | null>(null);
 
   function setFilters(next: FilterState) {
     const params = filtersToParams(next);
@@ -114,6 +117,29 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
 
     return () => ctrl.abort();
   }, [filteredIdKey, filters.tuples, coordinatorTz]);
+
+  // Fetch actual calendar events for the displayed week so WeekView can
+  // subtract booked time from availability windows.
+  useEffect(() => {
+    const tutorIds = filteredIdKey ? filteredIdKey.split(',') : [];
+    if (!tutorIds.length) { setWeeklyBusy({}); return; }
+
+    weeklyBusyAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    weeklyBusyAbortRef.current = ctrl;
+
+    fetch('/api/nylas/weekly-busy', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ tutorIds, weekOffset, tz: coordinatorTz }),
+      signal:  ctrl.signal,
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then((data: { busySlots: Record<string, BusyBlock[]> }) => setWeeklyBusy(data.busySlots))
+      .catch(() => { /* aborted or error — leave existing state */ });
+
+    return () => ctrl.abort();
+  }, [filteredIdKey, weekOffset, coordinatorTz]);
 
   function handleProposeSend(tutorName: string) {
     setProposeFor(null);
@@ -223,6 +249,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
           tutors={filtered}
           requestTuples={activeReq?.tuples ?? filters.tuples}
           weekOffset={weekOffset}
+          busySlotsPerTutor={weeklyBusy}
         />
       </main>
 
