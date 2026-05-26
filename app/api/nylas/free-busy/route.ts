@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
-import { nylasPost } from '@/lib/nylas/client';
+import { fetchTutorEvents } from '@/lib/nylas/events';
 import type { Tuple } from '@/lib/types/domain';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 
@@ -12,9 +12,6 @@ interface FreeBusyRequest {
   tuples: Tuple[];
   tz: string;
 }
-
-type NylasTimeSlot = { start_time: number; end_time: number; status: string };
-type NylasFreeBusyEntry = { email: string; time_slots?: NylasTimeSlot[]; error?: string };
 
 // Returns the next `count` occurrences of `dayOfWeek` (0=Sun) starting from
 // tomorrow in the coordinator's timezone. Uses toZonedTime so that getDay()
@@ -76,20 +73,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ results: {} });
   }
 
-  // Use service client to read tutor emails (coordinator's anon client may not
-  // have SELECT access to all users rows depending on RLS).
   const supabase = createServiceClient();
   const { data: tutorRows } = await supabase
     .from('users')
-    .select('id, email')
+    .select('id, nylas_grant_id')
     .in('id', tutorIds);
 
   if (!tutorRows?.length) {
     return NextResponse.json({ results: {} });
   }
 
-  const emailById = new Map(tutorRows.map(t => [t.id, t.email as string]));
-  const emails    = tutorRows.map(t => t.email as string);
+  const grantById = new Map(tutorRows.map(t => [t.id as string, t.nylas_grant_id as string | null]));
 
   // Expand tuples to concrete time ranges for the next 2 occurrences.
   const ranges = expandTuples(tuples, tz);
@@ -98,40 +92,26 @@ export async function POST(request: Request) {
   const startTime = Math.min(...ranges.map(r => r.start));
   const endTime   = Math.max(...ranges.map(r => r.end));
 
-  // POST /v3/calendars/free-busy — org-level call, returns busy periods per email.
-  const result = await nylasPost<NylasFreeBusyEntry[]>('/v3/calendars/free-busy', {
-    emails,
-    start_time: startTime,
-    end_time:   endTime,
-  });
-
-  if (!result.ok) {
-    console.error('[api/nylas/free-busy] Nylas error:', result.error);
-    const results: Record<string, CalendarStatus> = {};
-    for (const id of tutorIds) results[id] = 'unknown';
-    return NextResponse.json({ results });
-  }
-
-  const freeBusyByEmail = new Map(result.data.map(fb => [fb.email, fb]));
+  // Fetch events per-tutor in parallel using individual Nylas grants.
+  const settled = await Promise.all(
+    tutorIds.map(async tutorId => {
+      const grantId = grantById.get(tutorId);
+      if (!grantId) return { tutorId, events: null };
+      const events = await fetchTutorEvents(grantId, startTime, endTime, tz);
+      return { tutorId, events };
+    }),
+  );
 
   const results: Record<string, CalendarStatus> = {};
 
-  for (const tutorId of tutorIds) {
-    const email = emailById.get(tutorId);
-    if (!email) { results[tutorId] = 'unknown'; continue; }
+  for (const { tutorId, events } of settled) {
+    if (events === null) { results[tutorId] = 'no_calendar'; continue; }
 
-    const fb = freeBusyByEmail.get(email);
-    if (!fb || fb.error) { results[tutorId] = 'no_calendar'; continue; }
-
-    const busySlots = fb.time_slots ?? [];
-
-    // A tutor has a conflict if ANY checked range overlaps with a busy slot.
-    const hasConflict = ranges.some(range =>
-      busySlots.some(slot =>
-        slot.status === 'busy' &&
-        slot.start_time < range.end &&
-        slot.end_time   > range.start,
-      ),
+    // A tutor has a conflict if any event overlaps any requested tuple window.
+    // Events are fetched for the range covering the tuple occurrences, and are
+    // mapped into the coordinator's tz, so ev.day/start/end align with tuple.day/start/end.
+    const hasConflict = tuples.some(tp =>
+      events.some(ev => ev.day === tp.day && ev.start < tp.end && ev.end > tp.start),
     );
 
     results[tutorId] = hasConflict ? 'conflict' : 'free';
