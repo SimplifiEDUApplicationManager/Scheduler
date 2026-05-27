@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {
   TUTORS,
-  REQUESTS,
   INVITATIONS,
 } from '@/lib/data/mock';
 import { createClient } from '@/lib/supabase/server';
@@ -45,7 +44,7 @@ export default async function DashboardPage() {
   const userTz = userRow?.timezone;
 
   const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }] = await Promise.all([
+  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
       .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
@@ -62,6 +61,10 @@ export default async function DashboardPage() {
       .in('status', ['ACCEPTED', 'DECLINED'])
       .not('resolved_at', 'is', null)
       .gte('created_at', windowStart),
+    supabase
+      .from('requests')
+      .select('id, source')
+      .eq('status', 'open'),
   ]);
 
   // Fetch tutor names for availability requests
@@ -120,7 +123,7 @@ export default async function DashboardPage() {
     const subjectName = (r.subjects as { name: string } | null)?.name ?? '';
     return { tutorName, tutorInitials: initials(tutorName), subjectName };
   });
-  const openRequests = REQUESTS.filter(r => r.status === 'open');
+  const openRequests = openRequestRows ?? [];
   const pending      = INVITATIONS.filter(i => i.status === 'pending');
   const declined     = INVITATIONS.filter(i => i.status === 'declined');
   const expired      = INVITATIONS.filter(i => i.status === 'expired');
