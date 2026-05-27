@@ -19,11 +19,13 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   const { data: row } = await supabase
     .from('users')
-    .select('name, email, role')
+    .select('name, email, role, status')
     .eq('id', user.id)
     .single();
 
-  if (!row) redirect('/login');
+  // No row (RLS block) or PENDING status — send to /onboarding, not /login,
+  // to avoid the /login → / → /login redirect loop for invited users.
+  if (!row || row.status === 'PENDING') redirect('/onboarding');
 
   return (
     <>
