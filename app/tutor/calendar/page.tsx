@@ -69,6 +69,13 @@ export default async function TutorCalendarPage() {
     ? await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, me.tz)
     : [];
 
+  // Compute current weekly hours from the already-fetched events (no extra API call).
+  me.hoursCurrent = Math.round(
+    initialEvents
+      .filter(e => e.kind === 'session')
+      .reduce((sum, e) => sum + Math.max(0, e.end - e.start), 0)
+    * 100) / 100;
+
   const initialProposals = await getTutorProposals(row.id, supabase);
 
   // Fetch all resolved proposals in the rolling 90-day window to compute the leaderboard.
