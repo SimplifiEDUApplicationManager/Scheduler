@@ -1,10 +1,17 @@
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { capacityStatus } from '@/lib/utils/capacity';
-import type { Tutor } from '@/lib/types/domain';
+
+export interface TeamTutorRow {
+  id: string;
+  name: string;
+  initials: string;
+  hoursCurrent: number;
+  hoursMax: number;
+}
 
 interface TeamSnapshotProps {
-  tutors: Tutor[];
+  tutors: TeamTutorRow[];
 }
 
 export function TeamSnapshot({ tutors }: TeamSnapshotProps) {

@@ -16,6 +16,7 @@ import type { PendingAvailabilityItem } from '@/components/features/dashboard/Pe
 import { ResponseTimeLeaderboard } from '@/components/features/dashboard/ResponseTimeLeaderboard';
 import type { LeaderboardRow } from '@/components/features/dashboard/ResponseTimeLeaderboard';
 import { computeLeaderboard } from '@/lib/utils/responseTime';
+import { fetchTutorEvents, weekRange } from '@/lib/nylas/events';
 
 function getGreeting(tz?: string | null): string {
   const h = parseInt(
@@ -44,7 +45,14 @@ export default async function DashboardPage() {
   const userTz = userRow?.timezone;
 
   const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }] = await Promise.all([
+  const [
+    { data: reviewRows },
+    { data: availRows },
+    { data: resolvedProposals },
+    { data: openRequestRows },
+    { data: activeTutorRows },
+    { count: onboardingCount },
+  ] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
       .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
@@ -65,6 +73,16 @@ export default async function DashboardPage() {
       .from('requests')
       .select('id, source')
       .eq('status', 'open'),
+    supabase
+      .from('users')
+      .select('id, name, max_weekly_hours, nylas_grant_id, timezone')
+      .eq('role', 'TUTOR')
+      .eq('status', 'ACTIVE'),
+    supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'TUTOR')
+      .eq('status', 'PENDING'),
   ]);
 
   // Fetch tutor names for availability requests
@@ -129,8 +147,32 @@ export default async function DashboardPage() {
   const expired      = INVITATIONS.filter(i => i.status === 'expired');
   const accepted7d   = INVITATIONS.filter(i => i.status === 'accepted').length;
 
-  const activeTutors = TUTORS.filter(t => t.status === 'active').length;
-  const onboarding   = TUTORS.filter(t => t.status === 'onboarding').length;
+  // Build real team rows from DB + Nylas current-week events
+  const { startUnix, endUnix } = weekRange(0);
+  const teamRows = await Promise.all(
+    (activeTutorRows ?? []).map(async tutor => {
+      let hoursCurrent = 0;
+      if (tutor.nylas_grant_id) {
+        const tz = (tutor.timezone as string | null) ?? 'UTC';
+        const events = await fetchTutorEvents(tutor.nylas_grant_id as string, startUnix, endUnix, tz);
+        hoursCurrent = Math.round(
+          events
+            .filter(ev => ev.kind === 'session')
+            .reduce((sum, ev) => sum + Math.max(0, ev.end - ev.start), 0) * 100,
+        ) / 100;
+      }
+      return {
+        id: tutor.id as string,
+        name: tutor.name as string,
+        initials: initials(tutor.name as string),
+        hoursCurrent,
+        hoursMax: (tutor.max_weekly_hours as number | null) ?? 20,
+      };
+    }),
+  );
+
+  const activeTutors = teamRows.length;
+  const onboarding   = onboardingCount ?? 0;
   const atCap        = TUTORS.filter(t => t.hoursCurrent >= t.hoursMax).length;
   const underbooked  = TUTORS.filter(t => t.hoursCurrent < t.hoursMin).length;
 
@@ -270,7 +312,7 @@ export default async function DashboardPage() {
               </Link>
             }
           >
-            <TeamSnapshot tutors={TUTORS} />
+            <TeamSnapshot tutors={teamRows} />
           </DashCard>
 
           <DashCard
