@@ -225,7 +225,19 @@ export async function fetchTutor(
     return false;
   });
 
-  return rowToTutor(tutorResult.data as unknown as RawTutorRow, pendingChanges, filteredReqs);
+  const tutorRow = tutorResult.data as unknown as RawTutorRow;
+  const tutor = rowToTutor(tutorRow, pendingChanges, filteredReqs);
+
+  if (tutorRow.nylas_grant_id) {
+    try {
+      const events = await fetchTutorEventsForCapacity(tutorRow.nylas_grant_id);
+      tutor.hoursCurrent = computeWeeklyHours(events);
+    } catch {
+      // Non-fatal: show 0h if Nylas is unavailable
+    }
+  }
+
+  return tutor;
 }
 
 /** Fetch all active tutors, ordered by name, with current weekly hours from Nylas. */
