@@ -9,6 +9,8 @@
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/lib/types/database';
 import type { Tutor, TutorSubject, TutorSubjectChange, TutorAvailabilityRequest, SubjectConf, CoordConf, SubjectChangeType, SubjectChangeStatus, AvailabilityRequestType, AvailabilityRequestStatus } from '@/lib/types/domain';
+import { fetchTutorEventsForCapacity } from '@/lib/nylas/events';
+import { computeWeeklyHours } from '@/lib/utils/capacity';
 
 type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
 
@@ -226,7 +228,7 @@ export async function fetchTutor(
   return rowToTutor(tutorResult.data as unknown as RawTutorRow, pendingChanges, filteredReqs);
 }
 
-/** Fetch all active tutors, ordered by name. */
+/** Fetch all active tutors, ordered by name, with current weekly hours from Nylas. */
 export async function fetchAllTutors(supabase: SupabaseInstance): Promise<Tutor[]> {
   const { data, error } = await supabase
     .from('users')
@@ -236,6 +238,25 @@ export async function fetchAllTutors(supabase: SupabaseInstance): Promise<Tutor[
     .order('name');
 
   if (error) throw error;
-  // fetchAllTutors is for coordinator views — no pending changes or requests needed
-  return (data ?? []).map(row => rowToTutor(row as unknown as RawTutorRow, [], []));
+  const rows = (data ?? []) as unknown as RawTutorRow[];
+
+  // Fan out Nylas capacity fetches for tutors with a connected calendar.
+  const hoursMap = new Map<string, number>();
+  await Promise.all(
+    rows
+      .filter(r => r.nylas_grant_id)
+      .map(async r => {
+        try {
+          const events = await fetchTutorEventsForCapacity(r.nylas_grant_id!);
+          hoursMap.set(r.id, computeWeeklyHours(events));
+        } catch {
+          // Non-fatal: tutor shows 0h if Nylas is unavailable
+        }
+      }),
+  );
+
+  return rows.map(row => {
+    const tutor = rowToTutor(row, [], []);
+    return { ...tutor, hoursCurrent: hoursMap.get(row.id) ?? 0 };
+  });
 }

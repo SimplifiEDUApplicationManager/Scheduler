@@ -174,6 +174,46 @@ export async function fetchTutorEvents(
     .filter((ev): ev is TutorEvent => ev !== null);
 }
 
+// ── Capacity event fetch ──────────────────────────────────────────────────────
+
+import type { NylasEventForCapacity } from '@/lib/utils/capacity';
+import { weekBounds } from '@/lib/utils/capacity';
+
+/**
+ * Fetch all calendar events in the current ISO week (Mon–Sun UTC) for a
+ * tutor's grant, returning them shaped for `computeWeeklyHours` in capacity.ts.
+ */
+export async function fetchTutorEventsForCapacity(
+  grantId: string,
+): Promise<NylasEventForCapacity[]> {
+  const { start, end } = weekBounds();
+  const startSec = Math.floor(start / 1000);
+  const endSec   = Math.floor(end   / 1000);
+
+  const calendarIds = await fetchCalendarIds(grantId);
+  const perCalendar = await Promise.all(
+    calendarIds.map(id => fetchEventsForCalendar(grantId, id, startSec, endSec)),
+  );
+
+  const seen = new Set<string>();
+  const result: NylasEventForCapacity[] = [];
+  for (const batch of perCalendar) {
+    for (const ev of batch) {
+      if (seen.has(ev.id)) continue;
+      seen.add(ev.id);
+      const when = ev.when;
+      if (when.object !== 'timespan') continue;
+      result.push({
+        start_time: when.start_time,
+        end_time:   when.end_time,
+        title:      ev.title ?? '',
+        metadata:   null,
+      });
+    }
+  }
+  return result;
+}
+
 // ── Week range helper ─────────────────────────────────────────────────────────
 
 // ── Booking creation ──────────────────────────────────────────────────────────
