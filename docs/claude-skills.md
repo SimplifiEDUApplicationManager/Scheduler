@@ -109,6 +109,29 @@ Claude looks up the open request in the app and the tutor's email automatically 
 
 ---
 
+## `/request` — Log an intake transcript as a new request
+
+Paste a client intake summary or call transcript and Claude will parse it, create a new tutoring request in the app, and recommend 3 tutors for the match.
+
+**Say something like:**
+- `/request` followed by pasting the intake transcript
+- `log this intake: [paste transcript]`
+- `create a request from this intake call summary`
+
+**No inputs required beyond the transcript.** Claude extracts student name, subject, schedule, timezone, rate, and notes automatically.
+
+**What Claude does:**
+1. Parses the transcript to extract all structured fields
+2. Creates a new open request in the app (visible in the coordinator dashboard)
+3. Queries active tutors who teach the requested subject
+4. Recommends 3 tutors ranked by subject confidence, rate compatibility, and personality fit
+
+**What Claude returns:** Confirmation that the request was created, plus a ranked list of 3 tutor recommendations with one-sentence reasoning for each. From there, use `/send-request` to propose one.
+
+**Multiple subjects:** If the transcript mentions multiple subjects (e.g. "Algebra and executive functioning support"), Claude creates one request per subject.
+
+---
+
 ## `/show-availability` — Weekly overview of all tutor availability
 
 Get a at-a-glance view of every active tutor's open hours over the next 7 days (working hours minus already-booked calendar events).
