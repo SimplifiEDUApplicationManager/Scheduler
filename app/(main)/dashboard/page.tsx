@@ -3,6 +3,7 @@ import {
   TUTORS,
   INVITATIONS,
 } from '@/lib/data/mock';
+import { fetchAllTutors } from '@/lib/data/tutors';
 import { createClient } from '@/lib/supabase/server';
 import { KpiTile } from '@/components/features/dashboard/KpiTile';
 import { AlertsStrip } from '@/components/features/dashboard/AlertsStrip';
@@ -44,7 +45,7 @@ export default async function DashboardPage() {
   const userTz = userRow?.timezone;
 
   const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }] = await Promise.all([
+  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
       .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
@@ -65,6 +66,12 @@ export default async function DashboardPage() {
       .from('requests')
       .select('id, source')
       .eq('status', 'open'),
+    supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'TUTOR')
+      .eq('status', 'PENDING'),
+    fetchAllTutors(supabase),
   ]);
 
   // Fetch tutor names for availability requests
@@ -129,14 +136,14 @@ export default async function DashboardPage() {
   const expired      = INVITATIONS.filter(i => i.status === 'expired');
   const accepted7d   = INVITATIONS.filter(i => i.status === 'accepted').length;
 
-  const activeTutors = TUTORS.filter(t => t.status === 'active').length;
-  const onboarding   = TUTORS.filter(t => t.status === 'onboarding').length;
-  const atCap        = TUTORS.filter(t => t.hoursCurrent >= t.hoursMax).length;
-  const underbooked  = TUTORS.filter(t => t.hoursCurrent < t.hoursMin).length;
+  const activeTutors = realTutors.length;
+  const onboarding   = onboardingCount ?? 0;
+  const atCap        = realTutors.filter(t => t.hoursCurrent >= t.hoursMax).length;
+  const underbooked  = realTutors.filter(t => t.hoursCurrent < t.hoursMin).length;
 
-  const totalCurrent = TUTORS.reduce((a, t) => a + t.hoursCurrent, 0);
-  const totalMax     = TUTORS.reduce((a, t) => a + t.hoursMax, 0);
-  const capacityPct  = Math.round((totalCurrent / totalMax) * 100);
+  const totalCurrent = realTutors.reduce((a, t) => a + t.hoursCurrent, 0);
+  const totalMax     = realTutors.reduce((a, t) => a + t.hoursMax, 0);
+  const capacityPct  = totalMax > 0 ? Math.round((totalCurrent / totalMax) * 100) : 0;
 
   const pendingReviews = pendingReviewItems.length;
   const pendingAvailability = pendingAvailabilityItems.length;
@@ -270,7 +277,7 @@ export default async function DashboardPage() {
               </Link>
             }
           >
-            <TeamSnapshot tutors={TUTORS} />
+            <TeamSnapshot tutors={realTutors} />
           </DashCard>
 
           <DashCard
