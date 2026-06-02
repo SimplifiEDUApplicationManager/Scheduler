@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
+import { createServiceClient } from '@/lib/supabase/server';
+import { sendProposalEmail } from '@/lib/resend/emails';
 import type { Json } from '@/lib/types/database';
 import { isValidRate } from '@/lib/utils/rate';
+
+const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
 
 /**
  * POST /api/proposals
@@ -59,6 +63,33 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message, status: 500 }, { status: 500 });
+  }
+
+  // Send proposal notification email to tutor (fire-and-forget — don't fail the request if email fails)
+  if (appUrl) {
+    const serviceClient = createServiceClient();
+    const { data: tutor } = await serviceClient
+      .from('users')
+      .select('email, name')
+      .eq('id', tutor_id as string)
+      .single();
+
+    if (tutor) {
+      sendProposalEmail(
+        tutor.email,
+        tutor.name ?? tutor.email.split('@')[0],
+        {
+          studentName:  student_name as string,
+          subject:      subject as string,
+          schedule:     requested_schedule as Array<{ day: number; start: number; end: number }>,
+          timezone:     timezone as string,
+          startDate:    (start_date as string | undefined) ?? null,
+          notes:        (notes as string | undefined) ?? null,
+          offeredRate:  isValidRate(offered_rate) ? (offered_rate as number) : null,
+        },
+        appUrl,
+      ).catch(() => { /* swallow — email failure is non-fatal */ });
+    }
   }
 
   return NextResponse.json({ id: data.id }, { status: 201 });
