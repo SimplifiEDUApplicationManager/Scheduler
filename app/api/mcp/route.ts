@@ -50,6 +50,21 @@ async function sbGet(table: string, qs: string): Promise<unknown[]> {
   return res.json() as Promise<unknown[]>;
 }
 
+async function sbInsert(table: string, row: Record<string, unknown>): Promise<void> {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      apikey: SB_SVC_KEY,
+      Authorization: `Bearer ${SB_SVC_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify(row),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
+}
+
 function textContent(text: string) {
   return { content: [{ type: 'text', text }] };
 }
@@ -242,6 +257,44 @@ After calling this tool, for each task:
         tasks: tasks.map(t => ({ gid: t.gid, name: t.name, notes: t.notes, due_on: t.due_on, permalink_url: t.permalink_url })),
       }, null, 2));
     }),
+  tool('leave_feedback', 'Leave a comment or note for Austin to review. Use this any time something works well, something is confusing, a skill gives a wrong result, or you have a feature request.',
+    {
+      message:  z.string().describe('Your feedback, bug report, or feature request'),
+      context:  z.string().optional().describe('Which skill or task you were doing when you hit this (e.g. "send_proposal", "sync_requests")'),
+    },
+    async ({ message, context }) => {
+      // Identify who is leaving feedback via the skill API key
+      let coordinator_name: string | null = null;
+      try {
+        const profile = await appGet('/api/coordinator/profile') as { name?: string };
+        coordinator_name = profile.name ?? null;
+      } catch {
+        // non-fatal — store without name
+      }
+
+      await sbInsert('skill_feedback', {
+        message,
+        context: context ?? null,
+        coordinator_name,
+        created_at: new Date().toISOString(),
+      });
+
+      return textContent(`Got it${coordinator_name ? `, ${coordinator_name}` : ''}. Feedback saved — Austin will review it when he's back.`);
+    }),
+
+  tool('show_feedback', "Show all stored skill feedback. Austin uses this to review comments left by coordinators.",
+    {
+      limit: z.number().default(50).describe('Max number of entries to return (newest first)'),
+    },
+    async ({ limit }) => {
+      const rows = await sbGet(
+        'skill_feedback',
+        `order=created_at.desc&limit=${limit}&select=message,context,coordinator_name,created_at`,
+      );
+      if (!rows.length) return textContent('No feedback yet.');
+      return textContent(JSON.stringify(rows, null, 2));
+    }),
+
 ];
 
 // ── MCP protocol handler ──────────────────────────────────────────────────────
