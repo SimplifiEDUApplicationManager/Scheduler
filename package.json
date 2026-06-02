@@ -16,12 +16,14 @@
     "@nylas/react": "^3.2.7",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.0",
+    "@vercel/mcp-adapter": "^0.3.2",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "resend": "^6.12.4"
+    "resend": "^6.12.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
