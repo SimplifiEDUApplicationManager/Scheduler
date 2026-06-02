@@ -334,7 +334,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '24px 32px 120px', display: 'grid', gridTemplateColumns: '192px minmax(0,1fr)', gap: 32 }}>
 
         {/* Sticky sub-nav */}
-        <aside style={{ position: 'sticky', top: 24, alignSelf: 'start', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <aside data-tour="settings-subnav" style={{ position: 'sticky', top: 24, alignSelf: 'start', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div style={{ fontSize: 10, color: '#A1A1AA', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '6px 10px 10px' }}>Jump to</div>
           {NAV.map(([id, label]) => {
             const active = activeSection === id;
@@ -486,7 +486,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           </Card>
 
           {/* My subjects */}
-          <Card id="subjects" title="My subjects" subtitle="The subjects you teach. Coordinators see your confidence level when filtering tutors.">
+          <Card id="subjects" dataTour="settings-subjects" title="My subjects" subtitle="The subjects you teach. Coordinators see your confidence level when filtering tutors.">
             {/* Confidence legend */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 14, padding: '10px 14px', background: '#FAFAFA', borderRadius: 8 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#52525B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>My confidence</span>
@@ -656,7 +656,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
               <b>Careful:</b> disconnecting your calendar hides your availability from coordinators until a new calendar is connected.
             </div>
             <div style={{ height: 1, background: '#F5F5F5', margin: '0 0 16px' }} />
-            <Row label="Personal booking page" sub="A Nylas-hosted page students can use to book time directly with you, based on your working hours and connected calendar.">
+            <Row label="Personal booking page" dataTour="settings-booking-preview" sub="A Nylas-hosted page students can use to book time directly with you, based on your working hours and connected calendar.">
               {bookingUrl ? (
                 <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                   <input readOnly value={bookingUrl} style={{ ...input(), fontFamily: 'monospace', fontSize: 12 }} />
@@ -836,9 +836,9 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
 
 // ─── Local helper components ──────────────────────────────────────────────────
 
-function Card({ id, title, subtitle, children, danger }: { id: SectionId; title: string; subtitle?: string; children: ReactNode; danger?: boolean }) {
+function Card({ id, dataTour, title, subtitle, children, danger }: { id: SectionId; dataTour?: string; title: string; subtitle?: string; children: ReactNode; danger?: boolean }) {
   return (
-    <section id={`sec-${id}`} style={{ background: '#fff', border: `1px solid ${danger ? '#FECACA' : '#E4E4E7'}`, borderRadius: 12, padding: 20, marginBottom: 16, scrollMarginTop: 20 }}>
+    <section id={`sec-${id}`} data-tour={dataTour} style={{ background: '#fff', border: `1px solid ${danger ? '#FECACA' : '#E4E4E7'}`, borderRadius: 12, padding: 20, marginBottom: 16, scrollMarginTop: 20 }}>
       <div style={{ marginBottom: 16 }}>
         <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: danger ? '#991B1B' : '#18181B' }}>{title}</h3>
         {subtitle && <p style={{ fontSize: 12, color: '#71717A', margin: '4px 0 0', lineHeight: 1.5 }}>{subtitle}</p>}
@@ -848,9 +848,9 @@ function Card({ id, title, subtitle, children, danger }: { id: SectionId; title:
   );
 }
 
-function Row({ label, sub, children }: { label: string; sub?: string; children: ReactNode }) {
+function Row({ label, sub, dataTour, children }: { label: string; sub?: string; dataTour?: string; children: ReactNode }) {
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div data-tour={dataTour} style={{ marginBottom: 14 }}>
       <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#3F3F46', marginBottom: sub ? 2 : 6 }}>{label}</label>
       {sub && <div style={{ fontSize: 11, color: '#A1A1AA', marginBottom: 6 }}>{sub}</div>}
       {children}

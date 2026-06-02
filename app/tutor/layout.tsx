@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { Header } from '@/components/features/Header';
+import { DanielleTour } from '@/components/features/onboarding/DanielleTour';
 import { DEV_BYPASS } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 
@@ -9,6 +10,7 @@ export default async function TutorLayout({ children }: { children: React.ReactN
       <>
         <Header />
         <main className="flex-1 overflow-hidden flex flex-col min-h-0">{children}</main>
+        <DanielleTour />
       </>
     );
   }
@@ -29,6 +31,7 @@ export default async function TutorLayout({ children }: { children: React.ReactN
     <>
       <Header authUser={{ name: row.name, email: row.email, navRole: 'tutor', dbRole: row.role }} />
       <main className="flex-1 overflow-hidden flex flex-col min-h-0">{children}</main>
+      <DanielleTour />
     </>
   );
 }

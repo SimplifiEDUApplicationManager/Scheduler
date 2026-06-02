@@ -147,7 +147,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
           <p style={{ fontSize: 12, color: '#71717A', margin: '4px 0 14px' }}>
             Student matches sent by your coordinators. Open a row to review and respond.
           </p>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div data-tour="proposals-filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {FILTERS.map(([k, label, n, c]) => (
               <button key={k} onClick={() => setFilter(k)} style={{ padding: '6px 12px', border: 'none', borderRadius: 999, cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', background: filter === k ? c : '#F5F5F5', color: filter === k ? '#fff' : '#52525B', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'background 120ms' }}>
                 {label}
@@ -160,7 +160,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
 
       {/* List */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px 40px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div data-tour="proposals-first-row" style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {visible.length === 0 && (
             <div style={{ padding: 64, textAlign: 'center', background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12 }}>
               <div style={{ fontSize: 24, color: '#A7F3D0', marginBottom: 10 }}>✓</div>
@@ -170,7 +170,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
               </div>
             </div>
           )}
-          {visible.map(p => (
+          {visible.map((p) => (
             <ProposalRow
               key={p.id}
               proposal={p}

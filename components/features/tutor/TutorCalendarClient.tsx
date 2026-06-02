@@ -144,7 +144,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
       {/* ── Left: profile + proposals ─────────────────────────────── */}
       <aside className="w-[380px] shrink-0 border-r border-border-default bg-white flex flex-col min-h-0">
         {/* Profile */}
-        <div className="px-5 py-4 border-b border-border-default shrink-0">
+        <div data-tour="tutor-profile-card" className="px-5 py-4 border-b border-border-default shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <Avatar initials={me.initials} size="xl" tone="brand" />
             <div className="min-w-0">
@@ -204,7 +204,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
         </div>
 
         {/* Proposals list — only show pending; resolved proposals are view-only on the proposals tab */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-4 flex flex-col gap-2.5">
+        <div data-tour="tutor-proposals-sidebar" className="flex-1 overflow-y-auto min-h-0 px-4 pb-4 flex flex-col gap-2.5">
           {proposals.filter(p => p.status === 'pending').map(p => (
             <ProposalCard
               key={p.id}
@@ -224,7 +224,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
       </aside>
 
       {/* ── Right: calendar ────────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-w-0 min-h-0">
+      <main data-tour="tutor-calendar-grid" className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Toolbar */}
         <div className="px-5 py-3 border-b border-border-default flex items-center gap-3 shrink-0 bg-white">
           <div className="min-w-0">
@@ -263,7 +263,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
           </div>
 
           {/* Week / Month toggle */}
-          <div className="flex items-center p-0.5 bg-surface-3 rounded-lg">
+          <div data-tour="tutor-cal-toggle" className="flex items-center p-0.5 bg-surface-3 rounded-lg">
             {(['week', 'month'] as CalView[]).map(v => (
               <button key={v} onClick={() => setCalView(v)}
                 className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all ${calView === v ? 'bg-white text-fg-1 shadow-xs' : 'text-fg-3 hover:text-fg-2'}`}>

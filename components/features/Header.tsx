@@ -96,6 +96,7 @@ export function Header({ authUser }: { authUser?: AuthUser }) {
             <Link
               key={href}
               href={href}
+              data-tour={`tab-${label}`}
               className={cn(
                 'px-2.5 py-1.5 rounded-md text-sm transition-colors',
                 isActive
