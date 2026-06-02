@@ -195,7 +195,7 @@ export function OnboardingWizard({ initialName, email }: Props) {
         ))}
       </div>
 
-      <div className="bg-surface-1 rounded-2xl shadow-lg w-full max-w-md p-8">
+      <div className={cn("bg-surface-1 rounded-2xl shadow-lg w-full p-8", step === 3 ? "max-w-xl" : "max-w-md")}>
 
         {/* Step 1: About you */}
         {step === 1 && (
