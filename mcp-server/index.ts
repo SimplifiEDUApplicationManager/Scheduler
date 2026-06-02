@@ -228,6 +228,95 @@ function createMcpServer() {
     },
   );
 
+  // ── sync_requests ─────────────────────────────────────────────────────────
+  s.tool(
+    'sync_requests',
+    `Fetch all incomplete tasks from the "New Tutoring Request" section of the coordinator's Asana project, plus the app's subject list.
+
+After calling this tool:
+1. For each task, extract ALL subjects from the notes (look for "Subjects:" line — multiple subjects = multiple requests).
+2. For each (task × subject) pair, call create_request with:
+   - student_name: task name (strip any "Tutoring - " prefix)
+   - student_email: parsed from notes ("Student Email:" line)
+   - subject: matched against the returned subjects list (case-insensitive, partial match ok; if no match set to null and append original to notes)
+   - schedule: inferred from notes using these rules:
+       "evenings and weekends" → Mon–Fri day:1-5 start:18 end:23, Sat–Sun day:6,0 start:8 end:23
+       "evenings" → all 7 days start:18 end:23
+       "weekdays" → Mon–Fri start:8 end:23
+       "weekends" → Sat–Sun start:8 end:23
+       "morning" = start:8 end:12, "afternoon" = start:13 end:18, "evening" = start:18 end:23
+   - timezone: infer IANA from notes (MSK→Europe/Moscow, ET→America/New_York, PT→America/Los_Angeles, etc.)
+   - start_date: task due_on (already ISO format)
+   - notes: full original task notes
+   - asana_task_id: "{gid}::{subject_lowercase_underscored}" (e.g. "1234::ap_calculus_bc") — this makes it idempotent (safe to run twice)
+3. Return a summary table of all submitted requests.`,
+    {},
+    async () => {
+      // Get coordinator profile (asana_project_id) via the app API
+      const profile = await appGet('/api/coordinator/profile') as {
+        id: string; asana_project_id: string | null;
+      };
+
+      if (!profile.asana_project_id) {
+        return { isError: true, content: [{ type: 'text' as const, text: 'No Asana project connected. Go to app Settings → Asana to connect your project.' }] };
+      }
+
+      // Get asana_access_token directly from Supabase (not exposed via profile endpoint)
+      const coordRows = await sbGet(
+        'users',
+        `id=eq.${profile.id}&select=asana_access_token&limit=1`,
+      ) as { asana_access_token: string | null }[];
+
+      const token = coordRows[0]?.asana_access_token;
+      if (!token) {
+        return { isError: true, content: [{ type: 'text' as const, text: 'No Asana access token stored. Go to app Settings → Asana to reconnect.' }] };
+      }
+
+      // Find "New Tutoring Request" section in the project
+      const sectionsRes = await fetch(
+        `https://app.asana.com/api/1.0/projects/${profile.asana_project_id}/sections?opt_fields=gid,name`,
+        { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
+      );
+      if (!sectionsRes.ok) {
+        const body = await sectionsRes.text();
+        return { isError: true, content: [{ type: 'text' as const, text: `Asana error fetching sections: ${sectionsRes.status} ${body.slice(0, 200)}` }] };
+      }
+      const { data: sections } = await sectionsRes.json() as { data: { gid: string; name: string }[] };
+      const section = sections.find(s => /new.?tutoring.?request/i.test(s.name));
+      if (!section) {
+        return { isError: true, content: [{ type: 'text' as const, text: `No "New Tutoring Request" section found in the project. Sections found: ${sections.map(s => s.name).join(', ')}` }] };
+      }
+
+      // Fetch incomplete tasks in that section
+      const tasksRes = await fetch(
+        `https://app.asana.com/api/1.0/sections/${section.gid}/tasks?opt_fields=gid,name,notes,due_on,permalink_url&completed_since=now`,
+        { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
+      );
+      if (!tasksRes.ok) {
+        const body = await tasksRes.text();
+        return { isError: true, content: [{ type: 'text' as const, text: `Asana error fetching tasks: ${tasksRes.status} ${body.slice(0, 200)}` }] };
+      }
+      const { data: tasks } = await tasksRes.json() as {
+        data: { gid: string; name: string; notes: string; due_on: string | null; permalink_url: string }[]
+      };
+
+      // Fetch app subject list for matching
+      const subjects = await appGet('/api/subjects') as { id: string; name: string }[];
+
+      return ok(JSON.stringify({
+        task_count: tasks.length,
+        subjects: subjects.map(s => s.name),
+        tasks: tasks.map(t => ({
+          gid:           t.gid,
+          name:          t.name,
+          notes:         t.notes,
+          due_on:        t.due_on,
+          permalink_url: t.permalink_url,
+        })),
+      }, null, 2));
+    },
+  );
+
   return s;
 }
 
