@@ -70,8 +70,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Status guards ──────────────────────────────────────────────────────────
-  if (userRow.status === 'PENDING' && pathname !== '/onboarding') {
-    return NextResponse.redirect(new URL('/onboarding', request.url));
+  if (userRow.status === 'PENDING') {
+    // Allow PENDING users through only on /onboarding; redirect everywhere else.
+    return pathname === '/onboarding'
+      ? response
+      : NextResponse.redirect(new URL('/onboarding', request.url));
   }
 
   if (userRow.status === 'DISABLED') {
