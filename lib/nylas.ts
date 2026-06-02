@@ -19,17 +19,33 @@ export function nylasApiUri(): string {
 
 // ── State encoding ────────────────────────────────────────────────────────────
 
-interface OAuthState {
-  userId: string;
+/** Minimal representation of a working-hour window, mirroring the Nylas OpenHours type. */
+export interface OAuthOpenHours {
+  days: number[];    // 0=Sun, 1=Mon … 6=Sat
+  start: string;     // "HH:MM"
+  end: string;       // "HH:MM"
 }
 
-/** Encode userId into the OAuth `state` param (base64url JSON). */
-export function encodeOAuthState(userId: string): string {
-  return Buffer.from(JSON.stringify({ userId } satisfies OAuthState)).toString('base64url');
+interface OAuthState {
+  userId: string;
+  openHours?: OAuthOpenHours[];
+  cushionMinutes?: number;
+}
+
+/** Encode userId (+ optional scheduling prefs) into the OAuth `state` param. */
+export function encodeOAuthState(
+  userId: string,
+  openHours?: OAuthOpenHours[],
+  cushionMinutes?: number,
+): string {
+  const payload: OAuthState = { userId };
+  if (openHours && openHours.length > 0) payload.openHours = openHours;
+  if (cushionMinutes && cushionMinutes > 0) payload.cushionMinutes = cushionMinutes;
+  return Buffer.from(JSON.stringify(payload)).toString('base64url');
 }
 
 export type DecodeStateResult =
-  | { ok: true; userId: string }
+  | { ok: true; userId: string; openHours?: OAuthOpenHours[]; cushionMinutes?: number }
   | { ok: false };
 
 /** Decode the `state` param returned by Nylas. Returns ok:false if malformed. */
@@ -37,7 +53,12 @@ export function decodeOAuthState(state: string): DecodeStateResult {
   try {
     const decoded = JSON.parse(Buffer.from(state, 'base64url').toString()) as Partial<OAuthState>;
     if (!decoded.userId) return { ok: false };
-    return { ok: true, userId: decoded.userId };
+    return {
+      ok: true,
+      userId: decoded.userId,
+      openHours: decoded.openHours,
+      cushionMinutes: decoded.cushionMinutes,
+    };
   } catch {
     return { ok: false };
   }

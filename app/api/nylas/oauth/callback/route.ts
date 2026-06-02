@@ -49,11 +49,13 @@ export async function GET(request: Request) {
   // This gives them a booking page URL immediately without any extra steps.
   if (role === 'TUTOR' && !userRow?.nylas_scheduler_config_id && userRow?.name && userRow?.email) {
     const created = await createSchedulerConfig({
-      tutorName:   userRow.name,
-      tutorEmail:  userRow.email,
-      timezone:    (userRow.timezone as string | null) ?? 'America/New_York',
-      grantId:     exchange.grantId,
-      meetingLink: (userRow.meeting_link as string | null) ?? undefined,
+      tutorName:      userRow.name,
+      tutorEmail:     userRow.email,
+      timezone:       (userRow.timezone as string | null) ?? 'America/New_York',
+      grantId:        exchange.grantId,
+      meetingLink:    (userRow.meeting_link as string | null) ?? undefined,
+      openHours:      decoded.ok ? decoded.openHours : undefined,
+      cushionMinutes: decoded.ok ? decoded.cushionMinutes : undefined,
     });
     if (created.configId !== null) {
       const { error: configSaveError } = await supabase
