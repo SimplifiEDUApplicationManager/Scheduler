@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { WorkingHoursEditor } from '@/components/features/tutor/WorkingHoursEditor';
+import type { HoursMap } from '@/lib/types/scheduler';
+import { EMPTY_HOURS_MAP } from '@/lib/types/scheduler';
 import { formatTimezoneLabel } from '@/lib/utils/timezone';
 import { RATE_OPTIONS } from '@/lib/utils/rate';
 import { cn } from '@/lib/utils/cn';
 
-// Curated timezone list covering the most common regions.
-// Tutors can always update their timezone later in Settings.
 const TIMEZONES = [
   'America/New_York',
   'America/Chicago',
@@ -34,32 +35,22 @@ const TIMEZONES = [
   'Pacific/Auckland',
 ];
 
-// 0=Sun, 1=Mon ... 6=Sat (Nylas convention)
-const DAYS = [
-  { value: 1, label: 'M', full: 'Monday' },
-  { value: 2, label: 'T', full: 'Tuesday' },
-  { value: 3, label: 'W', full: 'Wednesday' },
-  { value: 4, label: 'T', full: 'Thursday' },
-  { value: 5, label: 'F', full: 'Friday' },
-  { value: 6, label: 'S', full: 'Saturday' },
-  { value: 0, label: 'S', full: 'Sunday' },
-];
-
 const CUSHION_OPTIONS = [0, 5, 10, 15, 20] as const;
 
-function buildTimeOptions(startHour: number, endHour: number) {
-  const options: { value: string; label: string }[] = [];
-  for (let h = startHour; h <= endHour; h++) {
-    const hh = String(h).padStart(2, '0');
-    const suffix = h < 12 ? 'am' : 'pm';
-    const h12 = h % 12 === 0 ? 12 : h % 12;
-    options.push({ value: `${hh}:00`, label: `${h12} ${suffix}` });
-  }
-  return options;
-}
+// Day key -> Nylas day number (0=Sun, 1=Mon ... 6=Sat)
+const DAY_NUM: Record<string, number> = {
+  sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
+};
 
-const START_OPTIONS = buildTimeOptions(6, 22);
-const END_OPTIONS   = buildTimeOptions(7, 23);
+// Default Mon-Fri 9am-5pm, matching the settings page default.
+const DEFAULT_HOURS: HoursMap = {
+  ...EMPTY_HOURS_MAP,
+  mon: [{ start: '09:00', end: '17:00' }],
+  tue: [{ start: '09:00', end: '17:00' }],
+  wed: [{ start: '09:00', end: '17:00' }],
+  thu: [{ start: '09:00', end: '17:00' }],
+  fri: [{ start: '09:00', end: '17:00' }],
+};
 
 interface Props {
   initialName: string;
@@ -81,10 +72,8 @@ export function OnboardingWizard({ initialName, email }: Props) {
   const [meetingLink, setLink]  = useState('');
 
   // Step 3
-  const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [startTime, setStartTime]       = useState('09:00');
-  const [endTime, setEndTime]           = useState('17:00');
-  const [cushion, setCushion]           = useState<number>(0);
+  const [hours, setHours]       = useState<HoursMap>({ ...DEFAULT_HOURS });
+  const [cushion, setCushion]   = useState<number>(0);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -113,15 +102,31 @@ export function OnboardingWizard({ initialName, email }: Props) {
     setStep(3);
   }
 
-  // -- Step 3 — save profile, advance to calendar step ----------------------
+  // -- Step 3 — validate hours, save profile, advance to calendar step -------
   async function submitStep3(e: FormEvent) {
     e.preventDefault();
-    if (selectedDays.length === 0) {
-      setError('Please select at least one working day'); return;
+
+    const hasAnyWindow = Object.values(hours).some(ws => ws.length > 0);
+    if (!hasAnyWindow) {
+      setError('Please set at least one available time window'); return;
     }
-    if (startTime >= endTime) {
-      setError('End time must be after start time'); return;
+    for (const [day, windows] of Object.entries(hours)) {
+      for (const w of windows) {
+        if (w.start >= w.end) {
+          setError(`End time must be after start time on ${day.charAt(0).toUpperCase() + day.slice(1)}`);
+          return;
+        }
+        // Check for overlapping windows on the same day
+        const others = windows.filter(x => x !== w);
+        for (const other of others) {
+          if (w.start < other.end && other.start < w.end) {
+            setError(`Overlapping time windows on ${day.charAt(0).toUpperCase() + day.slice(1)}`);
+            return;
+          }
+        }
+      }
     }
+
     setError(null);
     setSubmitting(true);
     try {
@@ -150,26 +155,26 @@ export function OnboardingWizard({ initialName, email }: Props) {
     }
   }
 
-  // -- Build Nylas auth URL encoding working hours + cushion in state --------
+  // -- Build Nylas auth URL encoding per-day windows + cushion in state ------
   function connectCalendar() {
-    const openHours = [{ days: selectedDays, start: startTime, end: endTime }];
+    // Convert HoursMap to OAuthOpenHours[] — one entry per day+window pair.
+    const openHours = Object.entries(hours).flatMap(([key, windows]) =>
+      windows.map(w => ({ days: [DAY_NUM[key]!], start: w.start, end: w.end })),
+    ).filter(e => e.days[0] !== undefined);
+
     const url = new URL('/api/nylas/auth', window.location.origin);
     url.searchParams.set('email', email);
-    url.searchParams.set('open_hours', JSON.stringify(openHours));
+    if (openHours.length > 0) url.searchParams.set('open_hours', JSON.stringify(openHours));
     if (cushion > 0) url.searchParams.set('cushion', String(cushion));
     window.location.href = url.toString();
-  }
-
-  function toggleDay(day: number) {
-    setSelectedDays(prev =>
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day],
-    );
   }
 
   const tzOptions = TIMEZONES.map(tz => ({
     value: tz,
     label: formatTimezoneLabel(tz),
   }));
+
+  const activeDayCount = Object.values(hours).filter(ws => ws.length > 0).length;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-surface-2 p-6">
@@ -179,9 +184,7 @@ export function OnboardingWizard({ initialName, email }: Props) {
           <div key={s} className="flex items-center gap-2">
             <div className={cn(
               'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors',
-              step >= s
-                ? 'bg-brand-primary text-fg-on-brand'
-                : 'bg-surface-3 text-fg-3',
+              step >= s ? 'bg-brand-primary text-fg-on-brand' : 'bg-surface-3 text-fg-3',
             )}>
               {s}
             </div>
@@ -237,7 +240,6 @@ export function OnboardingWizard({ initialName, email }: Props) {
               <p className="text-sm text-fg-3 mt-1">These help coordinators match you with the right students.</p>
             </div>
 
-            {/* Min rate */}
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold text-fg-1">Minimum hourly rate</span>
               <div className="flex gap-2">
@@ -260,7 +262,6 @@ export function OnboardingWizard({ initialName, email }: Props) {
               <p className="text-xs text-fg-3">Coordinators won't propose students below this rate.</p>
             </div>
 
-            {/* Min + max hours */}
             <div className="flex gap-3">
               <Input
                 label="Min weekly hours"
@@ -284,7 +285,6 @@ export function OnboardingWizard({ initialName, email }: Props) {
               />
             </div>
 
-            {/* Meeting link */}
             <Input
               label="Video conferencing link (optional)"
               type="url"
@@ -297,18 +297,11 @@ export function OnboardingWizard({ initialName, email }: Props) {
             {error && <p className="text-xs text-danger-ink">{error}</p>}
 
             <div className="flex gap-3 mt-1">
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                className="flex-1"
-                onClick={() => { setError(null); setStep(1); }}
-              >
+              <Button type="button" variant="secondary" size="lg" className="flex-1"
+                onClick={() => { setError(null); setStep(1); }}>
                 Back
               </Button>
-              <Button type="submit" size="lg" className="flex-1">
-                Continue
-              </Button>
+              <Button type="submit" size="lg" className="flex-1">Continue</Button>
             </div>
           </form>
         )}
@@ -318,49 +311,10 @@ export function OnboardingWizard({ initialName, email }: Props) {
           <form onSubmit={submitStep3} className="flex flex-col gap-5">
             <div>
               <h1 className="text-xl font-extrabold text-fg-1">Your availability</h1>
-              <p className="text-sm text-fg-3 mt-1">When are you typically free to tutor? You can fine-tune this later.</p>
+              <p className="text-sm text-fg-3 mt-1">Set your weekly working hours. You can add multiple windows per day.</p>
             </div>
 
-            {/* Working days */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-fg-1">Working days</span>
-              <div className="flex gap-1.5">
-                {DAYS.map(({ value, label, full }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    title={full}
-                    onClick={() => toggleDay(value)}
-                    className={cn(
-                      'flex-1 h-9 rounded-md border text-xs font-bold transition-colors',
-                      selectedDays.includes(value)
-                        ? 'bg-brand-primary text-fg-on-brand border-brand-primary'
-                        : 'bg-surface-1 text-fg-1 border-border-default hover:border-border-strong',
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Time window */}
-            <div className="flex gap-3">
-              <Select
-                label="Start time"
-                options={START_OPTIONS}
-                value={startTime}
-                onChange={e => setStartTime(e.target.value)}
-                required
-              />
-              <Select
-                label="End time"
-                options={END_OPTIONS}
-                value={endTime}
-                onChange={e => setEndTime(e.target.value)}
-                required
-              />
-            </div>
+            <WorkingHoursEditor hours={hours} onChange={setHours} />
 
             {/* Session cushion */}
             <div className="flex flex-col gap-1.5">
@@ -388,14 +342,8 @@ export function OnboardingWizard({ initialName, email }: Props) {
             {error && <p className="text-xs text-danger-ink">{error}</p>}
 
             <div className="flex gap-3 mt-1">
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                className="flex-1"
-                onClick={() => { setError(null); setStep(2); }}
-                disabled={submitting}
-              >
+              <Button type="button" variant="secondary" size="lg" className="flex-1"
+                onClick={() => { setError(null); setStep(2); }} disabled={submitting}>
                 Back
               </Button>
               <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
@@ -419,8 +367,8 @@ export function OnboardingWizard({ initialName, email }: Props) {
             <div className="bg-surface-2 rounded-xl p-4 flex flex-col gap-1.5 text-sm text-fg-2">
               <p>Profile saved.</p>
               <p>
-                Working hours and{' '}
-                {cushion === 0 ? 'no session break' : `${cushion}-min break between sessions`}{' '}
+                {activeDayCount} day{activeDayCount !== 1 ? 's' : ''} of availability and{' '}
+                {cushion === 0 ? 'no session break' : `${cushion}-min break`}{' '}
                 will be applied on connect.
               </p>
             </div>
