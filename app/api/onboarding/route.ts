@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { name, timezone, minRate, maxWeeklyHours, meetingLink } = body;
+  const { name, timezone, minRate, maxWeeklyHours, minWeeklyHours, meetingLink } = body;
 
   if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ error: 'Name is required' }, { status: 422 });
@@ -39,9 +39,13 @@ export async function POST(request: Request) {
   if (!isValidRate(minRate)) {
     return NextResponse.json({ error: 'Rate must be 20, 25, 30, 35, or 40' }, { status: 422 });
   }
-  const hours = Number(maxWeeklyHours);
-  if (!Number.isInteger(hours) || hours < 6 || hours > 40) {
+  const maxHours = Number(maxWeeklyHours);
+  if (!Number.isInteger(maxHours) || maxHours < 6 || maxHours > 40) {
     return NextResponse.json({ error: 'Max weekly hours must be between 6 and 40' }, { status: 422 });
+  }
+  const minHours = Number(minWeeklyHours ?? 6);
+  if (!Number.isInteger(minHours) || minHours < 1 || minHours > maxHours) {
+    return NextResponse.json({ error: 'Min weekly hours must be between 1 and max weekly hours' }, { status: 422 });
   }
 
   const { error } = await svc
@@ -50,7 +54,8 @@ export async function POST(request: Request) {
       name:             String(name).trim(),
       timezone:         String(timezone),
       min_rate:         minRate as number,
-      max_weekly_hours: hours,
+      max_weekly_hours: maxHours,
+      min_weekly_hours: minHours,
       meeting_link:     meetingLink ? String(meetingLink).trim() : null,
       status:           'ACTIVE',
     })

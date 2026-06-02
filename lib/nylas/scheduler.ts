@@ -243,6 +243,8 @@ export async function createSchedulerConfig(params: {
   timezone: string;
   grantId: string;
   meetingLink?: string;
+  openHours?: Array<{ days: number[]; start: string; end: string }>;
+  cushionMinutes?: number;
 }): Promise<{ configId: string; bookingUrl: string } | { configId: null; error: string }> {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://simplifi-scheduler.vercel.app').replace(/\/$/, '');
 
@@ -260,7 +262,22 @@ export async function createSchedulerConfig(params: {
       availability: { calendar_ids: ['primary'] },
       booking:      { calendar_id: 'primary' },
     }],
-    availability: { duration_minutes: 60, interval_minutes: 0 },
+    availability: {
+      duration_minutes: 60,
+      interval_minutes: params.cushionMinutes ?? 0,
+      ...(params.openHours && params.openHours.length > 0
+        ? {
+            availability_rules: {
+              default_open_hours: params.openHours.map(h => ({
+                days:     h.days,
+                start:    h.start,
+                end:      h.end,
+                timezone: params.timezone || 'America/New_York',
+              })),
+            },
+          }
+        : {}),
+    },
     event_booking: {
       title: 'Tutoring Session',
       timezone: params.timezone || 'America/New_York',

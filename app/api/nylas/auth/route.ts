@@ -22,12 +22,25 @@ export async function GET(request: NextRequest) {
     loginHint = data?.email ?? null;
   }
 
+  // Optional scheduling prefs forwarded from the onboarding wizard.
+  const openHoursRaw = searchParams.get('open_hours');
+  const cushionRaw   = searchParams.get('cushion');
+  let openHours: import('@/lib/nylas').OAuthOpenHours[] | undefined;
+  let cushionMinutes: number | undefined;
+  try {
+    if (openHoursRaw) openHours = JSON.parse(openHoursRaw) as import('@/lib/nylas').OAuthOpenHours[];
+  } catch { /* ignore malformed */ }
+  if (cushionRaw) {
+    const n = parseInt(cushionRaw, 10);
+    if (!isNaN(n) && n >= 0) cushionMinutes = n;
+  }
+
   const params = new URLSearchParams({
     client_id:     process.env.NYLAS_CLIENT_ID!,
     redirect_uri:  nylasCallbackUri(),
     response_type: 'code',
     access_type:   'offline',
-    state:         encodeOAuthState(user.id),
+    state:         encodeOAuthState(user.id, openHours, cushionMinutes),
   });
 
   if (loginHint) params.set('login_hint', loginHint);
