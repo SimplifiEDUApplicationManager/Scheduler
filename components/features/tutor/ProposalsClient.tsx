@@ -160,7 +160,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
 
       {/* List */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px 40px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div data-tour="proposals-first-row" style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {visible.length === 0 && (
             <div style={{ padding: 64, textAlign: 'center', background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12 }}>
               <div style={{ fontSize: 24, color: '#A7F3D0', marginBottom: 10 }}>✓</div>
@@ -170,16 +170,15 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
               </div>
             </div>
           )}
-          {visible.map((p, i) => (
-            <div key={p.id} {...(i === 0 ? { 'data-tour': 'proposals-first-row' } : {})}>
-              <ProposalRow
-                proposal={p}
-                displayStatus={p.displayStatus}
-                conflicts={p.conflicts}
-                declineReason={declineReasons[p.id]}
-                onOpen={() => openDetail(p.id)}
-              />
-            </div>
+          {visible.map((p) => (
+            <ProposalRow
+              key={p.id}
+              proposal={p}
+              displayStatus={p.displayStatus}
+              conflicts={p.conflicts}
+              declineReason={declineReasons[p.id]}
+              onOpen={() => openDetail(p.id)}
+            />
           ))}
         </div>
       </div>

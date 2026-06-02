@@ -101,8 +101,8 @@ const STEPS: Step[] = [
     key: 'prop-row',
     target: '[data-tour="proposals-first-row"]',
     pose: 'point',
-    title: 'Each row is a proposal',
-    body: 'Click any row to open the full detail — student context, a calendar preview, and the Accept / Decline buttons.',
+    title: 'The proposals list',
+    body: 'Each row is a match a coordinator sent you. Click any row to open the full detail — student context, a calendar preview, and the Accept / Decline buttons.',
     cta: 'Next',
   },
   {
