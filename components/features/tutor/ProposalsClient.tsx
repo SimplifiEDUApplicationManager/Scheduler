@@ -147,7 +147,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
           <p style={{ fontSize: 12, color: '#71717A', margin: '4px 0 14px' }}>
             Student matches sent by your coordinators. Open a row to review and respond.
           </p>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div data-tour="proposals-filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {FILTERS.map(([k, label, n, c]) => (
               <button key={k} onClick={() => setFilter(k)} style={{ padding: '6px 12px', border: 'none', borderRadius: 999, cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', background: filter === k ? c : '#F5F5F5', color: filter === k ? '#fff' : '#52525B', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'background 120ms' }}>
                 {label}
@@ -170,15 +170,16 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
               </div>
             </div>
           )}
-          {visible.map(p => (
-            <ProposalRow
-              key={p.id}
-              proposal={p}
-              displayStatus={p.displayStatus}
-              conflicts={p.conflicts}
-              declineReason={declineReasons[p.id]}
-              onOpen={() => openDetail(p.id)}
-            />
+          {visible.map((p, i) => (
+            <div key={p.id} {...(i === 0 ? { 'data-tour': 'proposals-first-row' } : {})}>
+              <ProposalRow
+                proposal={p}
+                displayStatus={p.displayStatus}
+                conflicts={p.conflicts}
+                declineReason={declineReasons[p.id]}
+                onOpen={() => openDetail(p.id)}
+              />
+            </div>
           ))}
         </div>
       </div>
