@@ -176,7 +176,15 @@ Asana tasks appear as a request queue in the coordinator dashboard. Each request
 When a proposal is accepted by a tutor, the Asana task is updated with the assignment details (tutor name, scheduled time) and moved to a "Matched" section.
 
 ### Invite Tutors
-Same as V1: email + name + role → Supabase Auth `inviteUserByEmail()`. Pending tutors appear in the tutor list with a "Pending" badge.
+Coordinator enters email + name → invite email sent via Resend. The invited tutor's status is `PENDING`.
+
+**Tutor self-onboarding** (required before they become `ACTIVE`):
+1. Tutor clicks the invite link → lands on `/onboarding`.
+2. Wizard collects: name (pre-filled), timezone, minimum hourly rate, max weekly hours, and optional meeting link.
+3. On submit (`POST /api/onboarding`) the tutor's profile is saved and status is set to `ACTIVE`.
+4. Tutor is redirected to `/tutor/settings` to connect their calendar.
+
+Pending (not yet onboarded) tutors appear in the coordinator tutor list with a "Pending" badge. There is no coordinator approval step — the tutor activates themselves by completing onboarding.
 
 ### Subject Management
 Coordinators can:
