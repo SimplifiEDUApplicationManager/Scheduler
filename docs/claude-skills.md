@@ -132,6 +132,20 @@ Paste a client intake summary or call transcript and Claude will parse it, creat
 
 ---
 
+## `/show-requests` — View your open request queue
+
+See all your open tutoring requests at a glance — student, subject, source, schedule, and how long ago it arrived.
+
+**Say something like:**
+- `/show-requests`
+- `what requests do I have?`
+- `show my queue`
+- `/show-requests all` — include already-matched requests too
+
+**What Claude returns:** A numbered list of requests with student name, subject, source (Asana or manual), proposed schedule, and received time.
+
+---
+
 ## `/show-availability` — Weekly overview of all tutor availability
 
 Get a at-a-glance view of every active tutor's open hours over the next 7 days (working hours minus already-booked calendar events).

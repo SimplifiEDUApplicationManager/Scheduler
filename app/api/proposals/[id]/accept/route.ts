@@ -4,6 +4,7 @@ import { requireActiveRole } from '@/lib/auth';
 import { acceptProposal, transitionHttpStatus } from '@/lib/data/proposals';
 import { createTutoringEvent, tupleToUnix } from '@/lib/nylas/events';
 import { createServiceClient } from '@/lib/supabase/server';
+import { listAsanaSections, moveTaskToSection } from '@/lib/asana/client';
 import type { Database } from '@/lib/types/database';
 
 type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
@@ -58,9 +59,14 @@ export async function POST(
   }
 
   // Side-effects run after the accept is committed; failures never block the response.
-  await createBookingEvent(id, tutorId, auth.supabase, placements).catch(err => {
-    console.error('[proposals/accept] Nylas booking failed:', err);
-  });
+  await Promise.all([
+    createBookingEvent(id, tutorId, auth.supabase, placements).catch(err => {
+      console.error('[proposals/accept] Nylas booking failed:', err);
+    }),
+    matchRequestOnAccept(id).catch(err => {
+      console.error('[proposals/accept] Request matching failed:', err);
+    }),
+  ]);
 
   return NextResponse.json({ id });
 }
@@ -131,4 +137,97 @@ async function createBookingEvent(
       .update({ nylas_event_id: savedEventId })
       .eq('id', proposalId);
   }
+}
+
+/**
+ * After a proposal is accepted:
+ *   1. Find the linked request (via asana_task_id or coordinator+student+subject match).
+ *   2. Mark it as 'matched' and set matched_proposal_id.
+ *   3. If the request came from Asana, move the task to the "Tutor Pairing" section.
+ */
+async function matchRequestOnAccept(proposalId: string): Promise<void> {
+  const supabase = createServiceClient();
+
+  const { data: proposal } = await supabase
+    .from('proposals')
+    .select('id, asana_task_id, coordinator_id, student_email, subject')
+    .eq('id', proposalId)
+    .single();
+
+  if (!proposal) return;
+
+  // Find the linked open request — asana_task_id match first, then fuzzy fallback.
+  let requestId: string | null = null;
+
+  if (proposal.asana_task_id) {
+    const { data: req } = await supabase
+      .from('requests')
+      .select('id')
+      .eq('asana_task_id', proposal.asana_task_id)
+      .eq('status', 'open')
+      .maybeSingle();
+    requestId = req?.id ?? null;
+  }
+
+  if (!requestId && proposal.coordinator_id && proposal.student_email) {
+    const { data: req } = await supabase
+      .from('requests')
+      .select('id')
+      .eq('coordinator_id', proposal.coordinator_id)
+      .eq('student_email', proposal.student_email)
+      .eq('subject', proposal.subject)
+      .eq('status', 'open')
+      .limit(1)
+      .maybeSingle();
+    requestId = req?.id ?? null;
+  }
+
+  if (requestId) {
+    await supabase
+      .from('requests')
+      .update({ status: 'matched', matched_proposal_id: proposalId })
+      .eq('id', requestId);
+  }
+
+  // Move the Asana task to the "Tutor Pairing" section (best-effort).
+  if (proposal.asana_task_id && proposal.coordinator_id) {
+    await moveAsanaTaskToTutorPairing(
+      supabase,
+      proposal.coordinator_id,
+      proposal.asana_task_id,
+    ).catch(err => {
+      console.error('[proposals/accept] Asana section move failed:', err);
+    });
+  }
+}
+
+async function moveAsanaTaskToTutorPairing(
+  supabase: ReturnType<typeof createServiceClient>,
+  coordinatorId: string,
+  taskGid: string,
+): Promise<void> {
+  const { data: coord } = await supabase
+    .from('users')
+    .select('asana_access_token, asana_project_id')
+    .eq('id', coordinatorId)
+    .single();
+
+  if (!coord?.asana_access_token || !coord?.asana_project_id) return;
+
+  const sectionsResult = await listAsanaSections(
+    coord.asana_access_token,
+    coord.asana_project_id,
+  );
+  if (!sectionsResult.ok) {
+    console.error('[proposals/accept] listAsanaSections failed:', sectionsResult.error);
+    return;
+  }
+
+  const section = sectionsResult.data.find(s => /tutor.?pairing/i.test(s.name));
+  if (!section) {
+    console.error('[proposals/accept] "Tutor Pairing" section not found in project', coord.asana_project_id);
+    return;
+  }
+
+  await moveTaskToSection(coord.asana_access_token, section.gid, taskGid);
 }
