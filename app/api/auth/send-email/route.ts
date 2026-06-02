@@ -25,26 +25,38 @@ function buildActionLink(tokenHash: string, type: string, redirectTo: string): s
 }
 
 /**
- * Verify the Supabase hook JWT.
- * hookSecret format: "v1,whsec_<base64-encoded-key>"
- * Supabase signs with HS256 using the raw key bytes decoded from whsec_.
+ * Verify the Supabase hook JWT (HS256).
+ * Tries multiple key interpretations to handle Supabase version differences:
+ *   1. Full secret string as key (e.g. "v1,whsec_...")
+ *   2. Raw bytes decoded from the base64 part after "whsec_"
  */
 function verifyHookSignature(authHeader: string | null, hookSecret: string): boolean {
   if (!authHeader) return false;
-  const jwt = authHeader.replace(/^Bearer\s+/i, '');
-  const parts = jwt.split('.');
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+
+  // Direct string comparison (some Supabase versions send the raw secret)
+  if (token === hookSecret) return true;
+
+  const parts = token.split('.');
   if (parts.length !== 3) return false;
   const [header, payload, signature] = parts;
+  const message = `${header}.${payload}`;
 
+  function toBase64url(buf: Buffer): string {
+    return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  }
+
+  // Attempt 1: full secret string as the HMAC key
+  if (toBase64url(createHmac('sha256', hookSecret).update(message).digest()) === signature) return true;
+
+  // Attempt 2: decoded bytes from whsec_<base64>
   const match = hookSecret.match(/whsec_([A-Za-z0-9+/=]+)/);
-  if (!match) return false;
-  const keyBytes = Buffer.from(match[1], 'base64');
+  if (match) {
+    const keyBytes = Buffer.from(match[1], 'base64');
+    if (toBase64url(createHmac('sha256', keyBytes).update(message).digest()) === signature) return true;
+  }
 
-  const expected = createHmac('sha256', keyBytes)
-    .update(`${header}.${payload}`)
-    .digest('base64url');
-
-  return expected === signature;
+  return false;
 }
 
 export async function POST(req: NextRequest) {

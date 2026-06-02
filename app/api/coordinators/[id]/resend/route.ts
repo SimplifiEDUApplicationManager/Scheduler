@@ -25,19 +25,30 @@ export async function POST(
     return NextResponse.json({ error: 'Coordinator not found' }, { status: 404 });
   }
 
-  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-    type: 'magiclink',
+  // Try 'invite' first (works for PENDING users with unconfirmed email).
+  // Fall back to 'magiclink' if Supabase rejects the invite because the
+  // user has already confirmed their email address.
+  let linkData, linkError;
+  ({ data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+    type: 'invite',
     email: userRow.email,
-    options: {
-      redirectTo: `${siteUrl}/auth/callback?next=/onboarding`,
-    },
-  });
+    options: { redirectTo: `${siteUrl}/auth/callback?next=/onboarding` },
+  }));
 
   if (linkError) {
-    return NextResponse.json({ error: linkError.message }, { status: 400 });
+    if (linkError.status === 422 || linkError.message?.toLowerCase().includes('already')) {
+      ({ data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: userRow.email,
+        options: { redirectTo: `${siteUrl}/auth/callback?next=/onboarding` },
+      }));
+    }
+    if (linkError) {
+      return NextResponse.json({ error: linkError.message }, { status: 400 });
+    }
   }
 
-  const actionLink = linkData.properties.action_link;
+  const actionLink = linkData?.properties?.action_link;
   if (!actionLink) {
     return NextResponse.json({ error: 'Failed to generate invite link' }, { status: 500 });
   }
