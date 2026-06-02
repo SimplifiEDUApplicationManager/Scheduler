@@ -106,8 +106,8 @@ export function OnboardingWizard({ initialName, email }: Props) {
     if (!Number.isInteger(max) || max < 6 || max > 40) {
       setError('Max weekly hours must be between 6 and 40'); return;
     }
-    if (!Number.isInteger(min) || min < 1 || min > max) {
-      setError('Min weekly hours must be between 1 and max weekly hours'); return;
+    if (!Number.isInteger(min) || min < 6 || min > max) {
+      setError('Min weekly hours must be between 6 and max weekly hours'); return;
     }
     setError(null);
     setStep(3);
@@ -265,11 +265,11 @@ export function OnboardingWizard({ initialName, email }: Props) {
               <Input
                 label="Min weekly hours"
                 type="number"
-                min={1}
+                min={6}
                 max={40}
                 value={minHours}
                 onChange={e => setMinHours(e.target.value)}
-                hint="Minimum you'd like (>=1)"
+                hint="Minimum you'd like (6-40)"
                 required
               />
               <Input
