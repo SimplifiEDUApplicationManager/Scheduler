@@ -113,6 +113,11 @@ export interface AsanaProject {
   workspace: { gid: string };
 }
 
+export interface AsanaSection {
+  gid: string;
+  name: string;
+}
+
 
 interface AsanaMe {
   gid: string;
@@ -168,6 +173,34 @@ export async function addAsanaComment(
   text: string,
 ): Promise<AsanaResult<AsanaComment>> {
   return asanaPost<AsanaComment>(`/tasks/${taskGid}/stories`, pat, { text });
+}
+
+/**
+ * List all sections in a project.
+ */
+export async function listAsanaSections(
+  pat: string,
+  projectGid: string,
+): Promise<AsanaResult<AsanaSection[]>> {
+  return asanaGet<AsanaSection[]>(
+    `/projects/${projectGid}/sections?opt_fields=gid,name&limit=100`,
+    pat,
+  );
+}
+
+/**
+ * Move a task into a section.
+ */
+export async function moveTaskToSection(
+  pat: string,
+  sectionGid: string,
+  taskGid: string,
+): Promise<AsanaResult<Record<string, never>>> {
+  return asanaPost<Record<string, never>>(
+    `/sections/${sectionGid}/addTask`,
+    pat,
+    { task: taskGid },
+  );
 }
 
 /**
