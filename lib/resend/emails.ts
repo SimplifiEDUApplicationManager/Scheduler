@@ -255,7 +255,8 @@ function renderWeekCalendar(
 
   // Header row: day abbreviation + date
   const headers = DAY_ABBR.map((abbr, i) => {
-    const dayMs = weekStartMs + i * 24 * 60 * 60 * 1000;
+    // Use noon UTC (+12 h) so formatting in any UTC±12 timezone still shows the correct local date.
+    const dayMs = weekStartMs + i * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000;
     const dateLabel = formatInTimeZone(new Date(dayMs), tz, 'M/d');
     return `<td width="14%" style="padding:0 2px 6px;text-align:center;vertical-align:top">
       <div style="font-size:9px;font-weight:700;color:#A1A1AA;letter-spacing:0.06em">${abbr}</div>
@@ -313,7 +314,7 @@ export async function sendWeeklySummaryEmail(
     ? `<tr><td style="padding:6px 0;font-size:12px;font-weight:600;color:#71717A;white-space:nowrap;padding-right:16px">Proposals pending</td><td style="padding:6px 0;font-size:13px;color:#18181B;font-weight:600">${data.proposalsPending}</td></tr>`
     : '';
 
-  const calendarBlock = data.weekSessions.length > 0 || data.weekStartMs
+  const calendarBlock = data.weekSessions.length > 0
     ? renderWeekCalendar(data.weekSessions, data.weekStartMs, data.tutorTimezone)
     : '';
 
