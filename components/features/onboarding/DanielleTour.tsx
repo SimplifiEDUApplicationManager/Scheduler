@@ -287,6 +287,8 @@ export function DanielleTour() {
   function close() {
     setOpen(false);
     localStorage.setItem('sim_intro_seen', '1');
+    // Set a cookie so the server knows not to inject the demo proposal on next load.
+    document.cookie = 'sim_tour_done=1;path=/;max-age=31536000;SameSite=Lax';
     setSeen(true);
   }
 
