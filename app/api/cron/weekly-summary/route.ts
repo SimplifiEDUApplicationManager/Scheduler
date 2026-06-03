@@ -130,7 +130,6 @@ export async function GET(req: Request) {
       if (!appUrl) { results.skipped++; continue; }
 
       const name   = tutor.name ?? tutor.email.split('@')[0];
-      const tz     = tutor.timezone ?? 'America/New_York';
       const result = await sendWeeklySummaryEmail(
         tutor.email,
         name,
