@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { nylasGet, nylasPut } from '@/lib/nylas/client';
-import { createSchedulerConfig, fmtWorkingHours, fmtBreak, fmtExceptions } from '@/lib/nylas/scheduler';
+import { createSchedulerConfig, fetchGrantEmail, fmtWorkingHours, fmtBreak, fmtExceptions } from '@/lib/nylas/scheduler';
 import type { SchedulerSummary, OpenHours } from '@/lib/nylas/scheduler';
 import type { DayKey, HoursMap, SchedulerException, SchedulerPrefs } from '@/lib/types/scheduler';
 import { EMPTY_HOURS_MAP } from '@/lib/types/scheduler';
@@ -300,8 +300,22 @@ export async function PUT(request: Request) {
     const openHours = toDefaultOpenHours(hours, timezone, allDayDates);
 
     // Update participants to carry partial-day exceptions.
+    // If the config has no participants (created by an older code path), rebuild
+    // a default one from the tutor's grant info — Nylas rejects a PUT with an
+    // empty participants array with "must be associated with at least one participant".
     const existingParticipants = (cfg.participants ?? []) as Record<string, unknown>[];
-    const updatedParticipants = existingParticipants.map(p => ({
+    let participantsBase = existingParticipants;
+    if (participantsBase.length === 0) {
+      const grantEmail = await fetchGrantEmail(row.nylas_grant_id as string);
+      participantsBase = [{
+        name:          row.name,
+        email:         grantEmail ?? row.email,
+        is_organizer:  true,
+        availability:  { calendar_ids: ['primary'] },
+        booking:       { calendar_id: 'primary' },
+      }];
+    }
+    const updatedParticipants = participantsBase.map(p => ({
       ...p,
       specific_time_availability: specificTimeAvailability,
     }));
