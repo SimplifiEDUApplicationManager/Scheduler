@@ -4,7 +4,7 @@ import type { TutorProposal, TutorEvent } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { DAY_NAMES } from '@/lib/utils/tutors';
 
-export type DisplayStatus = 'pending' | 'reviewed' | 'accepted' | 'declined';
+export type DisplayStatus = 'pending' | 'reviewed' | 'accepted' | 'declined' | 'expired';
 
 interface ConflictEntry { tupleIdx: number; hits: TutorEvent[] }
 
@@ -21,6 +21,7 @@ const STATUS_META: Record<DisplayStatus, { label: string; bg: string; fg: string
   reviewed: { label: 'Reviewed', bg: '#EEF2FF', fg: '#3730A3', dot: '#6366F1' },
   accepted: { label: 'Accepted', bg: '#DCFCE7', fg: '#166534', dot: '#22C55E' },
   declined: { label: 'Declined', bg: '#FEE2E2', fg: '#991B1B', dot: '#DC2626' },
+  expired:  { label: 'Expired',  bg: '#F4F4F5', fg: '#71717A', dot: '#A1A1AA' },
 };
 
 function fmtH(h: number): string {

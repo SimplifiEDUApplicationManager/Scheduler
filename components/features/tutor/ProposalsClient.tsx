@@ -37,6 +37,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
   function getDisplayStatus(p: TutorProposal): DisplayStatus {
     if (p.status === 'accepted') return 'accepted';
     if (p.status === 'declined') return 'declined';
+    if (p.status === 'expired')  return 'expired';
     return reviewed.has(p.id) ? 'reviewed' : 'pending';
   }
 
