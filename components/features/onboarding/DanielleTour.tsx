@@ -9,7 +9,7 @@
 //
 // Target elements are marked with data-tour="<key>" attributes.
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 
@@ -173,6 +173,15 @@ const STEPS: Step[] = [
   },
 ];
 
+// Walk backwards from stepIdx to find the nearest step that declared a path.
+// This lets back-navigation route correctly even for steps that don't set path.
+function effectivePath(stepIdx: number): string | undefined {
+  for (let i = stepIdx; i >= 0; i--) {
+    if (STEPS[i]?.path) return STEPS[i]!.path;
+  }
+  return undefined;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function DanielleTour() {
@@ -216,19 +225,27 @@ export function DanielleTour() {
 
     setPose(s.pose);
 
-    // If this step needs a different route, navigate first.
-    // The effect will re-fire when pathname updates.
-    if (s.path && pathname !== s.path) {
-      router.push(s.path);
+    // Navigate to the correct page for this step — walk backwards to find the
+    // nearest step that declared a path (fixes back-navigation across routes).
+    const targetPath = effectivePath(step);
+    if (targetPath && pathname !== targetPath) {
+      router.push(targetPath);
       return;
     }
 
     if (!s.target) { setSpot(null); return; }
 
     // Retry until the element is in the DOM (tab transitions mount async).
-    let cancelled  = false;
-    let attempts   = 0;
-    let scrolled   = false;
+    let cancelled = false;
+    let attempts  = 0;
+    let scrolled  = false;
+    let ro: ResizeObserver | null = null;
+
+    const snap = (el: HTMLElement) => {
+      if (cancelled) return;
+      const r = el.getBoundingClientRect();
+      setSpot({ x: r.left, y: r.top, w: r.width, h: r.height });
+    };
 
     const measure = () => {
       if (cancelled) return;
@@ -240,17 +257,37 @@ export function DanielleTour() {
       }
       if (!scrolled) {
         scrolled = true;
-        try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch { /* noop */ }
-        setTimeout(measure, 320);
+        // Use instant scroll so the position is stable on the very next frame —
+        // smooth scroll + a hardcoded delay races against variable-height sections.
+        try { el.scrollIntoView({ block: 'center', behavior: 'instant' }); } catch { /* noop */ }
+        requestAnimationFrame(() => snap(el));
+        // Watch for height changes (e.g. subjects list expanding) and re-snap.
+        if (typeof ResizeObserver !== 'undefined') {
+          ro = new ResizeObserver(() => snap(el));
+          ro.observe(el);
+        }
         return;
       }
-      const r = el.getBoundingClientRect();
-      setSpot({ x: r.left, y: r.top, w: r.width, h: r.height });
+      snap(el);
+    };
+
+    // Re-snap on any scroll — capture phase catches inner overflow containers
+    // (the settings page scrolls via an inner div, not window).
+    const onScroll = () => {
+      const el = document.querySelector<HTMLElement>(s.target!);
+      if (el) snap(el);
     };
 
     const t = setTimeout(measure, 30);
     window.addEventListener('resize', measure);
-    return () => { cancelled = true; clearTimeout(t); window.removeEventListener('resize', measure); };
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', onScroll, true);
+      ro?.disconnect();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, pathname, open]);
 
