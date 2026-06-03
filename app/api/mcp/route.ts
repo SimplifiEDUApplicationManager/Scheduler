@@ -107,20 +107,24 @@ function tool<S extends z.ZodRawShape>(
 
 const TOOLS: Tool[] = [
 
-  tool('show_requests', "List the coordinator's tutoring requests.",
+  tool('show_requests', "List the coordinator's tutoring requests. Returns full request data including student_email and requested_schedule so send_proposal can be called directly from the results.",
     { status: z.enum(['open', 'all']).default('open').describe('open = only unmatched; all = every request') },
     async ({ status }) => {
       const rows = await appGet('/api/requests') as Record<string, unknown>[];
       const filtered = status === 'open' ? rows.filter(r => r.status === 'open') : rows;
+      // Return all fields needed for send_proposal — do not strip student_email or requested_schedule
       const summary = filtered.map(r => ({
-        id:           r.id,
-        student:      r.student_name,
-        subject:      r.subject ?? '—',
-        status:       r.status,
-        timezone:     r.timezone ?? '—',
-        start_date:   r.start_date ?? '—',
-        offered_rate: r.offered_rate ? `$${r.offered_rate}/hr` : '—',
-        notes:        typeof r.notes === 'string' ? r.notes.slice(0, 120) : '',
+        id:                 r.id,
+        student_name:       r.student_name,
+        student_email:      r.student_email ?? null,
+        subject:            r.subject ?? null,
+        status:             r.status,
+        timezone:           r.timezone ?? null,
+        start_date:         r.start_date ?? null,
+        offered_rate:       r.offered_rate ?? null,
+        requested_schedule: r.requested_schedule ?? [],
+        asana_task_id:      r.asana_task_id ?? null,
+        notes:              r.notes ?? null,
       }));
       return textContent(JSON.stringify({ count: summary.length, requests: summary }, null, 2));
     }),
@@ -132,37 +136,63 @@ const TOOLS: Tool[] = [
       return textContent(JSON.stringify(tutors, null, 2));
     }),
 
-  tool('send_proposal', 'Send a tutoring job proposal to a tutor. Pass all schedule/timezone/notes from the request record directly.',
+  tool('send_proposal', 'Send a tutoring job proposal to a tutor. Prefer passing request_id (from show_requests) and the tool will look up all student details automatically. Only pass the other fields if you do not have a request_id.',
     {
       tutor_email:   z.string().describe("Tutor's email. Use list_tutors if you only have their name."),
-      student_name:  z.string(),
-      student_email: z.string(),
-      subject:       z.string(),
+      request_id:    z.string().optional().describe('ID from show_requests — if provided, all student fields are pulled from the request automatically'),
+      student_name:  z.string().optional(),
+      student_email: z.string().optional(),
+      subject:       z.string().optional(),
       schedule: z.array(z.object({
         day:   z.number().describe('0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat'),
         start: z.number().describe('Start hour 0–23'),
         end:   z.number().describe('End hour 0–23'),
-      })),
-      timezone:      z.string().describe('IANA timezone'),
+      })).optional(),
+      timezone:      z.string().optional().describe('IANA timezone'),
       start_date:    z.string().optional().describe('YYYY-MM-DD'),
-      notes:         z.string().optional().describe('Full notes from the request record'),
-      offered_rate:  z.number().optional().describe('Hourly rate in dollars'),
-      asana_task_id: z.string().optional(),
+      notes:         z.string().optional(),
+      offered_rate:  z.number().optional(),
     },
-    async ({ tutor_email, student_name, student_email, subject, schedule, timezone,
-             start_date, notes, offered_rate, asana_task_id }) => {
+    async ({ tutor_email, request_id, student_name, student_email, subject, schedule, timezone,
+             start_date, notes, offered_rate }) => {
+      // Look up tutor
       const tutors = await sbGet(
         'users',
         `email=eq.${encodeURIComponent(tutor_email)}&role=eq.TUTOR&status=eq.ACTIVE&select=id,name&limit=1`,
       ) as { id: string; name: string }[];
-
       if (!tutors.length) return errorContent(`No active tutor found for ${tutor_email}. Use list_tutors to find the correct email.`);
 
+      // If request_id provided, pull all fields from the request record
+      if (request_id) {
+        const reqs = await sbGet(
+          'requests',
+          `id=eq.${request_id}&select=student_name,student_email,subject,requested_schedule,timezone,start_date,notes,offered_rate,asana_task_id&limit=1`,
+        ) as Record<string, unknown>[];
+        if (!reqs.length) return errorContent(`Request ${request_id} not found.`);
+        const req = reqs[0];
+        await appPost('/api/proposals', {
+          tutor_id:           tutors[0].id,
+          student_name:       req.student_name,
+          student_email:      req.student_email,
+          subject:            req.subject,
+          requested_schedule: req.requested_schedule,
+          timezone:           req.timezone,
+          start_date:         req.start_date,
+          notes:              req.notes,
+          offered_rate:       req.offered_rate,
+          asana_task_id:      req.asana_task_id,
+        });
+        return textContent(`Proposal sent to ${tutors[0].name} (${tutor_email}) — ${req.student_name}, ${req.subject}.`);
+      }
+
+      // Manual fields path
+      if (!student_name || !student_email || !subject || !schedule || !timezone) {
+        return errorContent('Provide either request_id or all of: student_name, student_email, subject, schedule, timezone.');
+      }
       await appPost('/api/proposals', {
         tutor_id: tutors[0].id, student_name, student_email, subject,
-        requested_schedule: schedule, timezone, start_date, notes, offered_rate, asana_task_id,
+        requested_schedule: schedule, timezone, start_date, notes, offered_rate,
       });
-
       return textContent(`Proposal sent to ${tutors[0].name} (${tutor_email}) — ${student_name}, ${subject}.`);
     }),
 
