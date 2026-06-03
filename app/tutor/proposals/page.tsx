@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { TUTORS, TUTOR_PROPOSALS, TUTOR_EVENTS, ME_TUTOR_ID } from '@/lib/data/mock';
 import { ProposalsClient } from '@/components/features/tutor/ProposalsClient';
@@ -8,10 +9,16 @@ import { DEMO_PROPOSAL } from '@/lib/data/demo';
 import { DEV_BYPASS } from '@/lib/env';
 
 export default async function TutorProposalsPage() {
+  const cookieStore = await cookies();
+  // sim_tour_done is set client-side when the Danielle tour completes.
+  // Only show the demo proposal to tutors who haven't finished the tour yet.
+  const tourDone = cookieStore.get('sim_tour_done')?.value === '1';
+
   if (DEV_BYPASS) {
     const me = TUTORS.find(t => t.id === ME_TUTOR_ID);
     if (!me) return notFound();
-    return <ProposalsClient me={me} initialEvents={TUTOR_EVENTS} initialProposals={[DEMO_PROPOSAL, ...TUTOR_PROPOSALS]} />;
+    const devProposals = tourDone ? TUTOR_PROPOSALS : [DEMO_PROPOSAL, ...TUTOR_PROPOSALS];
+    return <ProposalsClient me={me} initialEvents={TUTOR_EVENTS} initialProposals={devProposals} />;
   }
 
   const supabase = await createClient();
@@ -26,5 +33,7 @@ export default async function TutorProposalsPage() {
 
   if (!me) redirect('/login');
 
-  return <ProposalsClient me={me} initialEvents={[]} initialProposals={[DEMO_PROPOSAL, ...proposals]} />;
+  const initialProposals = tourDone ? proposals : [DEMO_PROPOSAL, ...proposals];
+
+  return <ProposalsClient me={me} initialEvents={[]} initialProposals={initialProposals} />;
 }

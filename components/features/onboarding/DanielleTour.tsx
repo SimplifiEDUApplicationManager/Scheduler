@@ -199,7 +199,13 @@ export function DanielleTour() {
   useEffect(() => {
     const alreadySeen = localStorage.getItem('sim_intro_seen') === '1';
     setSeen(alreadySeen);
-    if (!alreadySeen) setOpen(true);
+    if (!alreadySeen) {
+      setOpen(true);
+    } else {
+      // Tour was already completed — sync the server-side cookie so the server
+      // knows not to inject the demo proposal on this and future page loads.
+      document.cookie = 'sim_tour_done=1;path=/;max-age=31536000;SameSite=Lax';
+    }
   }, []);
 
   // ── Auto-advance past prop-practice-wait when the tutor opens the demo ───
@@ -287,6 +293,7 @@ export function DanielleTour() {
   function close() {
     setOpen(false);
     localStorage.setItem('sim_intro_seen', '1');
+    document.cookie = 'sim_tour_done=1;path=/;max-age=31536000;SameSite=Lax';
     setSeen(true);
   }
 
