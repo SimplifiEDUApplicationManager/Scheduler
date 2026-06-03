@@ -1,12 +1,14 @@
 // app/api/cron/weekly-summary/route.ts
-// Triggered every Sunday at 7 PM ET (23:00 UTC) via Vercel Cron.
-// Sends a weekly summary email to every active tutor.
+// Triggered every hour on Sundays (0 * * * 0) via Vercel Cron.
+// Each run checks which tutors' local time is Sunday 19:xx and only sends to
+// those tutors — so every tutor receives the email at 7 PM their own timezone.
 
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { nylasList } from '@/lib/nylas/client';
 import { computeWeeklyHours, weekBounds } from '@/lib/utils/capacity';
 import { sendWeeklySummaryEmail } from '@/lib/resend/emails';
+import { toZonedTime } from 'date-fns-tz';
 
 const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
 
@@ -31,7 +33,7 @@ export async function GET(req: Request) {
 
   const { data: tutors, error } = await supabase
     .from('users')
-    .select('id, email, name, max_weekly_hours, nylas_grant_id')
+    .select('id, email, name, max_weekly_hours, nylas_grant_id, timezone')
     .eq('role', 'TUTOR')
     .eq('status', 'ACTIVE');
 
@@ -39,7 +41,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { start, end } = weekBounds();
+  const nowUtc = new Date();
+  const { start, end } = weekBounds(nowUtc.getTime());
   const startSec = Math.floor(start / 1000);
   const endSec   = Math.floor(end   / 1000);
 
@@ -47,6 +50,19 @@ export async function GET(req: Request) {
 
   for (const tutor of tutors ?? []) {
     try {
+      // ── Timezone gate: only send when it's Sunday 19:xx in the tutor's tz ──
+      const tz = tutor.timezone ?? 'America/New_York';
+      let localNow: Date;
+      try {
+        localNow = toZonedTime(nowUtc, tz);
+      } catch {
+        localNow = toZonedTime(nowUtc, 'America/New_York');
+      }
+      // getDay(): 0 = Sunday; getHours(): 19 = 7 PM
+      if (localNow.getDay() !== 0 || localNow.getHours() !== 19) {
+        results.skipped++;
+        continue;
+      }
       // ── Hours this week via Nylas ──────────────────────────────────────────
       let hoursThisWeek = 0;
       if (tutor.nylas_grant_id) {
