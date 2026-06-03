@@ -22,6 +22,7 @@ interface NylasEvent {
   busy?: boolean;
   recurrence?: string[] | null;
   description?: string | null;
+  metadata?: Record<string, string> | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -39,8 +40,10 @@ function nylasStatusToEvent(
   return 'upcoming';
 }
 
-function isTutoringSession(title: string | undefined): boolean {
-  return (title ?? '').startsWith('[Tutoring]');
+function isTutoringSession(ev: NylasEvent): boolean {
+  // Primary marker: metadata set at creation time by the platform.
+  // Fallback: [Tutoring] title prefix for events created before metadata was added.
+  return ev.metadata?.simplifi_created === 'true' || (ev.title ?? '').startsWith('[Tutoring]');
 }
 
 // ── Mapper ────────────────────────────────────────────────────────────────────
@@ -59,7 +62,7 @@ function toTutorEvent(ev: NylasEvent, tz: string): TutorEvent | null {
   const zonedEnd   = toZonedTime(endMs,   tz);
 
   const kind: TutorEventKind =
-    isTutoringSession(ev.title) ? 'session' : 'other';
+    isTutoringSession(ev) ? 'session' : 'other';
   const status: TutorEventStatus =
     nylasStatusToEvent(ev.status, startMs);
 
@@ -171,7 +174,7 @@ export async function fetchTutorEvents(
 
   return allEvents
     .map(ev => toTutorEvent(ev, tz))
-    .filter((ev): ev is TutorEvent => ev !== null);
+    .filter((ev): ev is TutorEvent => ev !== null && ev.kind === 'session');
 }
 
 // ── Capacity event fetch ──────────────────────────────────────────────────────
@@ -224,6 +227,7 @@ interface NylasEventCreateBody {
   participants?: { email: string; name: string; status?: string }[];
   location?: string;
   recurrence?: string[];
+  metadata?: Record<string, string>;
 }
 
 interface CreatedNylasEvent {
@@ -292,6 +296,7 @@ export async function createTutoringEvent(
     when: { object: 'timespan', start_time: params.startUnix, end_time: params.endUnix },
     participants: [{ email: params.studentEmail, name: params.studentName, status: 'noreply' }],
     recurrence: ['RRULE:FREQ=WEEKLY'],
+    metadata: { simplifi_created: 'true' },
     ...(params.meetingLink ? { location: params.meetingLink } : {}),
   };
 

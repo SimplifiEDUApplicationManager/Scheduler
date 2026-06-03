@@ -102,10 +102,12 @@ export async function GET(req: Request) {
             .filter(e =>
               e.when.object === 'timespan' &&
               e.when.start_time != null &&
-              e.when.end_time != null,
+              e.when.end_time != null &&
+              // Only include platform-created sessions, not personal calendar events.
+              (e.metadata?.simplifi_created === 'true' || (e.title ?? '').startsWith('[Tutoring]')),
             )
             .map(e => ({
-              title:        e.title ?? 'Session',
+              title:        e.title?.replace(/^\[Tutoring\]\s*/, '') ?? 'Session',
               startTimeSec: e.when.start_time!,
               endTimeSec:   e.when.end_time!,
             }));
@@ -130,7 +132,6 @@ export async function GET(req: Request) {
       if (!appUrl) { results.skipped++; continue; }
 
       const name   = tutor.name ?? tutor.email.split('@')[0];
-      const tz     = tutor.timezone ?? 'America/New_York';
       const result = await sendWeeklySummaryEmail(
         tutor.email,
         name,

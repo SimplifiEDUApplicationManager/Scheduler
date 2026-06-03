@@ -31,12 +31,12 @@ export interface CapacityInfo {
  * Returns true if the event should count toward the tutor's weekly hours.
  *
  * An event is a tutoring session when ANY of the following is true:
- *   1. Its title contains "[Tutoring]" (case-insensitive).
- *   2. Its metadata has `simplifi_type === "session"`.
+ *   1. Its metadata has `simplifi_created === "true"` (set by createTutoringEvent).
+ *   2. Its title contains "[Tutoring]" (case-insensitive) — fallback for older events.
  */
 export function isTutoringSession(event: NylasEventForCapacity): boolean {
+  if (event.metadata?.simplifi_created === 'true') return true;
   if (/\[tutoring\]/i.test(event.title)) return true;
-  if (event.metadata?.simplifi_type === 'session') return true;
   return false;
 }
 
