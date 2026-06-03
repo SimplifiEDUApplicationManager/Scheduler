@@ -24,6 +24,7 @@ interface Step {
   body: string;
   cta: string;
   placement?: 'center';  // default: fixed bottom-right corner
+  waitForEvent?: boolean; // hide the Next button — step only advances via a window event
 }
 
 interface Spot { x: number; y: number; w: number; h: number }
@@ -110,7 +111,7 @@ const STEPS: Step[] = [
     path: '/tutor/proposals',
     pose: 'wave',
     title: 'Time to practice!',
-    body: "I've added a practice proposal from a student named Alex Chen. Go ahead and open it — click the row, then hit Accept to see the full accept flow, including a real calendar event.",
+    body: "I've added a practice proposal — Alex Chen — straight to your inbox so you can try the review flow for real. Click the row to open it.",
     cta: "Let's do it",
     placement: 'center',
   },
@@ -118,17 +119,17 @@ const STEPS: Step[] = [
     key: 'prop-practice-wait',
     path: '/tutor/proposals',
     pose: 'idle',
-    title: 'Go accept it!',
-    body: "Click the Alex Chen row, review the details, and hit Accept. I'll jump to the next step automatically once you do.",
-    cta: 'Skip practice',
+    title: 'Open Alex Chen\'s proposal',
+    body: "Click the Alex Chen row in your inbox. I'll automatically move to the next step once you do.",
+    cta: 'Next',
+    waitForEvent: true,
   },
   {
     key: 'prop-practice-done',
     pose: 'wave',
-    title: "You accepted your first job! 🎉",
-    body: "A real calendar event was added to your connected calendar and the family got a notification. That's exactly how it works for real students.",
+    title: "That's how it works! 🎉",
+    body: "You're now looking at a real proposal. Accept or Decline using the buttons — a calendar invite goes out automatically on accept. Click Keep going when you're done.",
     cta: 'Keep going',
-    placement: 'center',
   },
   {
     key: 'set-tab',
@@ -201,20 +202,12 @@ export function DanielleTour() {
     if (!alreadySeen) setOpen(true);
   }, []);
 
-  // ── Dispatch sim:show-demo when the practice-intro step is entered ─────────
-  useEffect(() => {
-    if (!open) return;
-    if (STEPS[step]?.key === 'prop-practice-intro') {
-      window.dispatchEvent(new CustomEvent('sim:show-demo'));
-    }
-  }, [step, open]);
-
-  // ── Auto-advance past prop-practice-wait when the tutor accepts the demo ──
+  // ── Auto-advance past prop-practice-wait when the tutor opens the demo ───
   useEffect(() => {
     if (!open || STEPS[step]?.key !== 'prop-practice-wait') return;
     const handler = () => { setSpot(null); setStep(s => s + 1); };
-    window.addEventListener('sim:demo-accepted', handler);
-    return () => window.removeEventListener('sim:demo-accepted', handler);
+    window.addEventListener('sim:demo-opened', handler);
+    return () => window.removeEventListener('sim:demo-opened', handler);
   }, [step, open]);
 
   // ── Measure target element whenever step or pathname changes ──────────────
@@ -351,6 +344,7 @@ export function DanielleTour() {
           total={totalSteps}
           canBack={step > 0}
           ctaLabel={current.cta}
+          hideCta={!!current.waitForEvent}
           onNext={next}
           onBack={back}
         />
@@ -369,6 +363,7 @@ function Backdrop({ spot, dim }: { spot: Spot | null; dim: number }) {
         position: 'fixed', inset: 0, zIndex: 1000,
         background: `rgba(22,32,51,${dim})`,
         animation: 'tourFade 220ms ease-out',
+        pointerEvents: 'none',
       }} />
     );
   }
@@ -394,9 +389,9 @@ function Backdrop({ spot, dim }: { spot: Spot | null; dim: number }) {
 
 // ─── Speech bubble ────────────────────────────────────────────────────────────
 
-function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, onNext, onBack }: {
+function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, hideCta, onNext, onBack }: {
   title: string; body: string; tail: 'bottom' | 'right' | 'none';
-  step: number; total: number; canBack: boolean; ctaLabel: string;
+  step: number; total: number; canBack: boolean; ctaLabel: string; hideCta: boolean;
   onNext: () => void; onBack: () => void;
 }) {
   return (
@@ -439,9 +434,11 @@ function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, onNex
               ← Back
             </button>
           )}
-          <button onClick={onNext} style={{ height: 36, padding: '0 18px', borderRadius: 9, background: 'var(--brand-teal-600)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 4px 12px rgba(43,114,101,0.30)' }}>
-            {ctaLabel} →
-          </button>
+          {!hideCta && (
+            <button onClick={onNext} style={{ height: 36, padding: '0 18px', borderRadius: 9, background: 'var(--brand-teal-600)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 4px 12px rgba(43,114,101,0.30)' }}>
+              {ctaLabel} →
+            </button>
+          )}
         </div>
       </div>
     </div>

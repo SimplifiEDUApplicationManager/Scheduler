@@ -52,13 +52,11 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
   const [declineFor, setDeclineFor]       = useState<TutorProposal | null>(null);
   const [toast, setToast]         = useState<string | null>(null);
 
-  // ── Inject demo proposal when the tour signals it ────────────────────────
+  // ── Inject demo proposal immediately if the tour hasn't been completed ───
   useEffect(() => {
-    const handler = () => {
+    if (localStorage.getItem('sim_intro_seen') !== '1') {
       setProposals(ps => ps.some(p => p.id === 'demo-proposal') ? ps : [DEMO_PROPOSAL, ...ps]);
-    };
-    window.addEventListener('sim:show-demo', handler);
-    return () => window.removeEventListener('sim:show-demo', handler);
+    }
   }, []);
 
   function showToast(msg: string) {
@@ -103,6 +101,9 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     if (!p || p.status === 'accepted' || p.status === 'declined') return;
     setReviewed(r => { const n = new Set(r); n.add(id); return n; });
     setConsideringId(id);
+    if (id === 'demo-proposal') {
+      window.dispatchEvent(new CustomEvent('sim:demo-opened'));
+    }
   }
 
   async function handleAccept(placements: ({ day: number; start: number } | null)[]) {
