@@ -9,7 +9,7 @@
 //
 // Target elements are marked with data-tour="<key>" attributes.
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 
@@ -106,6 +106,31 @@ const STEPS: Step[] = [
     cta: 'Next',
   },
   {
+    key: 'prop-practice-intro',
+    path: '/tutor/proposals',
+    pose: 'wave',
+    title: 'Time to practice!',
+    body: "I've added a practice proposal from a student named Alex Chen. Go ahead and open it — click the row, then hit Accept to see the full accept flow, including a real calendar event.",
+    cta: "Let's do it",
+    placement: 'center',
+  },
+  {
+    key: 'prop-practice-wait',
+    path: '/tutor/proposals',
+    pose: 'idle',
+    title: 'Go accept it!',
+    body: "Click the Alex Chen row, review the details, and hit Accept. I'll jump to the next step automatically once you do.",
+    cta: 'Skip practice',
+  },
+  {
+    key: 'prop-practice-done',
+    pose: 'wave',
+    title: "You accepted your first job! 🎉",
+    body: "A real calendar event was added to your connected calendar and the family got a notification. That's exactly how it works for real students.",
+    cta: 'Keep going',
+    placement: 'center',
+  },
+  {
     key: 'set-tab',
     path: '/tutor/settings',
     target: '[data-tour="tab-Settings"]',
@@ -148,6 +173,15 @@ const STEPS: Step[] = [
   },
 ];
 
+// Walk backwards from stepIdx to find the nearest step that declared a path.
+// This lets back-navigation route correctly even for steps that don't set path.
+function effectivePath(stepIdx: number): string | undefined {
+  for (let i = stepIdx; i >= 0; i--) {
+    if (STEPS[i]?.path) return STEPS[i]!.path;
+  }
+  return undefined;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function DanielleTour() {
@@ -167,6 +201,22 @@ export function DanielleTour() {
     if (!alreadySeen) setOpen(true);
   }, []);
 
+  // ── Dispatch sim:show-demo when the practice-intro step is entered ─────────
+  useEffect(() => {
+    if (!open) return;
+    if (STEPS[step]?.key === 'prop-practice-intro') {
+      window.dispatchEvent(new CustomEvent('sim:show-demo'));
+    }
+  }, [step, open]);
+
+  // ── Auto-advance past prop-practice-wait when the tutor accepts the demo ──
+  useEffect(() => {
+    if (!open || STEPS[step]?.key !== 'prop-practice-wait') return;
+    const handler = () => { setSpot(null); setStep(s => s + 1); };
+    window.addEventListener('sim:demo-accepted', handler);
+    return () => window.removeEventListener('sim:demo-accepted', handler);
+  }, [step, open]);
+
   // ── Measure target element whenever step or pathname changes ──────────────
   useEffect(() => {
     if (!open) return;
@@ -175,19 +225,27 @@ export function DanielleTour() {
 
     setPose(s.pose);
 
-    // If this step needs a different route, navigate first.
-    // The effect will re-fire when pathname updates.
-    if (s.path && pathname !== s.path) {
-      router.push(s.path);
+    // Navigate to the correct page for this step — walk backwards to find the
+    // nearest step that declared a path (fixes back-navigation across routes).
+    const targetPath = effectivePath(step);
+    if (targetPath && pathname !== targetPath) {
+      router.push(targetPath);
       return;
     }
 
     if (!s.target) { setSpot(null); return; }
 
     // Retry until the element is in the DOM (tab transitions mount async).
-    let cancelled  = false;
-    let attempts   = 0;
-    let scrolled   = false;
+    let cancelled = false;
+    let attempts  = 0;
+    let scrolled  = false;
+    let ro: ResizeObserver | null = null;
+
+    const snap = (el: HTMLElement) => {
+      if (cancelled) return;
+      const r = el.getBoundingClientRect();
+      setSpot({ x: r.left, y: r.top, w: r.width, h: r.height });
+    };
 
     const measure = () => {
       if (cancelled) return;
@@ -199,17 +257,37 @@ export function DanielleTour() {
       }
       if (!scrolled) {
         scrolled = true;
-        try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch { /* noop */ }
-        setTimeout(measure, 320);
+        // Use instant scroll so the position is stable on the very next frame —
+        // smooth scroll + a hardcoded delay races against variable-height sections.
+        try { el.scrollIntoView({ block: 'center', behavior: 'instant' }); } catch { /* noop */ }
+        requestAnimationFrame(() => snap(el));
+        // Watch for height changes (e.g. subjects list expanding) and re-snap.
+        if (typeof ResizeObserver !== 'undefined') {
+          ro = new ResizeObserver(() => snap(el));
+          ro.observe(el);
+        }
         return;
       }
-      const r = el.getBoundingClientRect();
-      setSpot({ x: r.left, y: r.top, w: r.width, h: r.height });
+      snap(el);
+    };
+
+    // Re-snap on any scroll — capture phase catches inner overflow containers
+    // (the settings page scrolls via an inner div, not window).
+    const onScroll = () => {
+      const el = document.querySelector<HTMLElement>(s.target!);
+      if (el) snap(el);
     };
 
     const t = setTimeout(measure, 30);
     window.addEventListener('resize', measure);
-    return () => { cancelled = true; clearTimeout(t); window.removeEventListener('resize', measure); };
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', onScroll, true);
+      ro?.disconnect();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, pathname, open]);
 
@@ -275,7 +353,6 @@ export function DanielleTour() {
           ctaLabel={current.cta}
           onNext={next}
           onBack={back}
-          onSkip={close}
         />
       </div>
     </>
@@ -317,10 +394,10 @@ function Backdrop({ spot, dim }: { spot: Spot | null; dim: number }) {
 
 // ─── Speech bubble ────────────────────────────────────────────────────────────
 
-function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, onNext, onBack, onSkip }: {
+function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, onNext, onBack }: {
   title: string; body: string; tail: 'bottom' | 'right' | 'none';
   step: number; total: number; canBack: boolean; ctaLabel: string;
-  onNext: () => void; onBack: () => void; onSkip: () => void;
+  onNext: () => void; onBack: () => void;
 }) {
   return (
     <div style={{
@@ -355,10 +432,7 @@ function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, onNex
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <button onClick={onSkip} style={{ background: 'none', border: 'none', color: '#71717A', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', padding: '6px 2px' }}>
-          Skip tour
-        </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           {canBack && (
             <button onClick={onBack} style={{ height: 36, padding: '0 14px', borderRadius: 9, background: '#fff', color: '#3F3F46', border: '1px solid #E4E4E7', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
