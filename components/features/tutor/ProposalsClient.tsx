@@ -2,29 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import type { Tutor, TutorEvent, TutorProposal } from '@/lib/types/domain';
-
-// ── Demo proposal injected during the Danielle onboarding tour ────────────────
-
-const DEMO_PROPOSAL: TutorProposal = {
-  id: 'demo-proposal',
-  studentName: 'Alex Chen',
-  studentEmail: 'alex.chen@example.com',
-  subject: 'Algebra II',
-  tuples: [{ day: 2, start: 16, end: 18 }],
-  startDate: 'Next week',
-  hoursPerWeek: 2,
-  notes: 'Practice proposal — this is a demo so you can try the accept flow. Alex is a 10th grader looking for help with quadratic functions and systems of equations before midterms.',
-  coordinator: 'Simplifi EDU',
-  coordinatorEmail: 'demo@simplifiedu.com',
-  sentAt: 'Just now',
-  status: 'pending',
-  tz: 'America/New_York',
-  rationale: "We chose you for this match because your Algebra II confidence is high and Tuesday afternoons are open on your calendar.",
-  studentGrade: '10th grade',
-  offeredRate: 30,
-  parentName: 'Wei Chen',
-  scheduleNotes: 'Tuesday 4–6 pm works best. Family is flexible by ±30 min.',
-};
 import { ConsiderModal } from './consider/ConsiderModal';
 import { DeclineModal } from './DeclineModal';
 import { ProposalRow, type DisplayStatus } from './ProposalRow';
@@ -51,13 +28,6 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
   const [consideringId, setConsideringId] = useState<string | null>(null);
   const [declineFor, setDeclineFor]       = useState<TutorProposal | null>(null);
   const [toast, setToast]         = useState<string | null>(null);
-
-  // ── Inject demo proposal immediately if the tour hasn't been completed ───
-  useEffect(() => {
-    if (localStorage.getItem('sim_intro_seen') !== '1') {
-      setProposals(ps => ps.some(p => p.id === 'demo-proposal') ? ps : [DEMO_PROPOSAL, ...ps]);
-    }
-  }, []);
 
   function showToast(msg: string) {
     setToast(msg);
