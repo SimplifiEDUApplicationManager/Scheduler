@@ -106,6 +106,31 @@ const STEPS: Step[] = [
     cta: 'Next',
   },
   {
+    key: 'prop-practice-intro',
+    path: '/tutor/proposals',
+    pose: 'wave',
+    title: 'Time to practice!',
+    body: "I've added a practice proposal from a student named Alex Chen. Go ahead and open it — click the row, then hit Accept to see the full accept flow, including a real calendar event.",
+    cta: "Let's do it",
+    placement: 'center',
+  },
+  {
+    key: 'prop-practice-wait',
+    path: '/tutor/proposals',
+    pose: 'idle',
+    title: 'Go accept it!',
+    body: "Click the Alex Chen row, review the details, and hit Accept. I'll jump to the next step automatically once you do.",
+    cta: 'Skip practice',
+  },
+  {
+    key: 'prop-practice-done',
+    pose: 'wave',
+    title: "You accepted your first job! 🎉",
+    body: "A real calendar event was added to your connected calendar and the family got a notification. That's exactly how it works for real students.",
+    cta: 'Keep going',
+    placement: 'center',
+  },
+  {
     key: 'set-tab',
     path: '/tutor/settings',
     target: '[data-tour="tab-Settings"]',
@@ -166,6 +191,22 @@ export function DanielleTour() {
     setSeen(alreadySeen);
     if (!alreadySeen) setOpen(true);
   }, []);
+
+  // ── Dispatch sim:show-demo when the practice-intro step is entered ─────────
+  useEffect(() => {
+    if (!open) return;
+    if (STEPS[step]?.key === 'prop-practice-intro') {
+      window.dispatchEvent(new CustomEvent('sim:show-demo'));
+    }
+  }, [step, open]);
+
+  // ── Auto-advance past prop-practice-wait when the tutor accepts the demo ──
+  useEffect(() => {
+    if (!open || STEPS[step]?.key !== 'prop-practice-wait') return;
+    const handler = () => { setSpot(null); setStep(s => s + 1); };
+    window.addEventListener('sim:demo-accepted', handler);
+    return () => window.removeEventListener('sim:demo-accepted', handler);
+  }, [step, open]);
 
   // ── Measure target element whenever step or pathname changes ──────────────
   useEffect(() => {
