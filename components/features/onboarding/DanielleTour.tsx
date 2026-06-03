@@ -316,7 +316,6 @@ export function DanielleTour() {
           ctaLabel={current.cta}
           onNext={next}
           onBack={back}
-          onSkip={close}
         />
       </div>
     </>
@@ -358,10 +357,10 @@ function Backdrop({ spot, dim }: { spot: Spot | null; dim: number }) {
 
 // ─── Speech bubble ────────────────────────────────────────────────────────────
 
-function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, onNext, onBack, onSkip }: {
+function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, onNext, onBack }: {
   title: string; body: string; tail: 'bottom' | 'right' | 'none';
   step: number; total: number; canBack: boolean; ctaLabel: string;
-  onNext: () => void; onBack: () => void; onSkip: () => void;
+  onNext: () => void; onBack: () => void;
 }) {
   return (
     <div style={{
@@ -396,10 +395,7 @@ function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, onNex
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <button onClick={onSkip} style={{ background: 'none', border: 'none', color: '#71717A', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', padding: '6px 2px' }}>
-          Skip tour
-        </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           {canBack && (
             <button onClick={onBack} style={{ height: 36, padding: '0 14px', borderRadius: 9, background: '#fff', color: '#3F3F46', border: '1px solid #E4E4E7', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
