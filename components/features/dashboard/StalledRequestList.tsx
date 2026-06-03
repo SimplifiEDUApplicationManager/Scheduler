@@ -44,7 +44,7 @@ export function StalledRequestList({ items }: { items: StalledRequest[] }) {
             </div>
           </div>
           <Link
-            href="/dashboard/requests"
+            href={`/dashboard/requests?req=${req.id}`}
             className="h-[26px] px-2.5 rounded-md bg-surface-1 border border-border-default text-[11px] font-semibold text-fg-1 inline-flex items-center hover:bg-surface-3 transition-colors shrink-0"
           >
             Match
