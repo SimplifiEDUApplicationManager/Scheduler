@@ -1,6 +1,7 @@
 // lib/resend/emails.ts
 // Server-side only. All transactional email functions.
 
+import { formatInTimeZone } from 'date-fns-tz';
 import { getResend, FROM } from './client';
 
 type EmailResult = { ok: true } | { ok: false; error: string };
@@ -216,11 +217,86 @@ export async function sendProposalEmail(
 
 // ── Weekly summary email ──────────────────────────────────────────────────────
 
+export interface WeeklySession {
+  /** Display title — e.g. "John Smith · Algebra II" or raw event title */
+  title: string;
+  startTimeSec: number;
+  endTimeSec: number;
+}
+
 interface WeeklySummaryData {
   hoursThisWeek: number;
   maxWeeklyHours: number;
   upcomingCount: number;
   proposalsPending: number;
+  /** Sessions for the upcoming Mon–Sun to render in the week grid. */
+  weekSessions: WeeklySession[];
+  /** Monday 00:00:00 UTC (ms) of the upcoming week. */
+  weekStartMs: number;
+  tutorTimezone: string;
+}
+
+// ── Week calendar renderer ────────────────────────────────────────────────────
+
+const DAY_ABBR = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
+function renderWeekCalendar(
+  sessions: WeeklySession[],
+  weekStartMs: number,
+  tz: string,
+): string {
+  // Group sessions by day-of-week in the tutor's timezone (0=Mon … 6=Sun).
+  // 'e' from date-fns-tz: 1=Mon … 7=Sun (ISO), so subtract 1 to get 0-indexed.
+  const byDay: WeeklySession[][] = Array.from({ length: 7 }, () => []);
+  for (const s of sessions) {
+    const dow = parseInt(formatInTimeZone(new Date(s.startTimeSec * 1000), tz, 'e'), 10) - 1;
+    if (dow >= 0 && dow < 7) byDay[dow].push(s);
+  }
+
+  // Header row: day abbreviation + date
+  const headers = DAY_ABBR.map((abbr, i) => {
+    const dayMs = weekStartMs + i * 24 * 60 * 60 * 1000;
+    const dateLabel = formatInTimeZone(new Date(dayMs), tz, 'M/d');
+    return `<td width="14%" style="padding:0 2px 6px;text-align:center;vertical-align:top">
+      <div style="font-size:9px;font-weight:700;color:#A1A1AA;letter-spacing:0.06em">${abbr}</div>
+      <div style="font-size:11px;font-weight:600;color:#52525B;margin-top:1px">${dateLabel}</div>
+    </td>`;
+  }).join('');
+
+  // Cell row: sessions or free
+  const cells = byDay.map((daySessions) => {
+    if (daySessions.length === 0) {
+      return `<td width="14%" style="padding:0 2px">
+        <div style="background:#FAFAFA;border:1px solid #F4F4F5;border-radius:6px;padding:8px 6px;min-height:40px;display:flex;align-items:center;justify-content:center">
+          <span style="font-size:10px;color:#D4D4D8">&mdash;</span>
+        </div>
+      </td>`;
+    }
+    const items = daySessions.map(s => {
+      const start = formatInTimeZone(new Date(s.startTimeSec * 1000), tz, 'h:mm a');
+      const end   = formatInTimeZone(new Date(s.endTimeSec   * 1000), tz, 'h:mm a');
+      // Trim title to keep cells compact: use first segment before " · " if present
+      const shortTitle = s.title.split(' · ')[0] ?? s.title;
+      return `<div style="background:#EEF9F6;border-left:2px solid #2B7265;border-radius:4px;padding:4px 5px;margin-bottom:3px">
+        <div style="font-size:10px;font-weight:700;color:#18181B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${shortTitle}</div>
+        <div style="font-size:9px;color:#2B7265;margin-top:1px;white-space:nowrap">${start}–${end}</div>
+      </div>`;
+    }).join('');
+    return `<td width="14%" style="padding:0 2px;vertical-align:top">
+      <div style="background:#FAFAFA;border:1px solid #F4F4F5;border-radius:6px;padding:5px 4px">
+        ${items}
+      </div>
+    </td>`;
+  }).join('');
+
+  return `
+<div style="margin-bottom:24px">
+  <div style="font-size:11px;font-weight:700;color:#52525B;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Upcoming week</div>
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+    <tr>${headers}</tr>
+    <tr>${cells}</tr>
+  </table>
+</div>`;
 }
 
 export async function sendWeeklySummaryEmail(
@@ -237,9 +313,14 @@ export async function sendWeeklySummaryEmail(
     ? `<tr><td style="padding:6px 0;font-size:12px;font-weight:600;color:#71717A;white-space:nowrap;padding-right:16px">Proposals pending</td><td style="padding:6px 0;font-size:13px;color:#18181B;font-weight:600">${data.proposalsPending}</td></tr>`
     : '';
 
+  const calendarBlock = data.weekSessions.length > 0 || data.weekStartMs
+    ? renderWeekCalendar(data.weekSessions, data.weekStartMs, data.tutorTimezone)
+    : '';
+
   const content = `
 <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;letter-spacing:-0.015em">Your weekly summary</h2>
-<p style="font-size:14px;color:#52525B;margin:0 0 24px;line-height:1.6">Hi ${tutorName}, here's a quick look at your week.</p>
+<p style="font-size:14px;color:#52525B;margin:0 0 20px;line-height:1.6">Hi ${tutorName}, here&rsquo;s a quick look at your week.</p>
+${calendarBlock}
 <div style="background:#FAFAFA;border:1px solid #E4E4E7;border-radius:10px;padding:16px 20px;margin-bottom:24px">
   <table cellpadding="0" cellspacing="0" role="presentation" width="100%">
     <tr>

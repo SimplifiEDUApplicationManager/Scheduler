@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { nylasList } from '@/lib/nylas/client';
 import { computeWeeklyHours, weekBounds } from '@/lib/utils/capacity';
-import { sendWeeklySummaryEmail } from '@/lib/resend/emails';
+import { sendWeeklySummaryEmail, type WeeklySession } from '@/lib/resend/emails';
 import { toZonedTime } from 'date-fns-tz';
 
 const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
@@ -42,9 +42,17 @@ export async function GET(req: Request) {
   }
 
   const nowUtc = new Date();
+
+  // Current ISO week (Mon–Sun) — used to compute hours tutor worked this week.
   const { start, end } = weekBounds(nowUtc.getTime());
   const startSec = Math.floor(start / 1000);
   const endSec   = Math.floor(end   / 1000);
+
+  // Upcoming week (next Mon–Sun) — shown in the calendar grid.
+  // Adding 7 days to a Sunday reference puts us firmly in next week.
+  const { start: nextStart, end: nextEnd } = weekBounds(nowUtc.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const nextStartSec = Math.floor(nextStart / 1000);
+  const nextEndSec   = Math.floor(nextEnd   / 1000);
 
   const results = { sent: 0, skipped: 0, errors: 0 };
 
@@ -63,14 +71,22 @@ export async function GET(req: Request) {
         results.skipped++;
         continue;
       }
-      // ── Hours this week via Nylas ──────────────────────────────────────────
+      // ── Nylas events: current week (hours) + upcoming week (calendar) ────────
       let hoursThisWeek = 0;
+      let weekSessions: WeeklySession[] = [];
+
       if (tutor.nylas_grant_id) {
-        const eventsResult = await nylasList<NylasEventRaw>(
-          `/v3/grants/${tutor.nylas_grant_id}/events?start=${startSec}&end=${endSec}&limit=200&expand_recurring=true`,
-        );
-        if (eventsResult.ok) {
-          const events = eventsResult.data
+        const [thisWeekResult, nextWeekResult] = await Promise.all([
+          nylasList<NylasEventRaw>(
+            `/v3/grants/${tutor.nylas_grant_id}/events?start=${startSec}&end=${endSec}&limit=200&expand_recurring=true`,
+          ),
+          nylasList<NylasEventRaw>(
+            `/v3/grants/${tutor.nylas_grant_id}/events?start=${nextStartSec}&end=${nextEndSec}&limit=200&expand_recurring=true`,
+          ),
+        ]);
+
+        if (thisWeekResult.ok) {
+          const events = thisWeekResult.data
             .filter(e => e.when.object === 'timespan' && e.when.start_time != null && e.when.end_time != null)
             .map(e => ({
               title:      e.title ?? '',
@@ -79,6 +95,20 @@ export async function GET(req: Request) {
               metadata:   e.metadata ?? null,
             }));
           hoursThisWeek = computeWeeklyHours(events);
+        }
+
+        if (nextWeekResult.ok) {
+          weekSessions = nextWeekResult.data
+            .filter(e =>
+              e.when.object === 'timespan' &&
+              e.when.start_time != null &&
+              e.when.end_time != null,
+            )
+            .map(e => ({
+              title:        e.title ?? 'Session',
+              startTimeSec: e.when.start_time!,
+              endTimeSec:   e.when.end_time!,
+            }));
         }
       }
 
@@ -100,14 +130,18 @@ export async function GET(req: Request) {
       if (!appUrl) { results.skipped++; continue; }
 
       const name   = tutor.name ?? tutor.email.split('@')[0];
+      const tz     = tutor.timezone ?? 'America/New_York';
       const result = await sendWeeklySummaryEmail(
         tutor.email,
         name,
         {
           hoursThisWeek,
-          maxWeeklyHours:  tutor.max_weekly_hours ?? 20,
-          upcomingCount:   upcomingCount   ?? 0,
+          maxWeeklyHours:   tutor.max_weekly_hours ?? 20,
+          upcomingCount:    upcomingCount    ?? 0,
           proposalsPending: proposalsPending ?? 0,
+          weekSessions,
+          weekStartMs:      nextStart,
+          tutorTimezone:    tz,
         },
         appUrl,
       );
