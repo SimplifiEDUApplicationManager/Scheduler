@@ -26,13 +26,12 @@ const CONF_META: Record<SubjectConf, { label: string; bg: string; fg: string; ba
 const CONF_ORDER: SubjectConf[] = ['HIGH', 'MEDIUM', 'LOW'];
 
 const NAV = [
-  ['profile',       'Profile'],
-  ['capacity',      'Capacity'],
-  ['subjects',      'My subjects'],
-  ['hours',         'Working hours'],
-  ['calendar',      'Calendar'],
-  ['notifications', 'Notifications'],
-  ['pause',         'Pause tutoring'],
+  ['profile',  'Profile'],
+  ['capacity', 'Capacity'],
+  ['subjects', 'My subjects'],
+  ['hours',    'Working hours'],
+  ['calendar', 'Calendar'],
+  ['pause',    'Pause tutoring'],
 ] as const;
 type SectionId = typeof NAV[number][0];
 
@@ -48,7 +47,6 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const fileInputRef              = useRef<HTMLInputElement>(null);
   const bookingUrl                = me.bookingPageUrl ?? null;
   const [mySubjects, setSubjects] = useState<TutorSubject[]>(me.subjects);
-  const [notifs, setNotifs]       = useState({ newRequest: true, reminders: true, coordMessages: true, cancellations: true, weeklySummary: false });
   const [dirty, setDirty]         = useState(false);
   const [isPaused, setIsPaused]   = useState(me.isPaused);
   const [availReqs, setAvailReqs] = useState(me.availabilityRequests);
@@ -670,15 +668,6 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
             </Row>
           </Card>
 
-          {/* Notifications */}
-          <Card id="notifications" title="Notifications" subtitle="Choose how and when we reach out. Keep session reminders on so you don't miss a booking.">
-            <NotifRow label="New tutoring request" sub="A coordinator proposed a session to you." detail="Email + in-app + push" value={notifs.newRequest} onChange={v => { setNotifs(n => ({ ...n, newRequest: v })); touch(); }} />
-            <NotifRow label="Session reminders" sub="Before a confirmed session." detail="24h + 1h before · push" value={notifs.reminders} onChange={v => { setNotifs(n => ({ ...n, reminders: v })); touch(); }} />
-            <NotifRow label="Coordinator messages" sub="Direct messages from your coordinator." detail="Email + in-app" value={notifs.coordMessages} onChange={v => { setNotifs(n => ({ ...n, coordMessages: v })); touch(); }} />
-            <NotifRow label="Student cancellations" sub="When a student or parent cancels." detail="Email + push" value={notifs.cancellations} onChange={v => { setNotifs(n => ({ ...n, cancellations: v })); touch(); }} />
-            <NotifRow label="Weekly summary" sub="Hours booked, upcoming sessions, and stats." detail="Email · Sunday 7 pm" value={notifs.weeklySummary} onChange={v => { setNotifs(n => ({ ...n, weeklySummary: v })); touch(); }} last />
-          </Card>
-
           {/* Pause */}
           <Card id="pause" title="Pause tutoring" subtitle="Temporarily hide your availability from all coordinator views. Existing confirmed sessions stay booked." danger>
             {isPaused ? (
@@ -863,21 +852,6 @@ function PrefRow({ label, value }: { label: string; value: string }) {
     <div>
       <div style={{ fontSize: 10, color: '#A1A1AA', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{label}</div>
       <div style={{ fontSize: 13, fontWeight: 600, color: '#18181B' }}>{value}</div>
-    </div>
-  );
-}
-
-function NotifRow({ label, sub, detail, value, onChange, last }: { label: string; sub: string; detail: string; value: boolean; onChange: (v: boolean) => void; last?: boolean }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: last ? 'none' : '1px solid #F5F5F5' }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#18181B' }}>{label}</div>
-        <div style={{ fontSize: 12, color: '#71717A', marginTop: 2 }}>{sub}</div>
-      </div>
-      <div style={{ fontSize: 11, color: value ? '#47624E' : '#A1A1AA', fontWeight: 500, minWidth: 140, textAlign: 'right' }}>{value ? detail : 'Off'}</div>
-      <button onClick={() => onChange(!value)} style={{ width: 36, height: 20, borderRadius: 999, padding: 2, background: value ? '#2B7265' : '#E4E4E7', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 0.15s', flexShrink: 0 }}>
-        <div style={{ width: 16, height: 16, borderRadius: 999, background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.15)' }} />
-      </button>
     </div>
   );
 }

@@ -68,16 +68,17 @@ export async function POST(req: NextRequest) {
   // Send proposal notification email to tutor (fire-and-forget — don't fail the request if email fails)
   if (appUrl) {
     const serviceClient = createServiceClient();
-    const { data: tutor } = await serviceClient
-      .from('users')
-      .select('email, name')
-      .eq('id', tutor_id as string)
-      .single();
+    const [{ data: tutor }, { data: coordinator }] = await Promise.all([
+      serviceClient.from('users').select('email, name').eq('id', tutor_id as string).single(),
+      serviceClient.from('users').select('name').eq('id', user.id).single(),
+    ]);
 
     if (tutor) {
+      const coordName = coordinator?.name ?? 'Your coordinator';
       sendProposalEmail(
         tutor.email,
         tutor.name ?? tutor.email.split('@')[0],
+        coordName,
         {
           studentName:  student_name as string,
           subject:      subject as string,
