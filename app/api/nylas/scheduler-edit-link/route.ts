@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { mintSchedulerEditUrl, createSchedulerConfig, enableSchedulerSessionAuth } from '@/lib/nylas/scheduler';
+import { mintSchedulerEditUrl, createSchedulerConfig, enableSchedulerSessionAuth, fetchGrantEmail, patchSchedulerParticipantEmail } from '@/lib/nylas/scheduler';
 
 export async function POST() {
   try {
@@ -17,6 +17,12 @@ export async function POST() {
   if (error || !row) {
     return NextResponse.json({ error: 'User not found', status: 404 }, { status: 404 });
   }
+
+  // Fetch the canonical email from the Nylas grant. Gmail (and other providers)
+  // normalise + aliases to the base address on OAuth, so the grant email may
+  // differ from the Supabase user email. We use the grant email as the
+  // participant email so Nylas can mint edit sessions successfully.
+  const grantEmail = row.nylas_grant_id ? await fetchGrantEmail(row.nylas_grant_id) : null;
 
   // Try the existing config first (fast path).
   if (row.nylas_scheduler_config_id) {
@@ -40,6 +46,24 @@ export async function POST() {
         }
       }
       // Patch failed or config confirmed gone after retry — fall through to recreate.
+    } else if (mint.participantMismatch && grantEmail && row.nylas_grant_id) {
+      // Participant email in the config doesn't match the grant email.
+      // This happens when the Supabase email is a Gmail + alias and the grant
+      // was issued to the canonical address. Patch the participant email to
+      // the canonical grant email and retry.
+      const patched = await patchSchedulerParticipantEmail(
+        row.nylas_scheduler_config_id,
+        row.nylas_grant_id,
+        grantEmail,
+      );
+      if (patched) {
+        const retry = await mintSchedulerEditUrl(row.nylas_scheduler_config_id);
+        if (retry.url !== null) return NextResponse.json({ url: retry.url });
+        if (!retry.configGone) {
+          return NextResponse.json({ error: `[post-patch mint] ${retry.error}`, status: 502 }, { status: 502 });
+        }
+      }
+      // Patch failed or config confirmed gone — fall through to recreate.
     } else if (!mint.configGone) {
       // Any other error (rate limit, server error) — surface it immediately so
       // we don't orphan a config the tutor has already customised.
@@ -51,9 +75,11 @@ export async function POST() {
   if (!row.nylas_grant_id) {
     return NextResponse.json({ error: 'Calendar not connected — connect your calendar before editing scheduling preferences.', status: 400 }, { status: 400 });
   }
+  // Use canonical grant email (not Supabase email) to avoid + alias mismatches.
+  const tutorEmail = grantEmail ?? row.email;
   const created = await createSchedulerConfig({
     tutorName:   row.name,
-    tutorEmail:  row.email,
+    tutorEmail,
     timezone:    row.timezone ?? 'America/New_York',
     grantId:     row.nylas_grant_id,
     meetingLink: row.meeting_link ?? undefined,

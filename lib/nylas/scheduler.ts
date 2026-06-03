@@ -173,26 +173,91 @@ interface CreatedConfig {
   id: string;
 }
 
+interface NylasGrant {
+  id: string;
+  email: string;
+  provider: string;
+}
+
+/**
+ * Fetch the canonical email address for a Nylas grant.
+ * Gmail (and other providers) normalize + aliases to the base address on OAuth,
+ * so the grant email may differ from the Supabase user email.
+ * Returns null on failure.
+ */
+export async function fetchGrantEmail(grantId: string): Promise<string | null> {
+  const result = await nylasGet<NylasGrant>(`/v3/grants/${grantId}`);
+  if (!result.ok) {
+    console.error('[nylas/scheduler] Failed to fetch grant:', result.error);
+    return null;
+  }
+  return result.data.email ?? null;
+}
+
 /**
  * Mint a short-lived Nylas Scheduler edit session for the given configuration.
- * Returns { url } on success or { url: null, error, configGone, sessionAuthDisabled } on failure.
+ * Returns { url } on success or { url: null, error, configGone, sessionAuthDisabled, participantMismatch } on failure.
  *
  * sessionAuthDisabled is true when the config exists but was created without
  * requires_session_auth: true. Call enableSchedulerSessionAuth then retry.
+ *
+ * participantMismatch is true when the grant email does not match any
+ * participant in the config (e.g. Supabase email was a Gmail + alias).
+ * Call patchSchedulerParticipantEmail then retry.
  */
 export async function mintSchedulerEditUrl(
   configId: string,
-): Promise<{ url: string } | { url: null; error: string; configGone: boolean; sessionAuthDisabled: boolean }> {
+): Promise<{ url: string } | { url: null; error: string; configGone: boolean; sessionAuthDisabled: boolean; participantMismatch: boolean }> {
   const result = await nylasPost<SchedulingSession>(
     '/v3/scheduling/sessions',
     { configuration_id: configId },
   );
   if (!result.ok) {
     console.error('[nylas/scheduler] Failed to mint session:', result.error);
-    const sessionAuthDisabled = result.error.toLowerCase().includes('session');
-    return { url: null, error: result.error, configGone: result.statusCode === 404, sessionAuthDisabled };
+    const lower = result.error.toLowerCase();
+    const sessionAuthDisabled = lower.includes('session');
+    const participantMismatch = lower.includes('participant');
+    return { url: null, error: result.error, configGone: result.statusCode === 404, sessionAuthDisabled, participantMismatch };
   }
   return { url: result.data.url };
+}
+
+/**
+ * Patch an existing Nylas Scheduler configuration to update the participant
+ * email to the canonical grant email. Used when a tutor's Supabase email
+ * differs from their OAuth grant email (e.g. Gmail + aliases).
+ * Also sets requires_session_auth: true so edit sessions can be minted.
+ *
+ * Returns true on success.
+ */
+export async function patchSchedulerParticipantEmail(
+  configId: string,
+  grantId: string,
+  canonicalEmail: string,
+): Promise<boolean> {
+  const current = await nylasGet<Record<string, unknown>>(
+    `/v3/grants/${grantId}/scheduling/configurations/${configId}`,
+  );
+  if (!current.ok) {
+    console.error('[nylas/scheduler] patchSchedulerParticipantEmail GET failed:', current.statusCode, current.error);
+    return false;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _id, created_at: _ca, updated_at: _ua, ...body } = current.data;
+  const participants = body.participants as Array<Record<string, unknown>> | undefined;
+  if (!participants || participants.length === 0) {
+    console.error('[nylas/scheduler] patchSchedulerParticipantEmail: no participants in config');
+    return false;
+  }
+  const updatedParticipants = participants.map(p => ({ ...p, email: canonicalEmail }));
+  const updated = await nylasPut<CreatedConfig>(
+    `/v3/grants/${grantId}/scheduling/configurations/${configId}`,
+    { ...body, participants: updatedParticipants, requires_session_auth: true },
+  );
+  if (!updated.ok) {
+    console.error('[nylas/scheduler] patchSchedulerParticipantEmail PUT failed:', updated.statusCode, updated.error);
+  }
+  return updated.ok;
 }
 
 /**
