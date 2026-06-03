@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import {
-  TUTORS,
   INVITATIONS,
 } from '@/lib/data/mock';
 import { fetchAllTutors } from '@/lib/data/tutors';
@@ -8,7 +7,8 @@ import { createClient } from '@/lib/supabase/server';
 import { KpiTile } from '@/components/features/dashboard/KpiTile';
 import { AlertsStrip } from '@/components/features/dashboard/AlertsStrip';
 import { DashCard } from '@/components/features/dashboard/DashCard';
-import { AttentionList } from '@/components/features/dashboard/AttentionList';
+import { StalledRequestList } from '@/components/features/dashboard/StalledRequestList';
+import type { StalledRequest } from '@/components/features/dashboard/StalledRequestList';
 import { TeamSnapshot } from '@/components/features/dashboard/TeamSnapshot';
 import { PendingReviewList } from '@/components/features/dashboard/PendingReviewList';
 import type { PendingReviewItem } from '@/components/features/dashboard/PendingReviewList';
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
       .gte('created_at', windowStart),
     supabase
       .from('requests')
-      .select('id, source')
+      .select('id, source, student_name, subject, created_at')
       .eq('status', 'open'),
     supabase
       .from('users')
@@ -131,6 +131,16 @@ export default async function DashboardPage() {
     return { tutorName, tutorInitials: initials(tutorName), subjectName };
   });
   const openRequests = openRequestRows ?? [];
+  const stalledCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const stalledRequests: StalledRequest[] = openRequests
+    .filter(r => r.created_at <= stalledCutoff)
+    .map(r => ({
+      id:          r.id,
+      studentName: r.student_name,
+      subject:     r.subject ?? null,
+      source:      r.source,
+      createdAt:   r.created_at,
+    }));
   const pending      = INVITATIONS.filter(i => i.status === 'pending');
   const declined     = INVITATIONS.filter(i => i.status === 'declined');
   const expired      = INVITATIONS.filter(i => i.status === 'expired');
@@ -255,14 +265,9 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 gap-4 items-start">
           <DashCard
             title="Needs your attention"
-            subtitle="Stuck or stalled items from the last 7 days"
+            subtitle="Open requests waiting 48+ hours to be matched"
           >
-            <AttentionList
-              pending={pending}
-              declined={declined}
-              expired={expired}
-              tutors={TUTORS}
-            />
+            <StalledRequestList items={stalledRequests} />
           </DashCard>
 
           <DashCard
