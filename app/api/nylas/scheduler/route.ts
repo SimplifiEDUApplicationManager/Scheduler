@@ -237,11 +237,17 @@ export async function PUT(request: Request) {
     const timezone = (row.timezone as string | null) ?? 'America/New_York';
     let configId = row.nylas_scheduler_config_id as string | null;
 
+    // Use the canonical email from the Nylas grant as the participant email.
+    // Supabase may store a + alias (e.g. austin+tutor@simplifiedu.com) that
+    // Google normalises on OAuth, causing a mismatch against the grant email.
+    const grantEmail = await fetchGrantEmail(row.nylas_grant_id as string);
+    const tutorEmail = (grantEmail ?? row.email) as string;
+
     // Create config if it doesn't exist yet.
     if (!configId) {
       const created = await createSchedulerConfig({
         tutorName:   row.name as string,
-        tutorEmail:  row.email as string,
+        tutorEmail,
         timezone,
         grantId:     row.nylas_grant_id as string,
         meetingLink: (row.meeting_link as string | null) ?? undefined,
@@ -264,7 +270,7 @@ export async function PUT(request: Request) {
     if (!current.ok && current.statusCode === 404) {
       const recreated = await createSchedulerConfig({
         tutorName:   row.name as string,
-        tutorEmail:  row.email as string,
+        tutorEmail,
         timezone,
         grantId:     row.nylas_grant_id as string,
         meetingLink: (row.meeting_link as string | null) ?? undefined,
@@ -306,17 +312,19 @@ export async function PUT(request: Request) {
     const existingParticipants = (cfg.participants ?? []) as Record<string, unknown>[];
     let participantsBase = existingParticipants;
     if (participantsBase.length === 0) {
-      const grantEmail = await fetchGrantEmail(row.nylas_grant_id as string);
       participantsBase = [{
         name:          row.name,
-        email:         grantEmail ?? row.email,
+        email:         tutorEmail,
         is_organizer:  true,
         availability:  { calendar_ids: ['primary'] },
         booking:       { calendar_id: 'primary' },
       }];
     }
+    // Always stamp the canonical grant email onto existing participants — fixes
+    // configs created with a + alias that doesn't match the grant email.
     const updatedParticipants = participantsBase.map(p => ({
       ...p,
+      email:                      tutorEmail,
       specific_time_availability: specificTimeAvailability,
     }));
 
