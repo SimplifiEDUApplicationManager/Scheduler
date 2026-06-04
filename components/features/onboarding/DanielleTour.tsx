@@ -217,6 +217,18 @@ export function DanielleTour() {
     }
   }, []);
 
+  // ── Ensure demo proposal is visible when entering practice steps ─────────
+  // router.push may serve a cached render of /tutor/proposals without Alex
+  // Chen, so we fire sim:inject-demo at the client level. ProposalsClient
+  // adds the demo to its local state if it's not already present.
+  useEffect(() => {
+    if (!open) return;
+    const key = STEPS[step]?.key;
+    if (key === 'prop-practice-intro' || key === 'prop-practice-wait') {
+      window.dispatchEvent(new CustomEvent('sim:inject-demo'));
+    }
+  }, [step, open]);
+
   // ── Auto-advance past prop-practice-wait when the tutor opens the demo ───
   useEffect(() => {
     if (!open || STEPS[step]?.key !== 'prop-practice-wait') return;
