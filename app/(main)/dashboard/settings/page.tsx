@@ -17,7 +17,7 @@ function Card({ title, subtitle, children }: { title: string; subtitle?: string;
 }
 
 export default async function CoordinatorSettingsPage() {
-  const connectorUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/api/mcp`;
+  const connectorUrl = `${(process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '')}/api/mcp`;
 
   if (DEV_BYPASS) {
     return (
