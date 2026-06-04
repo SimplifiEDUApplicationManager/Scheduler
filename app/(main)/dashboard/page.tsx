@@ -148,11 +148,12 @@ export default async function DashboardPage() {
 
   const activeTutors = realTutors.length;
   const onboarding   = onboardingCount ?? 0;
-  const atCap        = realTutors.filter(t => t.hoursCurrent >= t.hoursMax).length;
-  const underbooked  = realTutors.filter(t => t.hoursCurrent < t.hoursMin).length;
+  const connectedTutors = realTutors.filter(t => t.nylasGrantId);
+  const atCap        = connectedTutors.filter(t => t.hoursCurrent >= t.hoursMax).length;
+  const underbooked  = connectedTutors.filter(t => t.hoursCurrent < t.hoursMin).length;
 
-  const totalCurrent = realTutors.reduce((a, t) => a + t.hoursCurrent, 0);
-  const totalMax     = realTutors.reduce((a, t) => a + t.hoursMax, 0);
+  const totalCurrent = connectedTutors.reduce((a, t) => a + t.hoursCurrent, 0);
+  const totalMax     = connectedTutors.reduce((a, t) => a + t.hoursMax, 0);
   const capacityPct  = totalMax > 0 ? Math.round((totalCurrent / totalMax) * 100) : 0;
 
   const pendingReviews = pendingReviewItems.length;
