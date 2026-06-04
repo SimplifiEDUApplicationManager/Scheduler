@@ -15,25 +15,22 @@ import type { Tables, Database } from '@/lib/types/database';
 async function resolveSkillCaller(): Promise<
   { ok: true; user: { id: string }; supabase: ReturnType<typeof createServiceClient>; role: Role } | null
 > {
-  const apiKey = process.env.SKILL_API_KEY;
-  const coordinatorId = process.env.SKILL_COORDINATOR_ID;
-  if (!apiKey || !coordinatorId) return null;
-
   const headerStore = await headers();
   const auth = headerStore.get('authorization') ?? '';
-  if (auth !== `Bearer ${apiKey}`) return null;
+  if (!auth.startsWith('Bearer sk_coord_')) return null;
+  const token = auth.slice('Bearer '.length);
 
   const supabase = createServiceClient();
   const { data: caller } = await supabase
     .from('users')
-    .select('role, status')
-    .eq('id', coordinatorId)
+    .select('id, role, status')
+    .eq('skill_api_key', token)
     .single();
 
   if (!caller || caller.status !== 'ACTIVE') return null;
   if (caller.role !== 'COORDINATOR' && caller.role !== 'SUPER_ADMIN') return null;
 
-  return { ok: true, user: { id: coordinatorId }, supabase, role: caller.role as Role };
+  return { ok: true, user: { id: caller.id }, supabase, role: caller.role as Role };
 }
 
 // ── Route auth helpers ───────────────────────────────────────────────────────

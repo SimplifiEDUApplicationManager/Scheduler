@@ -13,7 +13,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('users')
-    .select('id, email, name, asana_project_id')
+    .select('id, email, name, asana_project_id, skill_api_key')
     .eq('id', user.id)
     .single();
 
