@@ -10,6 +10,11 @@
  *   tools/list            → list available tools
  *   tools/call            → execute a tool
  *
+ * Each coordinator has a unique skill_api_key stored in their users row.
+ * The incoming Bearer token is threaded through to every internal app API call
+ * so each coordinator's identity propagates correctly — one connector URL works
+ * for every coordinator.
+ *
  * Connect in claude.ai → Settings → Integrations → add this route's URL.
  */
 
@@ -18,24 +23,23 @@ import { z } from 'zod';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const APP_URL      = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
-const SB_URL       = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '');
-const SB_SVC_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-const SKILL_KEY    = process.env.SKILL_API_KEY ?? '';
+const APP_URL    = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
+const SB_URL     = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '');
+const SB_SVC_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-function appHeaders() {
-  return { Authorization: `Bearer ${SKILL_KEY}`, 'Content-Type': 'application/json' };
+function appHeaders(authKey: string) {
+  return { Authorization: authKey, 'Content-Type': 'application/json' };
 }
 
-async function appGet(path: string): Promise<unknown> {
-  const res = await fetch(`${APP_URL}${path}`, { headers: appHeaders(), cache: 'no-store' });
+async function appGet(path: string, authKey: string): Promise<unknown> {
+  const res = await fetch(`${APP_URL}${path}`, { headers: appHeaders(authKey), cache: 'no-store' });
   if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
   return res.json();
 }
 
-async function appPost(path: string, body: unknown): Promise<unknown> {
+async function appPost(path: string, body: unknown, authKey: string): Promise<unknown> {
   const res = await fetch(`${APP_URL}${path}`, {
-    method: 'POST', headers: appHeaders(), body: JSON.stringify(body), cache: 'no-store',
+    method: 'POST', headers: appHeaders(authKey), body: JSON.stringify(body), cache: 'no-store',
   });
   if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
   return res.json();
@@ -79,14 +83,14 @@ interface Tool {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>; // JSON Schema
-  run: (args: Record<string, unknown>) => Promise<{ isError?: boolean; content: { type: string; text: string }[] }>;
+  run: (args: Record<string, unknown>, authKey: string) => Promise<{ isError?: boolean; content: { type: string; text: string }[] }>;
 }
 
 function tool<S extends z.ZodRawShape>(
   name: string,
   description: string,
   shape: S,
-  run: (args: z.infer<z.ZodObject<S>>) => Promise<{ isError?: boolean; content: { type: string; text: string }[] }>,
+  run: (args: z.infer<z.ZodObject<S>>, authKey: string) => Promise<{ isError?: boolean; content: { type: string; text: string }[] }>,
 ): Tool {
   const schema = z.object(shape);
   // Zod v4 built-in JSON Schema export
@@ -95,10 +99,10 @@ function tool<S extends z.ZodRawShape>(
     name,
     description,
     inputSchema: jsonSchema,
-    run: async (args) => {
+    run: async (args, authKey) => {
       const parsed = schema.safeParse(args);
       if (!parsed.success) return errorContent(`Invalid arguments: ${parsed.error.message}`);
-      return run(parsed.data as z.infer<z.ZodObject<S>>);
+      return run(parsed.data as z.infer<z.ZodObject<S>>, authKey);
     },
   };
 }
@@ -109,8 +113,8 @@ const TOOLS: Tool[] = [
 
   tool('show_requests', "List the coordinator's tutoring requests. Returns full request data including student_email and requested_schedule so send_proposal can be called directly from the results.",
     { status: z.enum(['open', 'all']).default('open').describe('open = only unmatched; all = every request') },
-    async ({ status }) => {
-      const rows = await appGet('/api/requests') as Record<string, unknown>[];
+    async ({ status }, authKey) => {
+      const rows = await appGet('/api/requests', authKey) as Record<string, unknown>[];
       const filtered = status === 'open' ? rows.filter(r => r.status === 'open') : rows;
       // Return all fields needed for send_proposal — do not strip student_email or requested_schedule
       const summary = filtered.map(r => ({
@@ -131,7 +135,7 @@ const TOOLS: Tool[] = [
 
   tool('list_tutors', 'List active tutors with name and email. Use to resolve a name to an email before calling send_proposal.',
     {},
-    async () => {
+    async (_args, _authKey) => {
       const tutors = await sbGet('users', 'role=eq.TUTOR&status=eq.ACTIVE&select=name,email&order=name.asc');
       return textContent(JSON.stringify(tutors, null, 2));
     }),
@@ -154,7 +158,7 @@ const TOOLS: Tool[] = [
       offered_rate:  z.number().optional(),
     },
     async ({ tutor_email, request_id, student_name, student_email, subject, schedule, timezone,
-             start_date, notes, offered_rate }) => {
+             start_date, notes, offered_rate }, authKey) => {
       // Look up tutor
       const tutors = await sbGet(
         'users',
@@ -181,7 +185,7 @@ const TOOLS: Tool[] = [
           notes:              req.notes,
           offered_rate:       req.offered_rate,
           asana_task_id:      req.asana_task_id,
-        });
+        }, authKey);
         return textContent(`Proposal sent to ${tutors[0].name} (${tutor_email}) — ${req.student_name}, ${req.subject}.`);
       }
 
@@ -192,7 +196,7 @@ const TOOLS: Tool[] = [
       await appPost('/api/proposals', {
         tutor_id: tutors[0].id, student_name, student_email, subject,
         requested_schedule: schedule, timezone, start_date, notes, offered_rate,
-      });
+      }, authKey);
       return textContent(`Proposal sent to ${tutors[0].name} (${tutor_email}) — ${student_name}, ${subject}.`);
     }),
 
@@ -212,17 +216,17 @@ const TOOLS: Tool[] = [
       asana_task_url: z.string().optional(),
     },
     async ({ student_name, student_email, subject, schedule, timezone,
-             start_date, notes, offered_rate, asana_task_id, asana_task_url }) => {
+             start_date, notes, offered_rate, asana_task_id, asana_task_url }, authKey) => {
       const result = await appPost('/api/requests', {
         student_name, student_email, subject, requested_schedule: schedule,
         timezone, start_date, notes, offered_rate, asana_task_id, asana_task_url,
-      }) as { id: string };
+      }, authKey) as { id: string };
       return textContent(`Request created for ${student_name}${subject ? ` — ${subject}` : ''}. (id: ${result.id})`);
     }),
 
   tool('show_availability', "Show every active tutor's working hours and calendar busy blocks for the current and next week.",
     { timezone: z.string().default('America/New_York') },
-    async ({ timezone }) => {
+    async ({ timezone }, authKey) => {
       const tutors = await sbGet(
         'users', 'role=eq.TUTOR&status=eq.ACTIVE&select=id,name,availability&order=name.asc',
       ) as { id: string; name: string; availability: unknown }[];
@@ -231,8 +235,8 @@ const TOOLS: Tool[] = [
 
       const tutorIds = tutors.map(t => t.id);
       const [week0, week1] = await Promise.all([
-        appPost('/api/nylas/weekly-busy', { tutorIds, weekOffset: 0, tz: timezone }),
-        appPost('/api/nylas/weekly-busy', { tutorIds, weekOffset: 1, tz: timezone }),
+        appPost('/api/nylas/weekly-busy', { tutorIds, weekOffset: 0, tz: timezone }, authKey),
+        appPost('/api/nylas/weekly-busy', { tutorIds, weekOffset: 1, tz: timezone }, authKey),
       ]) as [{ busySlots: Record<string, unknown[]> }, { busySlots: Record<string, unknown[]> }];
 
       const result = tutors.map(t => ({
@@ -258,8 +262,8 @@ After calling this tool, for each task:
 4. Infer timezone: MSK→Europe/Moscow, ET→America/New_York, PT→America/Los_Angeles, CT→America/Chicago.
 5. Set asana_task_id to "{gid}::{subject_lowercase_underscored}" (makes it idempotent — safe to run twice).`,
     {},
-    async () => {
-      const profile = await appGet('/api/coordinator/profile') as { id: string; asana_project_id: string | null };
+    async (_args, authKey) => {
+      const profile = await appGet('/api/coordinator/profile', authKey) as { id: string; asana_project_id: string | null };
       if (!profile.asana_project_id) return errorContent('No Asana project connected. Go to app Settings → Asana to connect your project.');
 
       const coordRows = await sbGet('users', `id=eq.${profile.id}&select=asana_access_token&limit=1`) as { asana_access_token: string | null }[];
@@ -279,7 +283,7 @@ After calling this tool, for each task:
       if (!section) return errorContent(`No "New Tutoring Request" section found. Sections: ${sections.map(s => s.name).join(', ')}`);
 
       const tasks = await asanaGet(`/sections/${section.gid}/tasks?opt_fields=gid,name,notes,due_on,permalink_url&completed_since=now`) as { gid: string; name: string; notes: string; due_on: string | null; permalink_url: string }[];
-      const subjects = await appGet('/api/subjects') as { name: string }[];
+      const subjects = await appGet('/api/subjects', authKey) as { name: string }[];
 
       return textContent(JSON.stringify({
         task_count: tasks.length,
@@ -287,16 +291,17 @@ After calling this tool, for each task:
         tasks: tasks.map(t => ({ gid: t.gid, name: t.name, notes: t.notes, due_on: t.due_on, permalink_url: t.permalink_url })),
       }, null, 2));
     }),
+
   tool('leave_feedback', 'Leave a comment or note for Austin to review. Use this any time something works well, something is confusing, a skill gives a wrong result, or you have a feature request.',
     {
       message:  z.string().describe('Your feedback, bug report, or feature request'),
       context:  z.string().optional().describe('Which skill or task you were doing when you hit this (e.g. "send_proposal", "sync_requests")'),
     },
-    async ({ message, context }) => {
+    async ({ message, context }, authKey) => {
       // Identify who is leaving feedback via the skill API key
       let coordinator_name: string | null = null;
       try {
-        const profile = await appGet('/api/coordinator/profile') as { name?: string };
+        const profile = await appGet('/api/coordinator/profile', authKey) as { name?: string };
         coordinator_name = profile.name ?? null;
       } catch {
         // non-fatal — store without name
@@ -316,7 +321,7 @@ After calling this tool, for each task:
     {
       limit: z.number().default(50).describe('Max number of entries to return (newest first)'),
     },
-    async ({ limit }) => {
+    async ({ limit }, _authKey) => {
       const rows = await sbGet(
         'skill_feedback',
         `order=created_at.desc&limit=${limit}&select=message,context,coordinator_name,created_at`,
@@ -335,7 +340,7 @@ function mcpError(id: unknown, code: number, message: string) {
   return { jsonrpc: '2.0', id, error: { code, message } };
 }
 
-async function handleMessage(msg: Record<string, unknown>) {
+async function handleMessage(msg: Record<string, unknown>, authKey: string) {
   const { method, id, params } = msg as { method: string; id: unknown; params?: Record<string, unknown> };
 
   if (method === 'initialize') {
@@ -369,7 +374,7 @@ async function handleMessage(msg: Record<string, unknown>) {
     if (!t) return mcpError(id, -32601, `Unknown tool: ${toolName}`);
 
     try {
-      const result = await t.run(args);
+      const result = await t.run(args, authKey);
       return { jsonrpc: '2.0', id, result };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -387,6 +392,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // Forward the raw Authorization header value as authKey so each coordinator's
+  // identity propagates through internal app API calls.
+  const authKey = req.headers.get('authorization') ?? '';
+
   let body: unknown;
   try {
     body = await req.json();
@@ -396,11 +405,11 @@ export async function POST(req: NextRequest) {
 
   // Handle batch or single message
   if (Array.isArray(body)) {
-    const responses = (await Promise.all(body.map(msg => handleMessage(msg as Record<string, unknown>)))).filter(Boolean);
+    const responses = (await Promise.all(body.map(msg => handleMessage(msg as Record<string, unknown>, authKey)))).filter(Boolean);
     return NextResponse.json(responses);
   }
 
-  const response = await handleMessage(body as Record<string, unknown>);
+  const response = await handleMessage(body as Record<string, unknown>, authKey);
   if (response === null) return new NextResponse(null, { status: 202 }); // notification acknowledged
   return NextResponse.json(response);
 }
