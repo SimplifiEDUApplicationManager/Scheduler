@@ -197,6 +197,15 @@ export function DanielleTour() {
 
   // ── Check localStorage on mount ───────────────────────────────────────────
   useEffect(() => {
+    // If replay() triggered a hard reload, start the tour automatically.
+    const replayPending = localStorage.getItem('sim_tour_replay') === '1';
+    if (replayPending) {
+      localStorage.removeItem('sim_tour_replay');
+      setSeen(true);
+      setOpen(true);
+      return;
+    }
+
     const alreadySeen = localStorage.getItem('sim_intro_seen') === '1';
     setSeen(alreadySeen);
     if (!alreadySeen) {
@@ -309,9 +318,13 @@ export function DanielleTour() {
   }
 
   function replay() {
-    setStep(0);
-    setSpot(null);
-    setOpen(true);
+    // Clear the server-side cookie so the proposals page re-injects the demo
+    // proposal (Alex Chen) when the server renders on the next request.
+    // Then hard-reload to /tutor/proposals — a client-side push won't trigger
+    // a fresh server render for the cookie-gated proposals page.
+    document.cookie = 'sim_tour_done=;path=/;max-age=0;SameSite=Lax';
+    localStorage.setItem('sim_tour_replay', '1');
+    window.location.href = '/tutor/proposals';
   }
 
   const current    = STEPS[step]!;
