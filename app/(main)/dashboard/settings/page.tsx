@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { DEV_BYPASS } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { AsanaConnectionClient } from '@/components/features/coordinator/AsanaConnectionClient';
+import { SkillConnectorCard } from '@/components/features/coordinator/SkillConnectorCard';
 
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -16,6 +17,8 @@ function Card({ title, subtitle, children }: { title: string; subtitle?: string;
 }
 
 export default async function CoordinatorSettingsPage() {
+  const connectorUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/api/mcp`;
+
   if (DEV_BYPASS) {
     return (
       <div style={{ flex: 1, overflow: 'auto', background: '#FAFAFA' }}>
@@ -24,6 +27,9 @@ export default async function CoordinatorSettingsPage() {
           <p style={{ fontSize: 13, color: '#71717A', margin: '0 0 24px' }}>Integrations and preferences for your coordinator account.</p>
           <Card title="Asana" subtitle="Connect your Asana account to pull tutoring requests directly into your dashboard. Each coordinator uses their own token and project.">
             <AsanaConnectionClient connected={false} projectName={null} />
+          </Card>
+          <Card title="Claude Skill Connector" subtitle="Use this URL and token to connect your Claude Cowork skills to Simplifi. Each coordinator has a unique token.">
+            <SkillConnectorCard skillApiKey={null} connectorUrl={connectorUrl} />
           </Card>
         </div>
       </div>
@@ -36,7 +42,7 @@ export default async function CoordinatorSettingsPage() {
 
   const { data: row } = await supabase
     .from('users')
-    .select('asana_project_id, asana_access_token')
+    .select('asana_project_id, asana_access_token, skill_api_key')
     .eq('id', user.id)
     .single();
 
@@ -60,6 +66,9 @@ export default async function CoordinatorSettingsPage() {
         <p style={{ fontSize: 13, color: '#71717A', margin: '0 0 24px' }}>Integrations and preferences for your coordinator account.</p>
         <Card title="Asana" subtitle="Connect your Asana account to pull tutoring requests directly into your dashboard. Each coordinator uses their own token and project.">
           <AsanaConnectionClient connected={connected} projectName={projectName} />
+        </Card>
+        <Card title="Claude Skill Connector" subtitle="Use this URL and token to connect your Claude Cowork skills to Simplifi. Each coordinator has a unique token.">
+          <SkillConnectorCard skillApiKey={row?.skill_api_key ?? null} connectorUrl={connectorUrl} />
         </Card>
       </div>
     </div>
