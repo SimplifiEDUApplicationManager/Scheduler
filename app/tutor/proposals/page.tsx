@@ -11,13 +11,16 @@ import { DEV_BYPASS } from '@/lib/env';
 export default async function TutorProposalsPage() {
   const cookieStore = await cookies();
   // sim_tour_done is set client-side when the Danielle tour completes.
-  // Only show the demo proposal to tutors who haven't finished the tour yet.
-  const tourDone = cookieStore.get('sim_tour_done')?.value === '1';
+  // sim_tour_replay is set by replay() so the demo proposal re-appears even
+  // if sim_tour_done is still present from a prior run.
+  const tourDone   = cookieStore.get('sim_tour_done')?.value === '1';
+  const tourReplay = cookieStore.get('sim_tour_replay')?.value === '1';
+  const showDemo   = !tourDone || tourReplay;
 
   if (DEV_BYPASS) {
     const me = TUTORS.find(t => t.id === ME_TUTOR_ID);
     if (!me) return notFound();
-    const devProposals = tourDone ? TUTOR_PROPOSALS : [DEMO_PROPOSAL, ...TUTOR_PROPOSALS];
+    const devProposals = showDemo ? [DEMO_PROPOSAL, ...TUTOR_PROPOSALS] : TUTOR_PROPOSALS;
     return <ProposalsClient me={me} initialEvents={TUTOR_EVENTS} initialProposals={devProposals} />;
   }
 
@@ -33,7 +36,7 @@ export default async function TutorProposalsPage() {
 
   if (!me) redirect('/login');
 
-  const initialProposals = tourDone ? proposals : [DEMO_PROPOSAL, ...proposals];
+  const initialProposals = showDemo ? [DEMO_PROPOSAL, ...proposals] : proposals;
 
   return <ProposalsClient me={me} initialEvents={[]} initialProposals={initialProposals} />;
 }

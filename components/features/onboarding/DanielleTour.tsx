@@ -303,6 +303,7 @@ export function DanielleTour() {
     setOpen(false);
     localStorage.setItem('sim_intro_seen', '1');
     document.cookie = 'sim_tour_done=1;path=/;max-age=31536000;SameSite=Lax';
+    document.cookie = 'sim_tour_replay=;path=/;max-age=0;SameSite=Lax';
     setSeen(true);
   }
 
@@ -318,11 +319,10 @@ export function DanielleTour() {
   }
 
   function replay() {
-    // Clear the server-side cookie so the proposals page re-injects the demo
-    // proposal (Alex Chen) when the server renders on the next request.
-    // Then hard-reload to /tutor/proposals — a client-side push won't trigger
-    // a fresh server render for the cookie-gated proposals page.
-    document.cookie = 'sim_tour_done=;path=/;max-age=0;SameSite=Lax';
+    // Set a positive replay cookie so the proposals page server component
+    // injects the demo proposal (Alex Chen) even when sim_tour_done is still set.
+    // Hard-reload so the server sees the new cookie on the next request.
+    document.cookie = 'sim_tour_replay=1;path=/;SameSite=Lax';
     localStorage.setItem('sim_tour_replay', '1');
     window.location.href = '/tutor/proposals';
   }
