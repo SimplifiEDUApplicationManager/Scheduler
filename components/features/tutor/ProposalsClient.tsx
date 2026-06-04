@@ -5,6 +5,7 @@ import type { Tutor, TutorEvent, TutorProposal } from '@/lib/types/domain';
 import { ConsiderModal } from './consider/ConsiderModal';
 import { DeclineModal } from './DeclineModal';
 import { ProposalRow, type DisplayStatus } from './ProposalRow';
+import { DEMO_PROPOSAL } from '@/lib/data/demo';
 
 type FilterKey = 'pending' | 'accepted' | 'declined' | 'all';
 
@@ -28,6 +29,19 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
   const [consideringId, setConsideringId] = useState<string | null>(null);
   const [declineFor, setDeclineFor]       = useState<TutorProposal | null>(null);
   const [toast, setToast]         = useState<string | null>(null);
+
+  // When the Danielle tour navigates back to this page via router.push (which
+  // may serve a cached server render without the demo proposal), the tour fires
+  // sim:inject-demo to add Alex Chen client-side, bypassing the cache entirely.
+  useEffect(() => {
+    const handler = () => {
+      setProposals(prev =>
+        prev.some(p => p.id === 'demo-proposal') ? prev : [DEMO_PROPOSAL, ...prev],
+      );
+    };
+    window.addEventListener('sim:inject-demo', handler);
+    return () => window.removeEventListener('sim:inject-demo', handler);
+  }, []);
 
   function showToast(msg: string) {
     setToast(msg);
