@@ -1,27 +1,20 @@
 import { notFound, redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { TUTORS, TUTOR_PROPOSALS, TUTOR_EVENTS, ME_TUTOR_ID } from '@/lib/data/mock';
 import { ProposalsClient } from '@/components/features/tutor/ProposalsClient';
 import { fetchTutor } from '@/lib/data/tutors';
 import { getTutorProposals } from '@/lib/data/proposals';
-import { DEMO_PROPOSAL } from '@/lib/data/demo';
 import { DEV_BYPASS } from '@/lib/env';
 
 export default async function TutorProposalsPage() {
-  const cookieStore = await cookies();
-  // sim_tour_done is set client-side when the Danielle tour completes.
-  // sim_tour_replay is set by replay() so the demo proposal re-appears even
-  // if sim_tour_done is still present from a prior run.
-  const tourDone   = cookieStore.get('sim_tour_done')?.value === '1';
-  const tourReplay = cookieStore.get('sim_tour_replay')?.value === '1';
-  const showDemo   = !tourDone || tourReplay;
+  // The demo proposal (Alex Chen) is injected client-side by DanielleTour via
+  // the sim:inject-demo event at the practice steps — not server-side. This
+  // means a page refresh never shows a stale Alex Chen between tour steps.
 
   if (DEV_BYPASS) {
     const me = TUTORS.find(t => t.id === ME_TUTOR_ID);
     if (!me) return notFound();
-    const devProposals = showDemo ? [DEMO_PROPOSAL, ...TUTOR_PROPOSALS] : TUTOR_PROPOSALS;
-    return <ProposalsClient me={me} initialEvents={TUTOR_EVENTS} initialProposals={devProposals} />;
+    return <ProposalsClient me={me} initialEvents={TUTOR_EVENTS} initialProposals={TUTOR_PROPOSALS} />;
   }
 
   const supabase = await createClient();
@@ -36,7 +29,5 @@ export default async function TutorProposalsPage() {
 
   if (!me) redirect('/login');
 
-  const initialProposals = showDemo ? [DEMO_PROPOSAL, ...proposals] : proposals;
-
-  return <ProposalsClient me={me} initialEvents={[]} initialProposals={initialProposals} />;
+  return <ProposalsClient me={me} initialEvents={[]} initialProposals={proposals} />;
 }
