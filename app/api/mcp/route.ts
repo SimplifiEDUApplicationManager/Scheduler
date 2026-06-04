@@ -392,9 +392,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  // Forward the raw Authorization header value as authKey so each coordinator's
-  // identity propagates through internal app API calls.
-  const authKey = req.headers.get('authorization') ?? '';
+  // Accept the coordinator's key either as an Authorization header (preferred)
+  // or as a ?key= query parameter (for clients like claude.ai that don't support
+  // custom headers — paste the full URL with ?key=sk_coord_... as the connector URL).
+  const headerKey = req.headers.get('authorization') ?? '';
+  const urlKey    = req.nextUrl.searchParams.get('key');
+  const authKey   = headerKey || (urlKey ? `Bearer ${urlKey}` : '');
 
   let body: unknown;
   try {
