@@ -331,12 +331,13 @@ export function DanielleTour() {
   }
 
   function replay() {
-    // Set a positive replay cookie so the proposals page server component
-    // injects the demo proposal (Alex Chen) even when sim_tour_done is still set.
-    // Hard-reload so the server sees the new cookie on the next request.
+    // Hard-reload to the calendar page (where the tour begins) so the mount
+    // useEffect picks up the localStorage flag and auto-starts the tour.
+    // Demo proposal injection is handled client-side via sim:inject-demo, so
+    // we no longer need to hard-reload /tutor/proposals for a fresh server render.
     document.cookie = 'sim_tour_replay=1;path=/;SameSite=Lax';
     localStorage.setItem('sim_tour_replay', '1');
-    window.location.href = '/tutor/proposals';
+    window.location.href = '/tutor/calendar';
   }
 
   const current    = STEPS[step]!;
