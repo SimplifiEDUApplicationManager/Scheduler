@@ -237,7 +237,15 @@ export default async function DashboardPage() {
             label="Tutor capacity"
             value={`${capacityPct}%`}
             hint={`${atCap} at capacity · ${underbooked} underbooked`}
-            trend={{ dir: 'up', text: 'Healthy utilization' }}
+            trend={
+              capacityPct === 0
+                ? { dir: 'flat', text: 'No sessions booked yet' }
+                : capacityPct < 40
+                  ? { dir: 'down', text: 'Low utilization', warn: true }
+                  : capacityPct < 80
+                    ? { dir: 'up', text: 'Healthy utilization' }
+                    : { dir: 'up', text: 'Near capacity', warn: true }
+            }
             accentColor="var(--brand-ink)"
           />
           <KpiTile
