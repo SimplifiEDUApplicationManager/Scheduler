@@ -210,7 +210,7 @@ export async function fetchTutorEventsForCapacity(
         start_time: when.start_time,
         end_time:   when.end_time,
         title:      ev.title ?? '',
-        metadata:   null,
+        metadata:   ev.metadata ?? null,
       });
     }
   }
