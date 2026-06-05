@@ -89,7 +89,11 @@ export async function POST(req: NextRequest) {
           offeredRate:  isValidRate(offered_rate) ? (offered_rate as number) : null,
         },
         appUrl,
-      ).catch(() => { /* swallow — email failure is non-fatal */ });
+      ).then(result => {
+        if (!result.ok) console.error('[proposals] proposal email failed:', result.error);
+      }).catch(err => {
+        console.error('[proposals] proposal email threw:', err);
+      });
     }
   }
 
