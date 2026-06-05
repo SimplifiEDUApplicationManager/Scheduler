@@ -82,7 +82,7 @@ def resend_send_invite(api_key: str, recipient_email: str, recipient_name: str, 
 
     payload = json.dumps({
         "from": "Simplifi EDU <info@simplifiedu.com>",
-        "to": [{"name": recipient_name, "email": recipient_email}],
+        "to": recipient_email,
         "subject": "You're invited to Simplifi EDU",
         "html": html_body,
     }).encode()
@@ -90,6 +90,7 @@ def resend_send_invite(api_key: str, recipient_email: str, recipient_name: str, 
     req = urllib.request.Request("https://api.resend.com/emails", data=payload, method="POST", headers={
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
+        "User-Agent": "simplifi-invite/1.0",
     })
     try:
         with urllib.request.urlopen(req, context=_ssl_ctx()) as resp:
