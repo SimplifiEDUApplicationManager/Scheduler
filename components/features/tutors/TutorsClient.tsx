@@ -209,7 +209,11 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
       {/* ── Right panel: shared availability calendar ────────────────────────── */}
       <main className="flex-1 flex flex-col bg-surface-1 min-w-0 min-h-0">
         <div className="px-5 py-3 border-b border-border-default flex items-center gap-3 shrink-0">
-          <h3 className="text-[15px] font-semibold text-fg-1">Shared availability</h3>
+          <h3 className="text-[15px] font-semibold text-fg-1">
+            {selectedTutorId
+              ? `${filtered.find(t => t.id === selectedTutorId)?.name ?? 'Tutor'}'s availability`
+              : 'Shared availability'}
+          </h3>
           {activeReq && (
             <span className="text-[11px] text-fg-3">
               matching <strong className="text-fg-1">{activeReq.studentName}</strong> · {activeReq.subject}
@@ -246,7 +250,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
           </div>
         </div>
         <WeekView
-          tutors={filtered}
+          tutors={selectedTutorId ? filtered.filter(t => t.id === selectedTutorId) : filtered}
           requestTuples={activeReq?.tuples ?? filters.tuples}
           weekOffset={weekOffset}
           busySlotsPerTutor={weeklyBusy}
