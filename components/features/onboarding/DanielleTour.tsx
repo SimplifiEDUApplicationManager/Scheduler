@@ -376,10 +376,12 @@ export function DanielleTour() {
           step={step + 1}
           total={totalSteps}
           canBack={step > 0}
+          canSkip={seen}
           ctaLabel={current.cta}
           hideCta={!!current.waitForEvent}
           onNext={next}
           onBack={back}
+          onSkip={close}
         />
       </div>
     </>
@@ -422,10 +424,10 @@ function Backdrop({ spot, dim }: { spot: Spot | null; dim: number }) {
 
 // ─── Speech bubble ────────────────────────────────────────────────────────────
 
-function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, hideCta, onNext, onBack }: {
+function SpeechBubble({ title, body, tail, step, total, canBack, canSkip, ctaLabel, hideCta, onNext, onBack, onSkip }: {
   title: string; body: string; tail: 'bottom' | 'right' | 'none';
-  step: number; total: number; canBack: boolean; ctaLabel: string; hideCta: boolean;
-  onNext: () => void; onBack: () => void;
+  step: number; total: number; canBack: boolean; canSkip: boolean; ctaLabel: string; hideCta: boolean;
+  onNext: () => void; onBack: () => void; onSkip: () => void;
 }) {
   return (
     <div style={{
@@ -460,7 +462,12 @@ function SpeechBubble({ title, body, tail, step, total, canBack, ctaLabel, hideC
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        {canSkip ? (
+          <button onClick={onSkip} style={{ height: 36, padding: '0 10px', background: 'none', border: 'none', fontSize: 12, color: '#A1A1AA', cursor: 'pointer', fontFamily: 'inherit' }}>
+            Skip tour
+          </button>
+        ) : <div />}
         <div style={{ display: 'flex', gap: 8 }}>
           {canBack && (
             <button onClick={onBack} style={{ height: 36, padding: '0 14px', borderRadius: 9, background: '#fff', color: '#3F3F46', border: '1px solid #E4E4E7', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
