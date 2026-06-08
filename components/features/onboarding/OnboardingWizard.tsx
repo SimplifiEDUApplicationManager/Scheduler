@@ -62,8 +62,10 @@ export function OnboardingWizard({ initialName, email }: Props) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Step 1
-  const [name, setName]         = useState(initialName);
-  const [timezone, setTimezone] = useState('');
+  const [name, setName]               = useState(initialName);
+  const [timezone, setTimezone]       = useState('');
+  const [password, setPassword]       = useState('');
+  const [confirmPassword, setConfirm] = useState('');
 
   // Step 2
   const [minRate, setMinRate]   = useState<number>(25);
@@ -81,8 +83,10 @@ export function OnboardingWizard({ initialName, email }: Props) {
   // -- Step 1 ----------------------------------------------------------------
   function submitStep1(e: FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { setError('Name is required'); return; }
-    if (!timezone)    { setError('Please select your timezone'); return; }
+    if (!name.trim())    { setError('Name is required'); return; }
+    if (!timezone)       { setError('Please select your timezone'); return; }
+    if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
     setError(null);
     setStep(2);
   }
@@ -140,6 +144,7 @@ export function OnboardingWizard({ initialName, email }: Props) {
           maxWeeklyHours: Number(maxHours),
           minWeeklyHours: Number(minHours),
           meetingLink:    meetingLink.trim() || null,
+          password,
         }),
       });
       const data = await res.json();
@@ -219,6 +224,26 @@ export function OnboardingWizard({ initialName, email }: Props) {
               placeholder="Select your timezone..."
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
+              required
+            />
+
+            <Input
+              label="Create a password"
+              type="password"
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+            />
+
+            <Input
+              label="Confirm password"
+              type="password"
+              autoComplete="new-password"
+              placeholder="Re-enter your password"
+              value={confirmPassword}
+              onChange={e => setConfirm(e.target.value)}
               required
             />
 

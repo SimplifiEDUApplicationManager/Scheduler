@@ -28,13 +28,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { name, timezone, minRate, maxWeeklyHours, minWeeklyHours, meetingLink } = body;
+  const { name, timezone, minRate, maxWeeklyHours, minWeeklyHours, meetingLink, password } = body;
 
   if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ error: 'Name is required' }, { status: 422 });
   }
   if (!timezone || typeof timezone !== 'string') {
     return NextResponse.json({ error: 'Timezone is required' }, { status: 422 });
+  }
+  if (!password || typeof password !== 'string' || String(password).length < 8) {
+    return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 422 });
   }
   if (!isValidRate(minRate)) {
     return NextResponse.json({ error: 'Rate must be 20, 25, 30, 35, or 40' }, { status: 422 });
@@ -63,6 +66,14 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const { error: pwError } = await svc.auth.admin.updateUserById(user.id, {
+    password: String(password),
+  });
+
+  if (pwError) {
+    return NextResponse.json({ error: pwError.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
