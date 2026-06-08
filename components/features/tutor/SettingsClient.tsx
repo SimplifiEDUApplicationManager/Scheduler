@@ -47,7 +47,8 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const fileInputRef              = useRef<HTMLInputElement>(null);
   const bookingUrl                = me.bookingPageUrl ?? null;
   const [mySubjects, setSubjects] = useState<TutorSubject[]>(me.subjects);
-  const [dirty, setDirty]         = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const autoSaveInitRef = useRef(false);
   const [isPaused, setIsPaused]   = useState(me.isPaused);
   const [availReqs, setAvailReqs] = useState(me.availabilityRequests);
   const [addOpen, setAddOpen]       = useState(false);
@@ -62,7 +63,6 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
 
-  const touch = () => setDirty(true);
 
   // Derived availability request states
   const pendingPause        = availReqs.find(r => r.requestType === 'PAUSE' && r.status === 'PENDING');
@@ -260,33 +260,45 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
     }
   }
 
-  async function save(msg: string) {
-    try {
-      const res = await fetch('/api/tutor/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          timezone: tz,
-          // Skip maxHours if ≤ 5 — those go through the approval request flow.
-          ...(maxHours > 5 ? { maxWeeklyHours: maxHours } : {}),
-          minWeeklyHours: minHours,
-          minRate,
-          meetingLink,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        showToast(data.error ?? 'Failed to save changes');
+  // Auto-save: debounce 800ms after any profile field changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!autoSaveInitRef.current) { autoSaveInitRef.current = true; return; }
+    if (maxHours < 1 || maxHours > 40 || (totalAvail > 0 && maxHours > totalAvail)) return;
+
+    setAutoSaveStatus('idle');
+    const timer = setTimeout(async () => {
+      setAutoSaveStatus('saving');
+      try {
+        const res = await fetch('/api/tutor/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            timezone: tz,
+            ...(maxHours > 5 ? { maxWeeklyHours: maxHours } : {}),
+            minWeeklyHours: minHours,
+            minRate,
+            meetingLink,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          showToast(data.error ?? 'Failed to save');
+          setAutoSaveStatus('idle');
+          return;
+        }
+      } catch {
+        showToast('Failed to save — check your connection');
+        setAutoSaveStatus('idle');
         return;
       }
-    } catch {
-      showToast('Failed to save changes');
-      return;
-    }
-    setDirty(false);
-    showToast(msg);
-  }
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [name, tz, maxHours, minHours, minRate, meetingLink]);
 
   // Scroll to section from ?section= query param on initial mount
   useEffect(() => {
@@ -348,7 +360,14 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
 
         {/* Main content */}
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px', letterSpacing: '-0.015em' }}>Settings</h1>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: '-0.015em' }}>Settings</h1>
+            {autoSaveStatus !== 'idle' && (
+              <span style={{ fontSize: 12, color: autoSaveStatus === 'saving' ? '#A1A1AA' : '#22C55E', transition: 'color 0.2s' }}>
+                {autoSaveStatus === 'saving' ? 'Saving…' : 'Saved ✓'}
+              </span>
+            )}
+          </div>
           <p style={{ fontSize: 13, color: '#71717A', margin: '0 0 24px' }}>Profile, capacity, and scheduling preferences for your tutoring account.</p>
 
           {isPaused && (
@@ -394,13 +413,13 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
               </label>
             </div>
             <Row label="Full name" sub="Appears on your tutor card, proposals, and calendar invites.">
-              <input value={name} onChange={e => { setName(e.target.value); touch(); }} style={input()} />
+              <input value={name} onChange={e => { setName(e.target.value); }} style={input()} />
             </Row>
             <Row label="Email address" sub="Changes must be made by an admin.">
               <input defaultValue={me.email} disabled style={{ ...input(), background: '#FAFAFA', color: '#71717A' }} />
             </Row>
             <Row label="Timezone" sub="We interpret your working hours in this timezone and convert session times for students.">
-              <TimezoneSelect value={tz} onChange={v => { setTz(v); touch(); }} />
+              <TimezoneSelect value={tz} onChange={v => { setTz(v); }} />
             </Row>
             <Row label="Bio" sub="Admin-controlled — contact your coordinator to update.">
               <div style={{ padding: 12, background: '#FAFAFA', border: '1px solid #F5F5F5', borderRadius: 8, fontSize: 13, color: '#52525B', lineHeight: 1.5 }}>{me.bio}</div>
@@ -418,7 +437,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                     <button onClick={() => handleCancelAvailRequest(pendingLowHours!.id)} style={{ marginLeft: 10, fontSize: 11, color: '#B45309', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>Cancel request</button>
                   </div>
                 ) : (
-                  <input type="number" min={1} max={40} value={maxHours} onChange={e => { setMax(+e.target.value); touch(); }} style={{ ...input(), borderColor: maxError ? '#DC2626' : '#E4E4E7' }} />
+                  <input type="number" min={1} max={40} value={maxHours} onChange={e => { setMax(+e.target.value); }} style={{ ...input(), borderColor: maxError ? '#DC2626' : '#E4E4E7' }} />
                 )}
                 <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 4 }}>Hard ceiling. Coordinators can&apos;t schedule past this.</div>
                 {maxExceedsAvail && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Cannot exceed your {totalAvail} hrs/week of availability windows.</div>}
@@ -438,7 +457,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
               </div>
               <div>
                 <label style={metaLabel}>Minimum weekly hours</label>
-                <input type="number" min={6} value={minHours} onChange={e => { setMin(+e.target.value); touch(); }} style={input()} />
+                <input type="number" min={6} value={minHours} onChange={e => { setMin(+e.target.value); }} style={input()} />
                 <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 4 }}>Target floor — flags you as underbooked. System min: 6 hours.</div>
               </div>
             </div>
@@ -461,7 +480,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                   <button
                     key={r}
                     type="button"
-                    onClick={() => { setMinRate(r); touch(); }}
+                    onClick={() => { setMinRate(r); }}
                     style={{
                       padding: '6px 12px',
                       borderRadius: 8,
@@ -588,7 +607,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                   <svg width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="#A1A1AA" strokeWidth={1.5} strokeLinecap="round" style={{ position: 'absolute', left: 10, top: 11 }} aria-hidden>
                     <path d="M5 9L2 12M8.5 1.5l4 4-5 5-4-4 5-5z" /><path d="M3.5 7.5l3-3" />
                   </svg>
-                  <input value={meetingLink} onChange={e => { setLink(e.target.value); touch(); }} style={{ ...input(), paddingLeft: 32 }} />
+                  <input value={meetingLink} onChange={e => { setLink(e.target.value); }} style={{ ...input(), paddingLeft: 32 }} />
                 </div>
               </div>
             </Row>
@@ -701,19 +720,6 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
         </div>
       </div>
 
-      {/* Sticky save bar */}
-      <div style={{ position: 'sticky', bottom: 0, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderTop: '1px solid #E4E4E7', padding: '12px 32px', zIndex: 20 }}>
-        <div style={{ maxWidth: 1040, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ fontSize: 12, color: '#71717A', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {dirty && <span style={{ width: 6, height: 6, borderRadius: 999, background: '#F59E0B', display: 'inline-block' }} />}
-            {dirty ? 'Unsaved changes · hours & timezone recompute availability automatically.' : 'All changes recompute availability automatically.'}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button disabled={!dirty} onClick={() => { setDirty(false); showToast('Changes discarded'); }} style={{ ...btn('secondary'), opacity: dirty ? 1 : 0.5 }}>Discard</button>
-            <button disabled={!dirty || maxExceedsAvail} onClick={() => save('Changes saved')} style={{ ...btn('primary'), opacity: (!dirty || maxExceedsAvail) ? 0.5 : 1, cursor: (!dirty || maxExceedsAvail) ? 'not-allowed' : 'pointer' }}>Save changes</button>
-          </div>
-        </div>
-      </div>
 
       {addOpen && (
         <AddSubjectModal
