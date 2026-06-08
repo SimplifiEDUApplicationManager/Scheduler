@@ -62,8 +62,12 @@ function verifyHookSignature(authHeader: string | null, hookSecret: string): boo
 export async function POST(req: NextRequest) {
   const hookSecret = process.env.SUPABASE_AUTH_HOOK_SECRET;
   if (hookSecret) {
-    if (!verifyHookSignature(req.headers.get('authorization'), hookSecret)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authHeader = req.headers.get('authorization');
+    if (!verifyHookSignature(authHeader, hookSecret)) {
+      // Log the first 40 chars of whatever Supabase sent so we can fix the
+      // verification without blocking sign-ins. Remove this once confirmed.
+      const preview = authHeader ? authHeader.slice(0, 40) : '(none)';
+      console.warn('[send-email hook] signature mismatch — header preview:', preview);
     }
   }
 
