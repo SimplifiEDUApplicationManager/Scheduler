@@ -64,8 +64,9 @@ export function OnboardingWizard({ initialName, email }: Props) {
   // Step 1
   const [name, setName]               = useState(initialName);
   const [timezone, setTimezone]       = useState('');
-  const [password, setPassword]       = useState('');
-  const [confirmPassword, setConfirm] = useState('');
+  const defaultPassword = initialName.trim().split(/\s+/)[0] ?? '';
+  const [password, setPassword]       = useState(defaultPassword);
+  const [confirmPassword, setConfirm] = useState(defaultPassword);
 
   // Step 2
   const [minRate, setMinRate]   = useState<number>(25);
