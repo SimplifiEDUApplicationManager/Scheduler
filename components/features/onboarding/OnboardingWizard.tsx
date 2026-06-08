@@ -9,7 +9,6 @@ import { WorkingHoursEditor } from '@/components/features/tutor/WorkingHoursEdit
 import type { HoursMap } from '@/lib/types/scheduler';
 import { EMPTY_HOURS_MAP } from '@/lib/types/scheduler';
 import { formatTimezoneLabel } from '@/lib/utils/timezone';
-import { RATE_OPTIONS } from '@/lib/utils/rate';
 import { cn } from '@/lib/utils/cn';
 
 const TIMEZONES = [
@@ -69,7 +68,6 @@ export function OnboardingWizard({ initialName, email }: Props) {
   const [confirmPassword, setConfirm] = useState(defaultPassword);
 
   // Step 2
-  const [minRate, setMinRate]   = useState<number>(25);
   const [minHours, setMinHours] = useState<string>('6');
   const [maxHours, setMaxHours] = useState<string>('20');
   const [meetingLink, setLink]  = useState('');
@@ -141,7 +139,6 @@ export function OnboardingWizard({ initialName, email }: Props) {
         body: JSON.stringify({
           name:           name.trim(),
           timezone,
-          minRate,
           maxWeeklyHours: Number(maxHours),
           minWeeklyHours: Number(minHours),
           meetingLink:    meetingLink.trim() || null,
@@ -264,28 +261,6 @@ export function OnboardingWizard({ initialName, email }: Props) {
             <div>
               <h1 className="text-xl font-extrabold text-fg-1">Your capacity</h1>
               <p className="text-sm text-fg-3 mt-1">These help coordinators match you with the right students.</p>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-fg-1">Minimum hourly rate</span>
-              <div className="flex gap-2">
-                {RATE_OPTIONS.map(r => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setMinRate(r)}
-                    className={cn(
-                      'flex-1 h-9 rounded-md border text-body font-semibold transition-colors',
-                      minRate === r
-                        ? 'bg-brand-primary text-fg-on-brand border-brand-primary'
-                        : 'bg-surface-1 text-fg-1 border-border-default hover:border-border-strong',
-                    )}
-                  >
-                    ${r}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-fg-3">Coordinators won't propose students below this rate.</p>
             </div>
 
             <div className="flex gap-3">
