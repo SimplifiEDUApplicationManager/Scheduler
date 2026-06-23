@@ -13,7 +13,7 @@ export type AvailabilityRequestStatus = 'PENDING' | 'APPROVED' | 'DECLINED';
 export type TutorStatus    = 'active' | 'onboarding';
 export type RequestSource  = 'asana' | 'manual';
 export type RequestStatus  = 'open' | 'matched';
-export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired';
+export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'finished';
 export type AtRiskSeverity = 'high' | 'medium';
 
 // ── Availability ────────────────────────────────────────────────────────────
