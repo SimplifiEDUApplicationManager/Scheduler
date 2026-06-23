@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import { declineProposal, transitionHttpStatus } from '@/lib/data/proposals';
+import { createServiceClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/proposals/[id]/decline
@@ -25,6 +26,21 @@ export async function POST(
 
   if (!result.ok) {
     return NextResponse.json({ error: result.message }, { status: transitionHttpStatus(result) });
+  }
+
+  // Reopen the linked request so coordinators can reassign
+  const svc = createServiceClient();
+  const { data: proposal } = await svc
+    .from('proposals')
+    .select('request_id')
+    .eq('id', id)
+    .single();
+
+  if (proposal?.request_id) {
+    await svc
+      .from('requests')
+      .update({ status: 'open', matched_proposal_id: null })
+      .eq('id', proposal.request_id);
   }
 
   return NextResponse.json({ id });
