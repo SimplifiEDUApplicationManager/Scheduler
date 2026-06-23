@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     tutor_id, student_name, student_email, subject,
     requested_schedule, timezone, start_date, notes, asana_task_id, offered_rate,
     student_grade, parent_name, test_name, starting_score, goal_score,
-    test_dates, accommodations, schedule_notes,
+    test_dates, accommodations, schedule_notes, request_id,
   } = body;
 
   if (!tutor_id || !student_name || !student_email || !subject || !requested_schedule || !timezone) {
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       test_dates:         (test_dates as string | undefined) ?? null,
       accommodations:     (accommodations as string | undefined) ?? null,
       schedule_notes:     (schedule_notes as string | undefined) ?? null,
+      request_id:         (request_id as string | undefined) ?? null,
     })
     .select('id')
     .single();

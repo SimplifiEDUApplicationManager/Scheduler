@@ -49,7 +49,7 @@ export default async function DashboardPage() {
   startOfToday.setHours(0, 0, 0, 0);
   const todayIso = startOfToday.toISOString();
 
-  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }] = await Promise.all([
+  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }, { count: pendingProposalCount }] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
       .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
     supabase
       .from('proposals')
       .select('tutor_id, created_at, resolved_at')
-      .in('status', ['ACCEPTED', 'DECLINED'])
+      .in('status', ['ACCEPTED', 'DECLINED', 'EXPIRED'])
       .not('resolved_at', 'is', null)
       .gte('created_at', windowStart),
     supabase
@@ -85,6 +85,10 @@ export default async function DashboardPage() {
       .select('id', { count: 'exact', head: true })
       .eq('status', 'matched')
       .gte('updated_at', todayIso),
+    supabase
+      .from('proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'PENDING'),
   ]);
 
   // Fetch tutor names for availability requests
@@ -241,12 +245,12 @@ export default async function DashboardPage() {
             accentColor="var(--warning)"
           />
           <KpiTile
-            label="Pending invitations"
-            value={pending.length}
+            label="Pending proposals"
+            value={pendingProposalCount ?? 0}
             hint="Awaiting tutor response"
             trend={
-              pending.length > 2
-                ? { dir: 'flat', text: `${pending.length} oldest > 24h`, warn: true }
+              (pendingProposalCount ?? 0) > 2
+                ? { dir: 'flat', text: 'Some proposals awaiting response', warn: true }
                 : { dir: 'flat', text: 'All recent' }
             }
             href="/dashboard/proposals"
