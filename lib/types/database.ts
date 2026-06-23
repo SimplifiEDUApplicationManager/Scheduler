@@ -608,7 +608,7 @@ export type Database = {
     }
     Enums: {
       confidence_level: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
-      proposal_status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED"
+      proposal_status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "FINISHED"
       user_role: "SUPER_ADMIN" | "COORDINATOR" | "TUTOR"
       user_status: "PENDING" | "ACTIVE" | "DISABLED"
     }
@@ -742,7 +742,7 @@ export const Constants = {
   public: {
     Enums: {
       confidence_level: ["HIGH", "MEDIUM", "UNPROVEN", "LOW"],
-      proposal_status: ["PENDING", "ACCEPTED", "DECLINED", "EXPIRED"],
+      proposal_status: ["PENDING", "ACCEPTED", "DECLINED", "EXPIRED", "FINISHED"],
       user_role: ["SUPER_ADMIN", "COORDINATOR", "TUTOR"],
       user_status: ["PENDING", "ACTIVE", "DISABLED"],
     },
