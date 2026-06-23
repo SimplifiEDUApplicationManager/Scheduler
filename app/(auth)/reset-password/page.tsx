@@ -1,43 +1,73 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 
-type FormState = 'idle' | 'loading' | 'success' | { error: string };
+type PageState = 'verifying' | 'ready' | 'loading' | 'success' | { error: string };
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [formState, setFormState] = useState<FormState>('idle');
+  const [state, setState] = useState<PageState>('verifying');
+
+  // On mount, exchange the token_hash from the URL for a session
+  useEffect(() => {
+    const supabase = createClient();
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get('token_hash');
+    const type = params.get('type');
+
+    if (tokenHash && type === 'recovery') {
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+        .then(({ error }) => {
+          setState(error ? { error: error.message } : 'ready');
+        });
+    } else {
+      // No token — user might have arrived via auth callback redirect
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        setState(user ? 'ready' : { error: 'Invalid or expired reset link. Please request a new one.' });
+      });
+    }
+  }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (password.length < 8) {
-      setFormState({ error: 'Password must be at least 8 characters.' });
+      setState({ error: 'Password must be at least 8 characters.' });
       return;
     }
     if (password !== confirm) {
-      setFormState({ error: 'Passwords do not match.' });
+      setState({ error: 'Passwords do not match.' });
       return;
     }
 
-    setFormState('loading');
+    setState('loading');
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      setFormState({ error: error.message });
+      setState({ error: error.message });
     } else {
-      setFormState('success');
+      setState('success');
     }
   }
 
-  if (formState === 'success') {
+  if (state === 'verifying') {
+    return (
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Verifying link...</CardTitle>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (state === 'success') {
     return (
       <Card className="w-full max-w-sm">
         <CardHeader>
@@ -53,7 +83,22 @@ export default function ResetPasswordPage() {
     );
   }
 
-  const errorMessage = typeof formState === 'object' ? formState.error : undefined;
+  const errorMessage = typeof state === 'object' ? state.error : undefined;
+  const isReady = state === 'ready' || state === 'loading';
+
+  if (!isReady && errorMessage) {
+    return (
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Reset link expired</CardTitle>
+        </CardHeader>
+        <p className="text-sm text-danger-ink mb-4">{errorMessage}</p>
+        <Button size="lg" className="w-full" onClick={() => router.replace('/login')}>
+          Back to sign in
+        </Button>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-sm">
@@ -69,7 +114,7 @@ export default function ResetPasswordPage() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          disabled={formState === 'loading'}
+          disabled={state === 'loading'}
         />
         <Input
           label="Confirm password"
@@ -79,11 +124,11 @@ export default function ResetPasswordPage() {
           required
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
-          disabled={formState === 'loading'}
-          error={errorMessage}
+          disabled={state === 'loading'}
+          error={typeof state === 'object' ? state.error : undefined}
         />
-        <Button type="submit" size="lg" disabled={formState === 'loading'} className="w-full">
-          {formState === 'loading' ? 'Updating\u2026' : 'Update password'}
+        <Button type="submit" size="lg" disabled={state === 'loading'} className="w-full">
+          {state === 'loading' ? 'Updating\u2026' : 'Update password'}
         </Button>
       </form>
     </Card>
