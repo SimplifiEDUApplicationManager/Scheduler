@@ -90,7 +90,10 @@ export async function POST(req: NextRequest) {
     const name = user.user_metadata?.name ?? user.email.split('@')[0];
     result = await sendInviteEmail(user.email, name, actionLink);
   } else if (email_action_type === 'recovery') {
-    result = await sendPasswordResetEmail(user.email, actionLink);
+    // Link directly to our reset-password page — bypass Supabase's verify redirect
+    const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
+    const resetLink = `${appUrl}/reset-password?token_hash=${encodeURIComponent(token_hash)}&type=recovery`;
+    result = await sendPasswordResetEmail(user.email, resetLink);
   } else {
     // magiclink, signup, email_change
     result = await sendMagicLinkEmail(user.email, actionLink);
