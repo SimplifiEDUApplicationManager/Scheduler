@@ -66,6 +66,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message, status: 500 }, { status: 500 });
   }
 
+  // Mark the linked request as "proposed" so it leaves the open queue
+  if (request_id) {
+    const serviceClient = createServiceClient();
+    await serviceClient
+      .from('requests')
+      .update({ status: 'proposed', matched_proposal_id: data.id })
+      .eq('id', request_id as string);
+  }
+
   // Send proposal notification email to tutor (fire-and-forget — don't fail the request if email fails)
   if (appUrl) {
     const serviceClient = createServiceClient();
