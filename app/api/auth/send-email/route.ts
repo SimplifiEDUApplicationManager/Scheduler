@@ -11,7 +11,7 @@
 
 import { createHmac } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { sendInviteEmail, sendMagicLinkEmail } from '@/lib/resend/emails';
+import { sendInviteEmail, sendMagicLinkEmail, sendPasswordResetEmail } from '@/lib/resend/emails';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 
@@ -89,8 +89,10 @@ export async function POST(req: NextRequest) {
   if (email_action_type === 'invite') {
     const name = user.user_metadata?.name ?? user.email.split('@')[0];
     result = await sendInviteEmail(user.email, name, actionLink);
+  } else if (email_action_type === 'recovery') {
+    result = await sendPasswordResetEmail(user.email, actionLink);
   } else {
-    // magiclink, signup, recovery, email_change
+    // magiclink, signup, email_change
     result = await sendMagicLinkEmail(user.email, actionLink);
   }
 
