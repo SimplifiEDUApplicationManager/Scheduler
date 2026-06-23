@@ -4,7 +4,7 @@ import type { TutorProposal, TutorEvent } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { DAY_NAMES } from '@/lib/utils/tutors';
 
-export type DisplayStatus = 'pending' | 'reviewed' | 'accepted' | 'declined' | 'expired';
+export type DisplayStatus = 'pending' | 'reviewed' | 'accepted' | 'declined' | 'expired' | 'finished';
 
 interface ConflictEntry { tupleIdx: number; hits: TutorEvent[] }
 
@@ -14,6 +14,7 @@ interface Props {
   conflicts: ConflictEntry[];
   declineReason?: string;
   onOpen: () => void;
+  onFinish?: () => void;
 }
 
 const STATUS_META: Record<DisplayStatus, { label: string; bg: string; fg: string; dot: string }> = {
@@ -22,6 +23,7 @@ const STATUS_META: Record<DisplayStatus, { label: string; bg: string; fg: string
   accepted: { label: 'Accepted', bg: '#DCFCE7', fg: '#166534', dot: '#22C55E' },
   declined: { label: 'Declined', bg: '#FEE2E2', fg: '#991B1B', dot: '#DC2626' },
   expired:  { label: 'Expired',  bg: '#F4F4F5', fg: '#71717A', dot: '#A1A1AA' },
+  finished: { label: 'Finished', bg: '#DBEAFE', fg: '#1E40AF', dot: '#3B82F6' },
 };
 
 function fmtH(h: number): string {
@@ -30,7 +32,7 @@ function fmtH(h: number): string {
   return mn === 0 ? `${h12}${suf}` : `${h12}:${String(mn).padStart(2, '0')}${suf}`;
 }
 
-export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReason, onOpen }: Props) {
+export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReason, onOpen, onFinish }: Props) {
   const meta = STATUS_META[displayStatus];
   const needsAction = displayStatus === 'pending' || displayStatus === 'reviewed';
   const initials = p.studentName.split(' ').map(n => n[0]).join('').slice(0, 2);
@@ -105,6 +107,14 @@ export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReas
               <path d="M2 6h8M7 3l3 3-3 3" />
             </svg>
           </div>
+          {displayStatus === 'accepted' && onFinish && (
+            <button
+              onClick={e => { e.stopPropagation(); onFinish(); }}
+              style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #DBEAFE', background: '#EFF6FF', color: '#1E40AF', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+            >
+              Mark finished
+            </button>
+          )}
         </div>
       </div>
     </button>

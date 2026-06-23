@@ -177,7 +177,7 @@ export interface TutorEvent {
   recurring?: boolean;
 }
 
-export type TutorProposalStatus = 'pending' | 'accepted' | 'declined' | 'expired';
+export type TutorProposalStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'finished';
 
 export interface TutorProposal {
   id: string;

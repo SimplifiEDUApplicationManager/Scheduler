@@ -49,7 +49,7 @@ export default async function DashboardPage() {
   startOfToday.setHours(0, 0, 0, 0);
   const todayIso = startOfToday.toISOString();
 
-  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }, { count: pendingProposalCount }] = await Promise.all([
+  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }, { count: pendingProposalCount }, { count: activeJobCount }] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
       .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
@@ -89,6 +89,10 @@ export default async function DashboardPage() {
       .from('proposals')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'PENDING'),
+    supabase
+      .from('proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'ACCEPTED'),
   ]);
 
   // Fetch tutor names for availability requests
@@ -158,10 +162,8 @@ export default async function DashboardPage() {
       source:      r.source,
       createdAt:   r.created_at,
     }));
-  const pending      = INVITATIONS.filter(i => i.status === 'pending');
   const declined     = INVITATIONS.filter(i => i.status === 'declined');
   const expired      = INVITATIONS.filter(i => i.status === 'expired');
-  const accepted7d   = INVITATIONS.filter(i => i.status === 'accepted').length;
 
   const activeTutors = realTutors.length;
   const onboarding   = onboardingCount ?? 0;
@@ -272,10 +274,14 @@ export default async function DashboardPage() {
             accentColor="var(--brand-ink)"
           />
           <KpiTile
-            label="Sessions this week"
-            value={accepted7d + 12}
-            hint="Accepted & confirmed"
-            trend={{ dir: 'up', text: `+${accepted7d} new bookings` }}
+            label="Active jobs"
+            value={activeJobCount ?? 0}
+            hint="Accepted proposals in progress"
+            trend={
+              (activeJobCount ?? 0) > 0
+                ? { dir: 'flat', text: 'Tutors mark finished when done' }
+                : { dir: 'flat', text: 'No active jobs' }
+            }
             accentColor="var(--brand-teal-500)"
           />
         </div>

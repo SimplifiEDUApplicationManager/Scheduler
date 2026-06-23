@@ -7,7 +7,7 @@ import { DeclineModal } from './DeclineModal';
 import { ProposalRow, type DisplayStatus } from './ProposalRow';
 import { DEMO_PROPOSAL } from '@/lib/data/demo';
 
-type FilterKey = 'pending' | 'accepted' | 'declined' | 'all';
+type FilterKey = 'pending' | 'accepted' | 'finished' | 'declined' | 'all';
 
 interface EnrichedProposal extends TutorProposal {
   displayStatus: DisplayStatus;
@@ -49,6 +49,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
   }
 
   function getDisplayStatus(p: TutorProposal): DisplayStatus {
+    if (p.status === 'finished') return 'finished';
     if (p.status === 'accepted') return 'accepted';
     if (p.status === 'declined') return 'declined';
     if (p.status === 'expired')  return 'expired';
@@ -161,11 +162,24 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     showToast(`Declined · ${p?.coordinator.split(' ')[0]} has been notified`);
   }
 
+  async function handleFinish(id: string) {
+    const res = await fetch(`/api/proposals/${id}/finish`, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.json() as { error?: string };
+      showToast(`Error: ${body.error ?? 'Failed to mark as finished'}`);
+      return;
+    }
+    const p = proposals.find(prop => prop.id === id);
+    setProposals(ps => ps.map(prop => prop.id === id ? { ...prop, status: 'finished' } : prop));
+    showToast(`${p?.studentName ?? 'Job'} marked as finished`);
+  }
+
   const considering = consideringId ? proposals.find(p => p.id === consideringId) ?? null : null;
 
   const FILTERS = [
     ['pending',  'Needs response', actionCount,                                            '#F59E0B'],
-    ['accepted', 'Accepted',       enriched.filter(p => p.displayStatus === 'accepted').length, '#22C55E'],
+    ['accepted', 'Active',         enriched.filter(p => p.displayStatus === 'accepted').length, '#22C55E'],
+    ['finished', 'Finished',       enriched.filter(p => p.displayStatus === 'finished').length, '#3B82F6'],
     ['declined', 'Declined',       enriched.filter(p => p.displayStatus === 'declined').length, '#DC2626'],
     ['all',      'All',            enriched.length,                                        '#52525B'],
   ] as const;
@@ -210,6 +224,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
               conflicts={p.conflicts}
               declineReason={declineReasons[p.id]}
               onOpen={() => openDetail(p.id)}
+              onFinish={p.displayStatus === 'accepted' ? () => handleFinish(p.id) : undefined}
             />
           ))}
         </div>
