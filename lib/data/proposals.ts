@@ -180,7 +180,7 @@ export async function expireOverdueProposals(
 ): Promise<number> {
   const { data: pending, error: fetchError } = await supabase
     .from('proposals')
-    .select('id, expires_at')
+    .select('id, expires_at, request_id')
     .eq('status', 'PENDING');
 
   if (fetchError) throw fetchError;
@@ -188,11 +188,33 @@ export async function expireOverdueProposals(
   const expiredIds = findExpiredProposals(pending ?? [], nowMs);
   if (expiredIds.length === 0) return 0;
 
-  const { error: updateError } = await supabase
-    .from('proposals')
-    .update({ status: 'EXPIRED', resolved_at: new Date().toISOString() })
-    .in('id', expiredIds);
+  // Expire each proposal individually so we can:
+  //   1. Set resolved_at = expires_at (exactly 24h) for accurate response-time scoring
+  //   2. Reopen the linked request so coordinators can reassign
+  let count = 0;
+  for (const id of expiredIds) {
+    const row = (pending ?? []).find(p => p.id === id);
+    if (!row) continue;
 
-  if (updateError) throw updateError;
-  return expiredIds.length;
+    const { error: updateError } = await supabase
+      .from('proposals')
+      .update({ status: 'EXPIRED', resolved_at: row.expires_at })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('[expire-proposals] failed to expire:', id, updateError.message);
+      continue;
+    }
+    count++;
+
+    if (row.request_id) {
+      const { error: reqErr } = await supabase
+        .from('requests')
+        .update({ status: 'open', matched_proposal_id: null })
+        .eq('id', row.request_id);
+      if (reqErr) console.error('[expire-proposals] failed to reopen request:', row.request_id, reqErr.message);
+    }
+  }
+
+  return count;
 }

@@ -56,6 +56,7 @@ export function ProposeModal({ tutor, request, onClose, onSend, asanaTaskId }: P
           test_dates:         testDates.trim() || null,
           accommodations:     accommodations.trim() || null,
           schedule_notes:     scheduleNotes.trim() || null,
+          request_id:         request?.id ?? null,
         }),
       });
       const body = await res.json() as { id?: string; error?: string };

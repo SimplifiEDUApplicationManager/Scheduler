@@ -150,16 +150,16 @@ async function matchRequestOnAccept(proposalId: string): Promise<void> {
 
   const { data: proposal } = await supabase
     .from('proposals')
-    .select('id, asana_task_id, coordinator_id, student_email, subject')
+    .select('id, request_id, asana_task_id, coordinator_id, student_email, subject')
     .eq('id', proposalId)
     .single();
 
   if (!proposal) return;
 
-  // Find the linked open request — asana_task_id match first, then fuzzy fallback.
-  let requestId: string | null = null;
+  // Find the linked open request — direct request_id first, then asana_task_id, then fuzzy.
+  let requestId: string | null = proposal.request_id ?? null;
 
-  if (proposal.asana_task_id) {
+  if (!requestId && proposal.asana_task_id) {
     const { data: req } = await supabase
       .from('requests')
       .select('id')
