@@ -45,7 +45,11 @@ export default async function DashboardPage() {
   const userTz = userRow?.timezone;
 
   const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors] = await Promise.all([
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todayIso = startOfToday.toISOString();
+
+  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
       .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
@@ -72,6 +76,15 @@ export default async function DashboardPage() {
       .eq('role', 'TUTOR')
       .eq('status', 'PENDING'),
     fetchAllTutors(supabase),
+    supabase
+      .from('requests')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', todayIso),
+    supabase
+      .from('requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'matched')
+      .gte('updated_at', todayIso),
   ]);
 
   // Fetch tutor names for availability requests
@@ -218,7 +231,12 @@ export default async function DashboardPage() {
             label="Open requests"
             value={openRequests.length}
             hint={`${openRequests.filter(r => r.source === 'asana').length} from Asana`}
-            trend={{ dir: 'up', text: '+2 since yesterday' }}
+            trend={(() => {
+              const diff = (createdToday ?? 0) - (matchedToday ?? 0);
+              if (diff > 0) return { dir: 'up' as const, text: `+${diff} since yesterday` };
+              if (diff < 0) return { dir: 'down' as const, text: `${diff} since yesterday` };
+              return { dir: 'flat' as const, text: 'No change since yesterday' };
+            })()}
             href="/dashboard/requests"
             accentColor="var(--warning)"
           />
