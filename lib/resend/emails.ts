@@ -157,6 +157,26 @@ export async function sendMagicLinkEmail(
   });
 }
 
+// ── Password reset email (Supabase Auth Hook — recovery) ─────────────────────
+
+export async function sendPasswordResetEmail(
+  recipientEmail: string,
+  actionLink: string,
+): Promise<EmailResult> {
+  const content = `
+<h2 style="font-size:20px;font-weight:800;margin:0 0 16px;letter-spacing:-0.015em">Reset your password</h2>
+<p style="font-size:14px;color:#52525B;margin:0 0 24px;line-height:1.6">We received a request to reset the password for your Simplifi EDU account. Click below to choose a new password.</p>
+<p style="margin:0 0 28px">${ctaButton(actionLink, 'Reset password')}</p>
+<p style="font-size:12px;color:#A1A1AA;margin:0;line-height:1.6">This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.</p>
+`;
+
+  return send({
+    to: recipientEmail,
+    subject: 'Reset your Simplifi EDU password',
+    html: brandedHtml(content),
+  });
+}
+
 // ── Proposal notification email ───────────────────────────────────────────────
 
 interface ProposalEmailData {
