@@ -9,13 +9,15 @@ const STATUS_COLOR: Record<InvitationStatus, string> = {
   accepted: '#22C55E',
   declined: '#DC2626',
   expired:  '#A1A1AA',
+  finished: '#3B82F6',
 };
 
 const STATUS_LABEL: Record<InvitationStatus, string> = {
   pending:  'Pending',
-  accepted: 'Accepted',
+  accepted: 'Active',
   declined: 'Declined',
   expired:  'Expired',
+  finished: 'Finished',
 };
 
 type Tab = 'all' | InvitationStatus;
@@ -23,7 +25,8 @@ type Tab = 'all' | InvitationStatus;
 const TABS: { key: Tab; label: string }[] = [
   { key: 'all',      label: 'All'      },
   { key: 'pending',  label: 'Pending'  },
-  { key: 'accepted', label: 'Accepted' },
+  { key: 'accepted', label: 'Active'   },
+  { key: 'finished', label: 'Finished' },
   { key: 'declined', label: 'Declined' },
   { key: 'expired',  label: 'Expired'  },
 ];
@@ -43,6 +46,7 @@ export function ProposalsClient({ invitations, tutors, requests }: Props) {
     all:      invitations.length,
     pending:  invitations.filter(i => i.status === 'pending').length,
     accepted: invitations.filter(i => i.status === 'accepted').length,
+    finished: invitations.filter(i => i.status === 'finished').length,
     declined: invitations.filter(i => i.status === 'declined').length,
     expired:  invitations.filter(i => i.status === 'expired').length,
   };

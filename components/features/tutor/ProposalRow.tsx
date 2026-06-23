@@ -39,9 +39,10 @@ export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReas
   const borderColor = displayStatus === 'reviewed' ? '#C7D2FE' : '#E4E4E7';
 
   return (
-    <button
-      onClick={onOpen}
-      disabled={!needsAction}
+    <div
+      onClick={needsAction ? onOpen : undefined}
+      role={needsAction ? 'button' : undefined}
+      tabIndex={needsAction ? 0 : undefined}
       style={{ textAlign: 'left', background: '#fff', border: `1px solid ${borderColor}`, borderRadius: 12, padding: 0, cursor: needsAction ? 'pointer' : 'default', fontFamily: 'inherit', color: '#18181B', overflow: 'hidden', display: 'block', width: '100%', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
       onMouseEnter={e => { if (!needsAction) return; e.currentTarget.style.borderColor = '#18181B'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(22,32,51,0.08)'; }}
       onMouseLeave={e => { if (!needsAction) return; e.currentTarget.style.borderColor = borderColor; e.currentTarget.style.boxShadow = 'none'; }}
@@ -117,6 +118,6 @@ export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReas
           )}
         </div>
       </div>
-    </button>
+    </div>
   );
 }

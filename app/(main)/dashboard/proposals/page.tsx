@@ -22,6 +22,7 @@ const STATUS_MAP: Record<string, InvitationStatus> = {
   ACCEPTED: 'accepted',
   DECLINED: 'declined',
   EXPIRED:  'expired',
+  FINISHED: 'finished',
 };
 
 export default async function ProposalsPage() {
