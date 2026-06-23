@@ -16,14 +16,17 @@ interface KpiTileProps {
   accentColor: string;
 }
 
-function TrendArrow({ dir }: { dir: 'up' | 'down' }) {
+function TrendIcon({ dir }: { dir: 'up' | 'down' | 'flat' }) {
+  if (dir === 'flat') {
+    return (
+      <svg width={10} height={10} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
+        <path d="M2 6h8" />
+      </svg>
+    );
+  }
   const d = dir === 'up' ? 'M2 8l4-4 4 4' : 'M2 4l4 4 4-4';
   return (
-    <svg
-      width={10} height={10} viewBox="0 0 12 12" fill="none"
-      stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-      aria-hidden
-    >
+    <svg width={10} height={10} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d={d} />
     </svg>
   );
@@ -52,10 +55,12 @@ export function KpiTile({ label, value, hint, trend, href, accentColor }: KpiTil
               ? 'text-warning-ink'
               : trend.dir === 'up'
               ? 'text-success-ink'
+              : trend.dir === 'down'
+              ? 'text-danger-ink'
               : 'text-fg-3',
           )}
         >
-          {(trend.dir === 'up' || trend.dir === 'down') && <TrendArrow dir={trend.dir} />}
+          <TrendIcon dir={trend.dir} />
           {trend.text}
         </div>
       )}
