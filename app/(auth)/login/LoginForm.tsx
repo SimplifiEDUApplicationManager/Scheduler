@@ -26,7 +26,7 @@ export function LoginForm({ linkExpired }: { linkExpired?: boolean }) {
     if (error) {
       setFormState({ error: error.message });
     } else {
-      router.replace('/auth/callback?next=/tutor/calendar');
+      router.replace('/');
     }
   }
 
