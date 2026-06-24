@@ -14,8 +14,8 @@ interface WeekViewProps {
 }
 
 const ROW_H = 44;
-const START_H = 8;
-const END_H = 21;
+const START_H = 0;
+const END_H = 24;
 const HOURS = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i);
 const PALETTE = ['#3B82F6','#16A34A','#DB2777','#D97706','#6366F1','#0891B2','#EA580C','#7C3AED'];
 

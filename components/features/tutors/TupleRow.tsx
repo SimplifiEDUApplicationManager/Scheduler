@@ -7,7 +7,7 @@ interface TupleRowProps {
   onRemove: () => void;
 }
 
-const HOURS = Array.from({ length: 14 }, (_, i) => 8 + i); // 8 AM – 9 PM
+const HOURS = Array.from({ length: 25 }, (_, i) => i); // 0–24 (12 AM – 12 AM)
 
 const selectCls =
   'h-[26px] px-1.5 text-[11px] border border-border-default rounded bg-surface-1 ' +

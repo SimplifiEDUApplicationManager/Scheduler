@@ -3,8 +3,8 @@
 import type { TutorEvent, Tuple } from '@/lib/types/domain';
 import { fmtHour } from '@/lib/utils/tutors';
 
-const START_H = 8;
-const END_H = 21;
+const START_H = 0;
+const END_H = 24;
 const ROW_H = 18;
 // Column order Mon–Sun; col index → day-of-week
 const COL_TO_DAY = [1, 2, 3, 4, 5, 6, 0];
