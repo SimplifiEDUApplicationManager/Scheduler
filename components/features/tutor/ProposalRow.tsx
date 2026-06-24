@@ -110,8 +110,9 @@ export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReas
           </div>
           {displayStatus === 'accepted' && onFinish && (
             <button
-              onClick={e => { e.stopPropagation(); onFinish(); }}
-              style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #DBEAFE', background: '#EFF6FF', color: '#1E40AF', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+              type="button"
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onFinish(); }}
+              style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #93C5FD', background: '#3B82F6', color: '#fff', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', pointerEvents: 'auto', position: 'relative', zIndex: 10 }}
             >
               Mark finished
             </button>
