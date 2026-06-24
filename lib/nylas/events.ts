@@ -2,7 +2,7 @@
 // Fetch and map Nylas calendar events → TutorEvent[].
 // Server-side only.
 
-import { nylasList, nylasPost, grantPath } from './client';
+import { nylasList, nylasPost, nylasDelete, grantPath } from './client';
 import type { TutorEvent, TutorEventKind, TutorEventStatus } from '@/lib/types/domain';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
@@ -311,6 +311,24 @@ export async function createTutoringEvent(
   }
 
   return result.data.id;
+}
+
+// ── Event deletion ───────────────────────────────────────────────────────────
+
+/**
+ * Delete a calendar event by Nylas event ID. Best-effort: returns true on
+ * success or if the event was already gone (404). Returns false on other errors.
+ */
+export async function deleteTutoringEvent(
+  grantId: string,
+  eventId: string,
+): Promise<boolean> {
+  const result = await nylasDelete(`${grantPath(grantId, 'events')}/${eventId}`);
+  if (result.ok) return true;
+  // 404 = already deleted by the tutor manually — not an error
+  if (result.error?.includes('404') || result.error?.includes('not found')) return true;
+  console.error('[nylas/events] deleteTutoringEvent failed:', result.error, { grantId, eventId });
+  return false;
 }
 
 // ── Week range helper ─────────────────────────────────────────────────────────
