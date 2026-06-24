@@ -318,16 +318,22 @@ export async function createTutoringEvent(
 /**
  * Delete a calendar event by Nylas event ID. Best-effort: returns true on
  * success or if the event was already gone (404). Returns false on other errors.
+ *
+ * Nylas v3 requires calendar_id on DELETE. We resolve the tutor's primary
+ * writable calendar, or use the provided calendarId (tutor email for Google).
  */
 export async function deleteTutoringEvent(
   grantId: string,
   eventId: string,
+  calendarId?: string,
 ): Promise<boolean> {
-  const result = await nylasDelete(`${grantPath(grantId, 'events')}/${eventId}`);
+  const calId = calendarId ?? (await fetchCalendarIds(grantId))[0] ?? 'primary';
+  const path = `${grantPath(grantId, 'events')}/${eventId}?calendar_id=${encodeURIComponent(calId)}`;
+  const result = await nylasDelete(path);
   if (result.ok) return true;
   // 404 = already deleted by the tutor manually — not an error
   if (result.error?.includes('404') || result.error?.includes('not found')) return true;
-  console.error('[nylas/events] deleteTutoringEvent failed:', result.error, { grantId, eventId });
+  console.error('[nylas/events] deleteTutoringEvent failed:', result.error, { grantId, eventId, calId });
   return false;
 }
 
