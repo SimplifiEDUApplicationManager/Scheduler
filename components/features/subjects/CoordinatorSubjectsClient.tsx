@@ -225,11 +225,16 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
 
   // ── Delete subject ────────────────────────────────────────────────────────
 
+  const [deletingSubject, setDeletingSubject] = useState(false);
+
   async function handleDeleteSubject(id: string, name: string) {
+    if (!confirm(`Remove "${name}"? This cannot be undone.`)) return;
+    setDeletingSubject(true);
     const res = await fetch(`/api/subjects/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const body = await res.json() as { error?: string };
       showToast(`Error: ${body.error ?? 'Failed to delete subject'}`);
+      setDeletingSubject(false);
       return;
     }
     setSubjects(prev => {
@@ -237,6 +242,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
       if (selectedId === id) setSelectedId(next[0]?.id ?? null);
       return next;
     });
+    setDeletingSubject(false);
     showToast(`${name} removed`);
   }
 
@@ -462,9 +468,11 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
                 </div>
                 <button
                   onClick={() => handleDeleteSubject(selectedSubject.id, selectedSubject.name)}
+                  disabled={deletingSubject}
                   className="h-8 px-3 rounded-lg border border-border-default bg-surface-1 text-xs font-semibold text-fg-3 hover:border-danger hover:text-danger hover:bg-danger-bg transition-colors shrink-0 mt-1"
+                  style={{ opacity: deletingSubject ? 0.5 : 1 }}
                 >
-                  Remove subject
+                  {deletingSubject ? 'Removing\u2026' : 'Remove subject'}
                 </button>
               </div>
             </div>

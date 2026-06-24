@@ -16,9 +16,10 @@ interface Props {
   coordinatorTz: string;
   onPropose: (tutor: Tutor) => void;
   onDelete: () => void;
+  deleting?: boolean;
 }
 
-export function RequestDetail({ request: r, invitations, tutors, matchedTutor, coordinatorTz, onPropose, onDelete }: Props) {
+export function RequestDetail({ request: r, invitations, tutors, matchedTutor, coordinatorTz, onPropose, onDelete, deleting }: Props) {
   const suggestions = useMemo(() => {
     const CONF_ORDER = ['HIGH', 'MEDIUM', 'UNPROVEN', 'LOW'] as const;
     return tutors
@@ -74,7 +75,9 @@ export function RequestDetail({ request: r, invitations, tutors, matchedTutor, c
             )}
             <button
               onClick={onDelete}
+              disabled={deleting}
               className="h-8 w-8 rounded-lg border border-border-default flex items-center justify-center text-fg-3 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+              style={{ opacity: deleting ? 0.5 : 1 }}
               aria-label="Delete request"
             >
               <svg width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>

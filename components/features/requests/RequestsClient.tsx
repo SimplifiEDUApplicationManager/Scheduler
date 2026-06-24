@@ -55,14 +55,18 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
     showToast('Request created');
   }
 
+  const [deleting, setDeleting] = useState(false);
+
   async function handleDelete() {
     if (!selected) return;
+    setDeleting(true);
     const id = selected.id;
     const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
-    if (!res.ok) { showToast('Failed to delete request'); return; }
+    if (!res.ok) { showToast('Failed to delete request'); setDeleting(false); return; }
     const remaining = requests.filter(r => r.id !== id);
     setRequests(remaining);
     setSelectedId(remaining[0]?.id ?? '');
+    setDeleting(false);
     showToast('Request deleted');
   }
 
@@ -113,6 +117,7 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
             coordinatorTz={coordinatorTz}
             onPropose={tutor => setProposeFor({ tutor, request: selected })}
             onDelete={handleDelete}
+            deleting={deleting}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-fg-muted text-sm">
