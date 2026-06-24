@@ -5,13 +5,15 @@ const STATUS_COLOR: Record<InvitationStatus, string> = {
   accepted: '#22C55E',
   declined: '#DC2626',
   expired:  '#A1A1AA',
+  finished: '#3B82F6',
 };
 
 const STATUS_LABEL: Record<InvitationStatus, string> = {
   pending:  'Pending',
-  accepted: 'Accepted',
+  accepted: 'Active',
   declined: 'Declined',
   expired:  'Expired',
+  finished: 'Finished',
 };
 
 function StatusPill({ status }: { status: InvitationStatus }) {
