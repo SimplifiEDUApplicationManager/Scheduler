@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
+import { deleteTutoringEvent } from '@/lib/nylas/events';
 
 /**
  * POST /api/proposals/[id]/finish
  * Tutor marks an accepted proposal as finished (engagement complete).
+ * Also removes the recurring calendar event (best-effort).
  */
 export async function POST(
   _req: NextRequest,
@@ -18,7 +20,7 @@ export async function POST(
 
   const { data: proposal } = await svc
     .from('proposals')
-    .select('status, tutor_id')
+    .select('status, tutor_id, nylas_event_id')
     .eq('id', id)
     .single();
 
@@ -41,6 +43,21 @@ export async function POST(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Remove the calendar event (best-effort — don't fail if already deleted)
+  if (proposal.nylas_event_id && proposal.tutor_id) {
+    const { data: tutor } = await svc
+      .from('users')
+      .select('nylas_grant_id')
+      .eq('id', proposal.tutor_id)
+      .single();
+
+    if (tutor?.nylas_grant_id) {
+      deleteTutoringEvent(tutor.nylas_grant_id, proposal.nylas_event_id).catch(err => {
+        console.error('[proposals/finish] calendar delete threw:', err);
+      });
+    }
   }
 
   return NextResponse.json({ id });
