@@ -40,6 +40,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
   const [proposeFor, setProposeFor]            = useState<Tutor | null>(null);
   const [profileTutor, setProfileTutor]        = useState<Tutor | null>(null);
   const [toastName, setToastName]              = useState<string | null>(null);
+  const [proposedReqIds, setProposedReqIds]    = useState<Set<string>>(new Set());
   const [weekOffset, setWeekOffset]            = useState(0);
   const [calendarStatuses, setCalendarStatuses] = useState<Record<string, CalendarStatus>>({});
   const [weeklyBusy, setWeeklyBusy]             = useState<Record<string, BusyBlock[]>>({});
@@ -142,6 +143,11 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
   }, [filteredIdKey, weekOffset, coordinatorTz]);
 
   function handleProposeSend(tutorName: string) {
+    // Remove the proposed request from the picker and clear the active selection
+    if (activeReq) {
+      setProposedReqIds(prev => new Set(prev).add(activeReq.id));
+      clearRequest();
+    }
     setProposeFor(null);
     setToastName(tutorName);
     setTimeout(() => setToastName(null), 3200);
@@ -152,7 +158,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
       {/* ── Left panel: request picker + filters + tutor list ─────────────── */}
       <aside className="w-[380px] border-r border-border-default bg-surface-1 flex flex-col shrink-0 min-h-0">
         <RequestPickerBlock
-          requests={requests.filter(r => r.status === 'open')}
+          requests={requests.filter(r => r.status === 'open' && !proposedReqIds.has(r.id))}
           activeReq={activeReq}
           onPick={applyRequest}
           onClear={clearRequest}
