@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { Subject, Tuple } from '@/lib/types/domain';
 import type { FilterState } from '@/lib/utils/tutors';
 import { TupleRow } from './TupleRow';
@@ -16,6 +16,15 @@ interface FilterPanelProps {
 
 export function FilterPanel({ filters, subjects, onChange }: FilterPanelProps) {
   const [subjectOpen, setSubjectOpen] = useState(false);
+  const [subjectSearch, setSubjectSearch] = useState('');
+  const subjectSearchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (subjectOpen) {
+      setSubjectSearch('');
+      setTimeout(() => subjectSearchRef.current?.focus(), 0);
+    }
+  }, [subjectOpen]);
 
   function set<K extends keyof FilterState>(key: K, val: FilterState[K]) {
     onChange({ ...filters, [key]: val });
@@ -98,40 +107,59 @@ export function FilterPanel({ filters, subjects, onChange }: FilterPanelProps) {
               </span>
             );
           })}
-          {subjectOpen && unselectedSubjects.slice(0, 8).map(s => (
-            <button
-              key={s.id}
-              onClick={() => { set('subjects', [...filters.subjects, s.id]); }}
-              className="px-2 py-0.5 rounded-full bg-surface-3 text-fg-2 text-[10px] font-medium hover:bg-neutral-200 transition-colors"
-            >
-              + {s.name}
-            </button>
-          ))}
+          {subjectOpen && (
+            <>
+              <div className="w-full mt-1">
+                <input
+                  ref={subjectSearchRef}
+                  type="search"
+                  value={subjectSearch}
+                  onChange={e => setSubjectSearch(e.target.value)}
+                  placeholder="Search subjects…"
+                  className="w-full h-7 px-2.5 text-[11px] border border-border-default rounded-md bg-surface-1 text-fg-1 placeholder:text-fg-muted focus:outline-none focus:border-neutral-400"
+                />
+              </div>
+              {unselectedSubjects
+                .filter(s => !subjectSearch || s.name.toLowerCase().includes(subjectSearch.toLowerCase()))
+                .slice(0, 12)
+                .map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => { set('subjects', [...filters.subjects, s.id]); setSubjectSearch(''); }}
+                  className="px-2 py-0.5 rounded-full bg-surface-3 text-fg-2 text-[10px] font-medium hover:bg-neutral-200 transition-colors"
+                >
+                  + {s.name}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </div>
 
-      {/* Confidence toggles */}
-      <div>
-        <span className="text-[9px] font-bold text-fg-muted uppercase tracking-[0.06em] block mb-1">Confidence</span>
-        <div className="flex gap-1">
-          {CONF_LEVELS.map(c => {
-            const on = filters.conf.includes(c);
-            return (
-              <button
-                key={c}
-                onClick={() => toggleConf(c)}
-                className={`flex-1 py-1 rounded-md text-[10px] font-semibold border transition-colors ${
-                  on
-                    ? 'bg-brand-ink text-fg-on-brand border-brand-ink'
-                    : 'bg-surface-1 text-fg-3 border-border-default hover:border-neutral-300'
-                }`}
-              >
-                {CONF_LABEL[c]}
-              </button>
-            );
-          })}
+      {/* Confidence toggles — only show when a subject is selected */}
+      {filters.subjects.length > 0 && (
+        <div>
+          <span className="text-[9px] font-bold text-fg-muted uppercase tracking-[0.06em] block mb-1">Confidence</span>
+          <div className="flex gap-1">
+            {CONF_LEVELS.map(c => {
+              const on = filters.conf.includes(c);
+              return (
+                <button
+                  key={c}
+                  onClick={() => toggleConf(c)}
+                  className={`flex-1 py-1 rounded-md text-[10px] font-semibold border transition-colors ${
+                    on
+                      ? 'bg-brand-ink text-fg-on-brand border-brand-ink'
+                      : 'bg-surface-1 text-fg-3 border-border-default hover:border-neutral-300'
+                  }`}
+                >
+                  {CONF_LABEL[c]}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Availability tuples */}
       <div>
