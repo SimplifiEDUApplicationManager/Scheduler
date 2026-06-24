@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import type { CalendarStatus } from '@/app/api/nylas/free-busy/route';
 import type { BusyBlock } from '@/app/api/nylas/weekly-busy/route';
@@ -33,8 +33,19 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
   const pathname   = usePathname();
   const rawParams  = useSearchParams();
 
-  // Derive all filter state from URL — URL is the single source of truth
-  const filters = useMemo(() => parseFilters(rawParams), [rawParams]);
+  // URL is the durable source of truth, but we keep an optimistic copy
+  // so the UI updates instantly while router.replace settles in the background.
+  const urlFilters = useMemo(() => parseFilters(rawParams), [rawParams]);
+  const [optimisticFilters, setOptimisticFilters] = useState<FilterState | null>(null);
+  const [, startTransition] = useTransition();
+  const filters = optimisticFilters ?? urlFilters;
+
+  // Sync optimistic state back to null once the URL catches up
+  useEffect(() => {
+    if (optimisticFilters && JSON.stringify(optimisticFilters) === JSON.stringify(urlFilters)) {
+      setOptimisticFilters(null);
+    }
+  }, [urlFilters, optimisticFilters]);
 
   // UI-only state (not bookmarkable)
   const [selectedTutorId, setSelectedTutorId] = useState<string | null>(null);
@@ -49,11 +60,15 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
   const weeklyBusyAbortRef = useRef<AbortController | null>(null);
 
   function setFilters(next: FilterState) {
+    // Update UI instantly
+    setOptimisticFilters(next);
+    setSelectedTutorId(null);
+    // Push to URL in the background (non-blocking)
     const params = filtersToParams(next);
     const qs = params.toString();
-    router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
-    // Deselect tutor when filters change
-    setSelectedTutorId(null);
+    startTransition(() => {
+      router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
+    });
   }
 
   const activeReq = (filters.reqId && !proposedReqIds.has(filters.reqId))
