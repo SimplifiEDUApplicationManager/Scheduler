@@ -49,7 +49,7 @@ export default async function DashboardPage() {
   startOfToday.setHours(0, 0, 0, 0);
   const todayIso = startOfToday.toISOString();
 
-  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }, { count: pendingProposalCount }, { count: activeJobCount }] = await Promise.all([
+  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }, { count: pendingProposalCount }, { count: activeJobCount }, { count: acceptedToday }, { count: finishedToday }] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
       .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
@@ -93,6 +93,16 @@ export default async function DashboardPage() {
       .from('proposals')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'ACCEPTED'),
+    supabase
+      .from('proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'ACCEPTED')
+      .gte('resolved_at', todayIso),
+    supabase
+      .from('proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'FINISHED')
+      .gte('updated_at', todayIso),
   ]);
 
   // Fetch tutor names for availability requests
@@ -277,11 +287,12 @@ export default async function DashboardPage() {
             label="Active jobs"
             value={activeJobCount ?? 0}
             hint="Accepted proposals in progress"
-            trend={
-              (activeJobCount ?? 0) > 0
-                ? { dir: 'flat', text: 'Tutors mark finished when done' }
-                : { dir: 'flat', text: 'No active jobs' }
-            }
+            trend={(() => {
+              const diff = (acceptedToday ?? 0) - (finishedToday ?? 0);
+              if (diff > 0) return { dir: 'up' as const, text: `+${diff} since yesterday` };
+              if (diff < 0) return { dir: 'down' as const, text: `${diff} since yesterday` };
+              return { dir: 'flat' as const, text: 'No change since yesterday' };
+            })()}
             accentColor="var(--brand-teal-500)"
           />
         </div>
