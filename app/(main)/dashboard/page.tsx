@@ -1,11 +1,7 @@
 import Link from 'next/link';
-import {
-  INVITATIONS,
-} from '@/lib/data/mock';
 import { fetchAllTutors } from '@/lib/data/tutors';
 import { createClient } from '@/lib/supabase/server';
 import { KpiTile } from '@/components/features/dashboard/KpiTile';
-import { AlertsStrip } from '@/components/features/dashboard/AlertsStrip';
 import { DashCard } from '@/components/features/dashboard/DashCard';
 import { StalledRequestList } from '@/components/features/dashboard/StalledRequestList';
 import type { StalledRequest } from '@/components/features/dashboard/StalledRequestList';
@@ -180,8 +176,6 @@ export default async function DashboardPage() {
       source:      r.source,
       createdAt:   r.created_at,
     }));
-  const declined     = INVITATIONS.filter(i => i.status === 'declined');
-  const expired      = INVITATIONS.filter(i => i.status === 'expired');
 
   const activeTutors = realTutors.length;
   const onboarding   = onboardingCount ?? 0;
@@ -195,8 +189,6 @@ export default async function DashboardPage() {
 
   const pendingReviews = pendingReviewItems.length;
   const pendingAvailability = pendingAvailabilityItems.length;
-
-  const hasAlerts = declined.length > 0 || expired.length > 0 || pendingReviews > 0 || pendingAvailability > 0;
 
   return (
     <div className="flex-1 overflow-auto">
@@ -304,18 +296,6 @@ export default async function DashboardPage() {
             accentColor="var(--brand-teal-500)"
           />
         </div>
-
-        {/* ── Alerts strip ──────────────────────────────────────────────────── */}
-        {hasAlerts && (
-          <div className="mb-5">
-            <AlertsStrip
-              declined={declined.length}
-              expired={expired.length}
-              pendingReviews={pendingReviews}
-              pendingAvailabilityRequests={pendingAvailability}
-            />
-          </div>
-        )}
 
         {/* ── 2×2 grid ──────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 items-start">
