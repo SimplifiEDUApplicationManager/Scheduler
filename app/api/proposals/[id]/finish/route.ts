@@ -49,12 +49,12 @@ export async function POST(
   if (proposal.nylas_event_id && proposal.tutor_id) {
     const { data: tutor } = await svc
       .from('users')
-      .select('nylas_grant_id')
+      .select('nylas_grant_id, email')
       .eq('id', proposal.tutor_id)
       .single();
 
     if (tutor?.nylas_grant_id) {
-      deleteTutoringEvent(tutor.nylas_grant_id, proposal.nylas_event_id).catch(err => {
+      deleteTutoringEvent(tutor.nylas_grant_id, proposal.nylas_event_id, tutor.email ?? undefined).catch(err => {
         console.error('[proposals/finish] calendar delete threw:', err);
       });
     }
