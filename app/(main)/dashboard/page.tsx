@@ -43,6 +43,7 @@ export default async function DashboardPage() {
     : { data: null };
   const firstName = userRow?.name?.split(' ')[0] ?? 'there';
   const userTz = userRow?.timezone;
+  const uid = authUser!.id;
 
   const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const startOfToday = new Date();
@@ -63,12 +64,14 @@ export default async function DashboardPage() {
     supabase
       .from('proposals')
       .select('tutor_id, created_at, resolved_at')
+      .eq('coordinator_id', uid)
       .in('status', ['ACCEPTED', 'DECLINED', 'EXPIRED'])
       .not('resolved_at', 'is', null)
       .gte('created_at', windowStart),
     supabase
       .from('requests')
       .select('id, source, student_name, subject, created_at')
+      .eq('coordinator_id', uid)
       .eq('status', 'open'),
     supabase
       .from('users')
@@ -79,28 +82,34 @@ export default async function DashboardPage() {
     supabase
       .from('requests')
       .select('id', { count: 'exact', head: true })
+      .eq('coordinator_id', uid)
       .gte('created_at', todayIso),
     supabase
       .from('requests')
       .select('id', { count: 'exact', head: true })
+      .eq('coordinator_id', uid)
       .eq('status', 'matched')
       .gte('updated_at', todayIso),
     supabase
       .from('proposals')
       .select('id', { count: 'exact', head: true })
+      .eq('coordinator_id', uid)
       .eq('status', 'PENDING'),
     supabase
       .from('proposals')
       .select('id', { count: 'exact', head: true })
+      .eq('coordinator_id', uid)
       .eq('status', 'ACCEPTED'),
     supabase
       .from('proposals')
       .select('id', { count: 'exact', head: true })
+      .eq('coordinator_id', uid)
       .eq('status', 'ACCEPTED')
       .gte('resolved_at', todayIso),
     supabase
       .from('proposals')
       .select('id', { count: 'exact', head: true })
+      .eq('coordinator_id', uid)
       .eq('status', 'FINISHED')
       .gte('updated_at', todayIso),
   ]);
