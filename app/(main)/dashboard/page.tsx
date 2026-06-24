@@ -64,7 +64,6 @@ export default async function DashboardPage() {
     supabase
       .from('proposals')
       .select('tutor_id, created_at, resolved_at')
-      .eq('coordinator_id', uid)
       .in('status', ['ACCEPTED', 'DECLINED', 'EXPIRED'])
       .not('resolved_at', 'is', null)
       .gte('created_at', windowStart),
