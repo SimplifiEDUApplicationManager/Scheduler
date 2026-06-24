@@ -55,7 +55,9 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
     setSelectedTutorId(null);
   }
 
-  const activeReq = requests.find(r => r.id === filters.reqId) ?? null;
+  const activeReq = (filters.reqId && !proposedReqIds.has(filters.reqId))
+    ? requests.find(r => r.id === filters.reqId) ?? null
+    : null;
 
   // Apply a request → fill subject + tuples + reqId
   function applyRequest(req: TuitionRequest) {
