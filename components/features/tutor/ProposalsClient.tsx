@@ -29,6 +29,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
   const [consideringId, setConsideringId] = useState<string | null>(null);
   const [declineFor, setDeclineFor]       = useState<TutorProposal | null>(null);
   const [toast, setToast]         = useState<string | null>(null);
+  const [busyAction, setBusyAction]       = useState<string | null>(null);
 
   // When the Danielle tour navigates back to this page via router.push (which
   // may serve a cached server render without the demo proposal), the tour fires
@@ -94,16 +95,19 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
   async function handleAccept(placements: ({ day: number; start: number } | null)[]) {
     const p = proposals.find(prop => prop.id === consideringId);
     if (!p) return;
+    setBusyAction(`accept-${p.id}`);
 
     // ── Demo proposal — use dedicated onboarding endpoint ─────────────────
     if (p.id === 'demo-proposal') {
       const res = await fetch('/api/proposals/demo/accept', { method: 'POST' });
       if (!res.ok) {
         showToast('Error: Failed to accept demo proposal');
+        setBusyAction(null);
         return;
       }
       setProposals(ps => ps.map(prop => prop.id === 'demo-proposal' ? { ...prop, status: 'accepted' } : prop));
       setConsideringId(null);
+      setBusyAction(null);
       showToast(`Accepted ${p.studentName} · calendar invite sent to family`);
       window.dispatchEvent(new CustomEvent('sim:demo-accepted'));
       return;
@@ -117,6 +121,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     if (!res.ok) {
       const body = await res.json() as { error?: string };
       showToast(`Error: ${body.error ?? 'Failed to accept proposal'}`);
+      setBusyAction(null);
       return;
     }
 
@@ -138,11 +143,13 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     setEvents(ev => [...ev, ...newEvents]);
     setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'accepted' } : prop));
     setConsideringId(null);
+    setBusyAction(null);
     showToast(`Accepted ${p.studentName} · calendar invite sent to family`);
   }
 
   async function handleDecline(id: string, reason: string) {
     const p = proposals.find(prop => prop.id === id);
+    setBusyAction(`decline-${id}`);
 
     const res = await fetch(`/api/proposals/${id}/decline`, {
       method: 'POST',
@@ -152,6 +159,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     if (!res.ok) {
       const body = await res.json() as { error?: string };
       showToast(`Error: ${body.error ?? 'Failed to decline proposal'}`);
+      setBusyAction(null);
       return;
     }
 
@@ -159,18 +167,22 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     setDeclineReasons(r => ({ ...r, [id]: reason }));
     setDeclineFor(null);
     setConsideringId(null);
+    setBusyAction(null);
     showToast(`Declined · ${p?.coordinator.split(' ')[0]} has been notified`);
   }
 
   async function handleFinish(id: string) {
+    setBusyAction(`finish-${id}`);
     const res = await fetch(`/api/proposals/${id}/finish`, { method: 'POST' });
     if (!res.ok) {
       const body = await res.json() as { error?: string };
       showToast(`Error: ${body.error ?? 'Failed to mark as finished'}`);
+      setBusyAction(null);
       return;
     }
     const p = proposals.find(prop => prop.id === id);
     setProposals(ps => ps.map(prop => prop.id === id ? { ...prop, status: 'finished' } : prop));
+    setBusyAction(null);
     showToast(`${p?.studentName ?? 'Job'} marked as finished`);
   }
 
@@ -225,6 +237,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
               declineReason={declineReasons[p.id]}
               onOpen={() => openDetail(p.id)}
               onFinish={p.displayStatus === 'accepted' ? () => handleFinish(p.id) : undefined}
+              finishing={busyAction === `finish-${p.id}`}
             />
           ))}
         </div>

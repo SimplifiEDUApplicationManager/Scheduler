@@ -15,6 +15,7 @@ interface Props {
   declineReason?: string;
   onOpen: () => void;
   onFinish?: () => void;
+  finishing?: boolean;
 }
 
 const STATUS_META: Record<DisplayStatus, { label: string; bg: string; fg: string; dot: string }> = {
@@ -32,7 +33,7 @@ function fmtH(h: number): string {
   return mn === 0 ? `${h12}${suf}` : `${h12}:${String(mn).padStart(2, '0')}${suf}`;
 }
 
-export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReason, onOpen, onFinish }: Props) {
+export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReason, onOpen, onFinish, finishing }: Props) {
   const meta = STATUS_META[displayStatus];
   const needsAction = displayStatus === 'pending' || displayStatus === 'reviewed';
   const initials = p.studentName.split(' ').map(n => n[0]).join('').slice(0, 2);
@@ -111,10 +112,11 @@ export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReas
           {displayStatus === 'accepted' && onFinish && (
             <button
               type="button"
+              disabled={finishing}
               onClick={e => { e.preventDefault(); e.stopPropagation(); onFinish(); }}
-              style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #93C5FD', background: '#3B82F6', color: '#fff', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', pointerEvents: 'auto', position: 'relative', zIndex: 10 }}
+              style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #93C5FD', background: '#3B82F6', color: '#fff', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: finishing ? 'not-allowed' : 'pointer', pointerEvents: 'auto', position: 'relative', zIndex: 10, opacity: finishing ? 0.6 : 1 }}
             >
-              Mark finished
+              {finishing ? 'Finishing\u2026' : 'Mark finished'}
             </button>
           )}
         </div>

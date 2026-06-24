@@ -15,6 +15,7 @@ export function LoginForm({ linkExpired }: { linkExpired?: boolean }) {
   const [password, setPassword] = useState('');
   const [formState, setFormState] = useState<FormState>('idle');
   const [resetSent, setResetSent] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,10 +36,12 @@ export function LoginForm({ linkExpired }: { linkExpired?: boolean }) {
       setFormState({ error: 'Enter your email address first.' });
       return;
     }
+    setResetting(true);
     const supabase = createClient();
     await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     });
+    setResetting(false);
     setResetSent(true);
   }
 
@@ -83,9 +86,10 @@ export function LoginForm({ linkExpired }: { linkExpired?: boolean }) {
         <button
           type="button"
           onClick={handleForgotPassword}
+          disabled={resetting}
           className="text-xs text-fg-3 hover:text-fg-1 transition-colors text-left -mt-2"
         >
-          Forgot password?
+          {resetting ? 'Sending\u2026' : 'Forgot password?'}
         </button>
         <Button type="submit" size="lg" disabled={formState === 'loading'} className="w-full">
           {formState === 'loading' ? 'Signing in\u2026' : 'Sign in'}

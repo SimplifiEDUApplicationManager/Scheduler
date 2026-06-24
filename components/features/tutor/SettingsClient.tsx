@@ -79,7 +79,10 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const maxExceedsAvail = totalAvail > 0 && maxHours > totalAvail;
   const maxError = maxHours < 1 || maxHours > 40 || maxExceedsAvail;
 
+  const [settingsBusy, setSettingsBusy] = useState<string | null>(null);
+
   async function handleResume() {
+    setSettingsBusy('resume');
     try {
       const res = await fetch('/api/tutor/profile', {
         method: 'PATCH',
@@ -95,10 +98,13 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
       showToast('Availability resumed');
     } catch {
       showToast('Failed to resume — check your connection and try again');
+    } finally {
+      setSettingsBusy(null);
     }
   }
 
   async function handleCancelAvailRequest(id: string) {
+    setSettingsBusy(`cancel-${id}`);
     try {
       const res = await fetch(`/api/tutor/availability-request/${id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -110,6 +116,8 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
       showToast('Request cancelled');
     } catch {
       showToast('Failed to cancel request — check your connection and try again');
+    } finally {
+      setSettingsBusy(null);
     }
   }
 
@@ -379,7 +387,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B' }}>Your availability is paused</div>
                 <div style={{ fontSize: 12, color: '#B91C1C' }}>Coordinators can&apos;t see your calendar. Existing sessions stay booked.</div>
               </div>
-              <button onClick={handleResume} style={btn('secondary')}>Resume</button>
+              <button onClick={handleResume} disabled={settingsBusy === 'resume'} style={{ ...btn('secondary'), opacity: settingsBusy === 'resume' ? 0.6 : 1 }}>{settingsBusy === 'resume' ? 'Resuming\u2026' : 'Resume'}</button>
             </div>
           )}
 
@@ -434,7 +442,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 {maxHoursLocked ? (
                   <div style={{ padding: '8px 10px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, fontSize: 13, color: '#78350F' }}>
                     {pendingLowHours!.details?.requested_hours as number} hrs — pending coordinator approval
-                    <button onClick={() => handleCancelAvailRequest(pendingLowHours!.id)} style={{ marginLeft: 10, fontSize: 11, color: '#B45309', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>Cancel request</button>
+                    <button onClick={() => handleCancelAvailRequest(pendingLowHours!.id)} disabled={settingsBusy === `cancel-${pendingLowHours!.id}`} style={{ marginLeft: 10, fontSize: 11, color: '#B45309', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', opacity: settingsBusy === `cancel-${pendingLowHours!.id}` ? 0.5 : 1 }}>{settingsBusy === `cancel-${pendingLowHours!.id}` ? 'Cancelling\u2026' : 'Cancel request'}</button>
                   </div>
                 ) : (
                   <input type="number" min={1} max={40} value={maxHours} onChange={e => { setMax(+e.target.value); }} style={{ ...input(), borderColor: maxError ? '#DC2626' : '#E4E4E7' }} />
@@ -628,7 +636,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                   <div style={{ fontWeight: 700, marginBottom: 2 }}>Scheduling change pending coordinator approval</div>
                   <div style={{ color: '#92400E' }}>Proposed availability totals {(pendingLowWindows.details?.total_hours as number | undefined)?.toFixed(1)} hrs/week (below 10-hour minimum).</div>
                 </div>
-                <button onClick={() => handleCancelAvailRequest(pendingLowWindows.id)} style={{ ...btn('secondary'), marginLeft: 12, color: '#B45309', borderColor: '#FDE68A', flexShrink: 0 }}>Cancel</button>
+                <button onClick={() => handleCancelAvailRequest(pendingLowWindows.id)} disabled={settingsBusy === `cancel-${pendingLowWindows.id}`} style={{ ...btn('secondary'), marginLeft: 12, color: '#B45309', borderColor: '#FDE68A', flexShrink: 0, opacity: settingsBusy === `cancel-${pendingLowWindows.id}` ? 0.5 : 1 }}>{settingsBusy === `cancel-${pendingLowWindows.id}` ? 'Cancelling\u2026' : 'Cancel'}</button>
               </div>
             )}
             <button
@@ -691,7 +699,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           <Card id="pause" title="Pause tutoring" subtitle="Temporarily hide your availability from all coordinator views. Existing confirmed sessions stay booked." danger>
             {isPaused ? (
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button onClick={handleResume} style={{ ...btn('primary'), background: '#16A34A' }}>Resume availability</button>
+                <button onClick={handleResume} disabled={settingsBusy === 'resume'} style={{ ...btn('primary'), background: '#16A34A', opacity: settingsBusy === 'resume' ? 0.6 : 1 }}>{settingsBusy === 'resume' ? 'Resuming\u2026' : 'Resume availability'}</button>
                 <div style={{ fontSize: 12, color: '#71717A' }}>You&apos;re currently paused. Coordinators can&apos;t see your calendar.</div>
               </div>
             ) : pendingPause ? (
@@ -701,7 +709,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                   <div style={{ fontSize: 12, color: '#92400E', marginBottom: 2 }}>Reason: {pendingPause.reason}</div>
                   <div style={{ fontSize: 11, color: '#A1A1AA' }}>Submitted {new Date(pendingPause.createdAt).toLocaleDateString()}</div>
                 </div>
-                <button onClick={() => handleCancelAvailRequest(pendingPause.id)} style={{ ...btn('secondary'), color: '#DC2626', borderColor: '#FECACA' }}>Cancel request</button>
+                <button onClick={() => handleCancelAvailRequest(pendingPause.id)} disabled={settingsBusy === `cancel-${pendingPause.id}`} style={{ ...btn('secondary'), color: '#DC2626', borderColor: '#FECACA', opacity: settingsBusy === `cancel-${pendingPause.id}` ? 0.5 : 1 }}>{settingsBusy === `cancel-${pendingPause.id}` ? 'Cancelling\u2026' : 'Cancel request'}</button>
               </div>
             ) : (
               <div>
