@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Subject, Tuple } from '@/lib/types/domain';
-import type { FilterState } from '@/lib/utils/tutors';
+import { DEFAULT_CONF, type FilterState } from '@/lib/utils/tutors';
 import { TupleRow } from './TupleRow';
 
 const CONF_LEVELS = ['HIGH', 'MEDIUM', 'LOW'] as const;
@@ -52,9 +52,17 @@ export function FilterPanel({ filters, subjects, onChange }: FilterPanelProps) {
 
   const unselectedSubjects = subjects.filter(s => !filters.subjects.includes(s.id));
 
+  const hasFilters = filters.q || filters.subjects.length > 0 || filters.tuples.length > 0;
+
+  function reset() {
+    onChange({ q: '', subjects: [], conf: DEFAULT_CONF, tuples: [], reqId: null });
+    setSubjectOpen(false);
+    setSubjectSearch('');
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      {/* Search */}
+      {/* Search + reset */}
       <div className="relative">
         <svg
           className="absolute left-2 top-1/2 -translate-y-1/2 text-fg-muted pointer-events-none"
@@ -71,6 +79,15 @@ export function FilterPanel({ filters, subjects, onChange }: FilterPanelProps) {
           className="w-full h-8 pl-7 pr-3 text-xs border border-border-default rounded-lg bg-surface-1 text-fg-1 placeholder:text-fg-muted focus:outline-none focus:border-neutral-400"
         />
       </div>
+
+      {hasFilters && (
+        <button
+          onClick={reset}
+          className="text-[11px] text-fg-3 hover:text-fg-1 transition-colors text-left"
+        >
+          Reset filters
+        </button>
+      )}
 
       {/* Subject chips */}
       <div>
