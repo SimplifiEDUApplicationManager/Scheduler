@@ -5,8 +5,8 @@ import { fmtRange, getWeekDays } from '@/lib/utils/tutors';
 import { cn } from '@/lib/utils/cn';
 
 const ROW_H = 40;
-const START_H = 8;
-const END_H = 21;
+const START_H = 0;
+const END_H = 24;
 const HOURS = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i);
 
 function eventBg(e: TutorEvent) {

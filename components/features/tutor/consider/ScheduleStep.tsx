@@ -5,8 +5,8 @@ import type { TutorProposal, TutorEvent } from '@/lib/types/domain';
 import { TUPLE_COLORS, countFitSlots } from './tupleColors';
 import { DropWeek } from './DropWeek';
 
-const START_HR = 8;
-const END_HR = 21;
+const START_HR = 0;
+const END_HR = 24;
 const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 type Placement = { day: number; start: number } | null;

@@ -454,7 +454,7 @@ function NoteBlock({ label, value, last }: { label: string; value: string; last?
 
 // ── Reschedule panel ───────────────────────────────────────────────────────
 const DAYS   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-const HOURS  = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] as const;
+const HOURS  = Array.from({ length: 24 }, (_, i) => i) as unknown as readonly number[];
 
 function ReschedulePanel({
   session,
