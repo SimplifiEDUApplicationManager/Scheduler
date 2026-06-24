@@ -10,6 +10,7 @@ import {
   filtersToParams,
   filterTutors,
   getWeekLabel,
+  DEFAULT_CONF,
   type FilterState,
 } from '@/lib/utils/tutors';
 import { RequestPickerBlock } from './RequestPickerBlock';
@@ -145,11 +146,11 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
   }, [filteredIdKey, weekOffset, coordinatorTz]);
 
   function handleProposeSend(tutorName: string) {
-    // Remove the proposed request from the picker and clear the active selection
+    // Remove the proposed request from the picker and fully reset filters
     if (activeReq) {
       setProposedReqIds(prev => new Set(prev).add(activeReq.id));
-      clearRequest();
     }
+    setFilters({ q: '', subjects: [], conf: DEFAULT_CONF, tuples: [], reqId: null });
     setProposeFor(null);
     setToastName(tutorName);
     setTimeout(() => setToastName(null), 3200);
