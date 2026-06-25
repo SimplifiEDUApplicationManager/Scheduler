@@ -20,7 +20,7 @@ const HOURS = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i)
 const PALETTE = ['#3B82F6','#16A34A','#DB2777','#D97706','#6366F1','#0891B2','#EA580C','#7C3AED'];
 
 export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor = {} }: WeekViewProps) {
-  const [hoverSlot, setHoverSlot] = useState<{ day: number; start: number; end: number; free: number[] } | null>(null);
+  const [hoverSlot, setHoverSlot] = useState<{ day: number; start: number; end: number; free: number[]; pairKey?: string } | null>(null);
   const weekDays = getWeekDays(weekOffset);
 
   const perDay = useMemo(() => {
@@ -121,25 +121,42 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
 
                 {/* Coverage tiles */}
                 {blocks.map((b, bi) => {
-                  const isHot = hoverSlot?.day === di && hoverSlot.start === b.start;
                   const h = (b.end - b.start) * ROW_H;
 
-                  // Cross-midnight detection: check if this block is a spillover from
-                  // the previous day or continues into the next day
+                  // Cross-midnight detection
                   const prevDi = (di + 6) % 7;
                   const nextDi = (di + 1) % 7;
                   const isSpilloverTop = b.start === 0 && tutors.some((t, ti) =>
                     b.free.includes(ti) && (t.availability[prevDi] ?? []).some(([, e]) => e > 24));
                   const isSpilloverBottom = b.end === 24 && tutors.some((t, ti) =>
                     b.free.includes(ti) && (t.availability[di] ?? []).some(([, e]) => e > 24));
-                  // Also check if next day column 0 has a matching block (visual continuity)
                   const continuesDown = isSpilloverBottom || (b.end === 24 && perDay[nextDi]?.some(nb => nb.start === 0));
                   const continuesUp = isSpilloverTop;
+
+                  // Cross-midnight pair key: both halves share the same key so hovering
+                  // either one highlights both and the tooltip shows the full range.
+                  const pairKey = continuesDown ? `xmid-${di}-${b.key}`
+                    : continuesUp ? `xmid-${prevDi}-${b.key}`
+                    : undefined;
+
+                  const isHot = hoverSlot?.day === di && hoverSlot.start === b.start
+                    || (pairKey != null && hoverSlot?.pairKey === pairKey);
 
                   return (
                     <div
                       key={bi}
-                      onMouseEnter={() => setHoverSlot({ day: di, start: b.start, end: b.end, free: b.free })}
+                      onMouseEnter={() => {
+                        // For cross-midnight, show the full range in the tooltip
+                        if (continuesDown) {
+                          const nextBlock = perDay[nextDi]?.find(nb => nb.start === 0);
+                          setHoverSlot({ day: di, start: b.start, end: 24 + (nextBlock?.end ?? 0), free: b.free, pairKey });
+                        } else if (continuesUp) {
+                          const prevBlock = perDay[prevDi]?.find(pb => pb.end === 24);
+                          setHoverSlot({ day: prevDi, start: prevBlock?.start ?? 0, end: 24 + b.end, free: b.free, pairKey });
+                        } else {
+                          setHoverSlot({ day: di, start: b.start, end: b.end, free: b.free });
+                        }
+                      }}
                       onMouseLeave={() => setHoverSlot(null)}
                       style={{
                         position:'absolute', top:(b.start-START_H)*ROW_H+1, height:h-2, left:2, right:2,
@@ -202,7 +219,10 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
             className="bg-surface-1 border border-border-default rounded-xl shadow-lg p-2.5 pointer-events-none"
           >
             <div className="text-[10px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-1.5">
-              {weekDays[hoverSlot.day].dow} · {fmtRange(hoverSlot.start, hoverSlot.end)}
+              {hoverSlot.end > 24
+                ? `${weekDays[hoverSlot.day].dow} ${fmtRange(hoverSlot.start, 24).split('–')[0]}– ${weekDays[(hoverSlot.day + 1) % 7].dow} ${fmtRange(0, hoverSlot.end - 24).split('–')[1]}`
+                : `${weekDays[hoverSlot.day].dow} · ${fmtRange(hoverSlot.start, hoverSlot.end)}`
+              }
             </div>
             <div className="text-xs font-bold text-fg-1 mb-2">{hoverSlot.free.length} tutor{hoverSlot.free.length !== 1 ? 's' : ''} free</div>
             <div className="flex flex-col gap-1 max-h-40 overflow-hidden">
