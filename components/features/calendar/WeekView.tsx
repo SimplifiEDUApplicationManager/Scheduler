@@ -123,15 +123,20 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
                 {blocks.map((b, bi) => {
                   const h = (b.end - b.start) * ROW_H;
 
-                  // Cross-midnight detection
+                  // Cross-midnight detection — only when the SAME tutors are free
+                  // on both sides of midnight (not just any block touching hour 0/24).
                   const prevDi = (di + 6) % 7;
                   const nextDi = (di + 1) % 7;
-                  const isSpilloverTop = b.start === 0 && tutors.some((t, ti) =>
-                    b.free.includes(ti) && (t.availability[prevDi] ?? []).some(([, e]) => e > 24));
-                  const isSpilloverBottom = b.end === 24 && tutors.some((t, ti) =>
-                    b.free.includes(ti) && (t.availability[di] ?? []).some(([, e]) => e > 24));
-                  const continuesDown = isSpilloverBottom || (b.end === 24 && perDay[nextDi]?.some(nb => nb.start === 0));
-                  const continuesUp = isSpilloverTop;
+                  const continuesUp = b.start === 0 && perDay[prevDi]?.some(pb =>
+                    pb.end === 24 && pb.free.some(ti => b.free.includes(ti))
+                    && tutors.some((t, tIdx) => pb.free.includes(tIdx) && b.free.includes(tIdx)
+                      && (t.availability[prevDi] ?? []).some(([, e]) => e > 24))
+                  ) === true;
+                  const continuesDown = b.end === 24 && perDay[nextDi]?.some(nb =>
+                    nb.start === 0 && nb.free.some(ti => b.free.includes(ti))
+                    && tutors.some((t, tIdx) => b.free.includes(tIdx) && nb.free.includes(tIdx)
+                      && (t.availability[di] ?? []).some(([, e]) => e > 24))
+                  ) === true;
 
                   // Cross-midnight pair key: both halves share the same key so hovering
                   // either one highlights both and the tooltip shows the full range.
