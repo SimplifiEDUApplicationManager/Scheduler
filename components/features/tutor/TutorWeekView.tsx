@@ -55,7 +55,7 @@ export function TutorWeekView({ events, proposal, weekOffset, onOpenSession }: P
               style={{ height: ROW_H }}
               className="text-[10px] text-fg-muted text-right pr-1.5 pt-0.5 border-t border-neutral-100 tabular-nums"
             >
-              {h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}
+              {h === 0 || h === 24 ? '' : h > 12 ? `${h - 12}p` : h === 12 ? '12p' : `${h}a`}
             </div>
           ))}
         </div>

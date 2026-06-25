@@ -1,5 +1,5 @@
 import type { Tuple } from '@/lib/types/domain';
-import { DAY_NAMES, fmtHour } from '@/lib/utils/tutors';
+import { DAY_NAMES, fmtHour, fmtHourWithDay } from '@/lib/utils/tutors';
 
 interface TupleRowProps {
   tuple: Tuple;
@@ -7,7 +7,8 @@ interface TupleRowProps {
   onRemove: () => void;
 }
 
-const HOURS = Array.from({ length: 25 }, (_, i) => i); // 0–24 (12 AM – 12 AM)
+const START_HOURS = Array.from({ length: 24 }, (_, i) => i); // 0–23
+const END_HOURS = Array.from({ length: 48 }, (_, i) => i + 1); // 1–48 (up to midnight +1d)
 
 const selectCls =
   'h-[26px] px-1.5 text-[11px] border border-border-default rounded bg-surface-1 ' +
@@ -29,7 +30,7 @@ export function TupleRow({ tuple, onChange, onRemove }: TupleRowProps) {
         onChange={e => onChange({ ...tuple, start: +e.target.value })}
         className={selectCls}
       >
-        {HOURS.map(h => <option key={h} value={h}>{fmtHour(h)}</option>)}
+        {START_HOURS.map(h => <option key={h} value={h}>{fmtHour(h)}</option>)}
       </select>
 
       <select
@@ -37,7 +38,7 @@ export function TupleRow({ tuple, onChange, onRemove }: TupleRowProps) {
         onChange={e => onChange({ ...tuple, end: +e.target.value })}
         className={selectCls}
       >
-        {HOURS.slice(1).map(h => <option key={h} value={h}>{fmtHour(h)}</option>)}
+        {END_HOURS.filter(h => h > tuple.start).map(h => <option key={h} value={h}>{fmtHourWithDay(h)}</option>)}
       </select>
 
       <button

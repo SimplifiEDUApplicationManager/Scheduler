@@ -31,8 +31,13 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
         tutors.forEach((t, ti) => {
           const windows = t.availability[di] ?? [];
           const inWorkingHours = windows.some(([s, e]) => h >= s && h + 0.5 <= e);
-          if (!inWorkingHours) return;
-          // Subtract calendar events already on the tutor's calendar
+
+          // Also check previous day for cross-midnight spillover
+          const prevDi = (di + 6) % 7;
+          const prevWindows = t.availability[prevDi] ?? [];
+          const inSpillover = prevWindows.some(([s, e]) => e > 24 && h >= 0 && h + 0.5 <= e - 24);
+
+          if (!inWorkingHours && !inSpillover) return;
           const tutorBusy = busySlotsPerTutor[t.id] ?? [];
           const isBusy = tutorBusy.some(b => b.day === di && h < b.endH && h + 0.5 > b.startH);
           if (!isBusy) free.push(ti);
@@ -101,7 +106,7 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
           <div>
             {HOURS.map(h => (
               <div key={h} style={{ height: ROW_H }} className="text-[10px] text-fg-muted text-right pr-1.5 pt-0.5 border-t border-neutral-100 tabular-nums">
-                {h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}
+                {h === 0 || h === 24 ? '' : h > 12 ? `${h - 12}p` : h === 12 ? '12p' : `${h}a`}
               </div>
             ))}
           </div>
@@ -118,6 +123,19 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
                 {blocks.map((b, bi) => {
                   const isHot = hoverSlot?.day === di && hoverSlot.start === b.start;
                   const h = (b.end - b.start) * ROW_H;
+
+                  // Cross-midnight detection: check if this block is a spillover from
+                  // the previous day or continues into the next day
+                  const prevDi = (di + 6) % 7;
+                  const nextDi = (di + 1) % 7;
+                  const isSpilloverTop = b.start === 0 && tutors.some((t, ti) =>
+                    b.free.includes(ti) && (t.availability[prevDi] ?? []).some(([, e]) => e > 24));
+                  const isSpilloverBottom = b.end === 24 && tutors.some((t, ti) =>
+                    b.free.includes(ti) && (t.availability[di] ?? []).some(([, e]) => e > 24));
+                  // Also check if next day column 0 has a matching block (visual continuity)
+                  const continuesDown = isSpilloverBottom || (b.end === 24 && perDay[nextDi]?.some(nb => nb.start === 0));
+                  const continuesUp = isSpilloverTop;
+
                   return (
                     <div
                       key={bi}
@@ -126,11 +144,17 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
                       style={{
                         position:'absolute', top:(b.start-START_H)*ROW_H+1, height:h-2, left:2, right:2,
                         background:tint(b.free.length), border:`1px solid ${bdr(b.free.length)}`,
-                        borderRadius:4, padding:'3px 5px', overflow:'hidden', cursor:'pointer',
+                        borderRadius: continuesUp && continuesDown ? 0 : continuesUp ? '0 0 4px 4px' : continuesDown ? '4px 4px 0 0' : 4,
+                        borderTop: continuesUp ? 'none' : undefined,
+                        borderBottom: continuesDown ? 'none' : undefined,
+                        padding:'3px 5px', overflow:'hidden', cursor:'pointer',
                         zIndex:isHot?3:2, outline:isHot?'2px solid #1F5349':'none', outlineOffset:-1,
                         display:'flex', flexDirection:'column', gap:2,
                       }}
                     >
+                      {continuesUp && (
+                        <div style={{ fontSize: 8, color: '#1F5349', textAlign: 'center', marginTop: -2, letterSpacing: '0.1em' }}>↑ cont.</div>
+                      )}
                       <div style={{ fontSize:10, fontWeight:700, color:'#1F5349', fontFeatureSettings:'"tnum"' }}>{b.free.length}</div>
                       {h >= 28 && (
                         <div style={{ display:'flex', alignItems:'center' }}>
@@ -147,6 +171,9 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
                             <span style={{ fontSize:9, fontWeight:700, color:'#1F5349', marginLeft:2 }}>+{b.free.length-3}</span>
                           )}
                         </div>
+                      )}
+                      {continuesDown && (
+                        <div style={{ fontSize: 8, color: '#1F5349', textAlign: 'center', marginTop: 'auto', marginBottom: -2, letterSpacing: '0.1em' }}>↓ cont.</div>
                       )}
                     </div>
                   );
