@@ -52,28 +52,73 @@ function fromDefaultOpenHours(openHours: OpenHours[]): HoursMap {
       if (key) map[key].push({ start: h.start, end: h.end });
     }
   }
+  // Reconstruct cross-midnight windows: if day X ends at 23:59 and day X+1
+  // starts at 00:00, merge them into a single cross-midnight window on day X.
+  const dayKeys: DayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  for (let i = 0; i < 7; i++) {
+    const key = dayKeys[i];
+    const nextKey = dayKeys[(i + 1) % 7];
+    const lateWindows = map[key].filter(w => w.end === '23:59');
+    const earlyWindows = map[nextKey].filter(w => w.start === '00:00');
+    for (const late of lateWindows) {
+      const match = earlyWindows.find(e => e.start === '00:00');
+      if (match) {
+        // Merge: extend the current-day window past midnight
+        const endMins = timeStrToMins(match.end) + 24 * 60;
+        const endH = Math.floor(endMins / 60);
+        const endM = endMins % 60;
+        late.end = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+        // Remove the next-day early window
+        map[nextKey] = map[nextKey].filter(w => w !== match);
+      }
+    }
+  }
   return map;
 }
 
 function toDefaultOpenHours(hours: HoursMap, timezone: string, allDayBlockDates: string[]): OpenHours[] {
-  // Group days that share the same start/end time into one entry.
-  const groups = new Map<string, number[]>();
+  // Expand each day's windows, splitting cross-midnight windows into two
+  // Nylas entries (Nylas requires start < end within 00:00–24:00).
+  const entries: { day: number; start: string; end: string }[] = [];
   for (const [k, windows] of Object.entries(hours) as [DayKey, HoursMap[DayKey]][]) {
+    const dayNum = KEY_TO_DAY_NUM[k];
     for (const w of windows) {
-      const key = `${w.start}|${w.end}`;
-      groups.set(key, [...(groups.get(key) ?? []), KEY_TO_DAY_NUM[k]]);
+      const endMins = timeStrToMins(w.end);
+      if (endMins > 24 * 60) {
+        // Split: current day start → 23:59, next day 00:00 → remainder
+        entries.push({ day: dayNum, start: w.start, end: '23:59' });
+        const nextDay = (dayNum + 1) % 7;
+        const remH = Math.floor((endMins - 24 * 60) / 60);
+        const remM = (endMins - 24 * 60) % 60;
+        const remEnd = `${String(remH).padStart(2, '0')}:${String(remM).padStart(2, '0')}`;
+        entries.push({ day: nextDay, start: '00:00', end: remEnd });
+      } else {
+        entries.push({ day: dayNum, start: w.start, end: w.end });
+      }
     }
+  }
+
+  // Group entries that share the same start/end time into one Nylas entry.
+  const groups = new Map<string, number[]>();
+  for (const e of entries) {
+    const key = `${e.start}|${e.end}`;
+    groups.set(key, [...(groups.get(key) ?? []), e.day]);
   }
   return [...groups.entries()].map(([key, days]) => {
     const [start, end] = key.split('|') as [string, string];
     return {
-      days,
+      days: [...new Set(days)],
       start,
       end,
       timezone,
       ...(allDayBlockDates.length > 0 ? { exdates: allDayBlockDates } : {}),
     };
   });
+}
+
+function timeStrToMins(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
 }
 
 function fromPartialExceptions(participants: Record<string, unknown>[]): SchedulerException[] {
