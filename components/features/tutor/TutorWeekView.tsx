@@ -80,8 +80,8 @@ export function TutorWeekView({ events, proposal, weekOffset, onOpenSession }: P
                     onClick={() => onOpenSession(e.id)}
                     style={{
                       position: 'absolute',
-                      top: (e.start - START_H) * ROW_H + 1,
-                      height: Math.max((e.end - e.start) * ROW_H - 2, 14),
+                      top: (e.start - START_H) * ROW_H,
+                      height: Math.max((e.end - e.start) * ROW_H, 14),
                       left: 3, right: 3,
                       background: bg,
                       borderLeft: `3px solid ${border}`,
@@ -111,8 +111,8 @@ export function TutorWeekView({ events, proposal, weekOffset, onOpenSession }: P
                   key={`p${ti}`}
                   style={{
                     position: 'absolute',
-                    top: (tp.start - START_H) * ROW_H + 1,
-                    height: (tp.end - tp.start) * ROW_H - 2,
+                    top: (tp.start - START_H) * ROW_H,
+                    height: (tp.end - tp.start) * ROW_H,
                     left: 3, right: 3,
                     background: 'repeating-linear-gradient(45deg,rgba(24,24,27,0.06) 0 6px,rgba(24,24,27,0.12) 6px 12px)',
                     border: '1.5px dashed #18181B',
