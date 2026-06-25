@@ -57,6 +57,7 @@ export function MiniWeekPreview({ tuples, conflicts, events }: Props) {
                 top: (e.start - START_H) * ROW_H,
                 height: Math.max((e.end - e.start) * ROW_H, 6),
                 left: 2, right: 2,
+                boxSizing: 'border-box',
                 background: e.status === 'cancelled' ? '#F4F4F5' : '#E8F4F1',
                 borderLeft: `2px solid ${e.status === 'cancelled' ? '#D4D4D8' : '#3F9C8B'}`,
                 borderRadius: 3, overflow: 'hidden',
@@ -78,6 +79,7 @@ export function MiniWeekPreview({ tuples, conflicts, events }: Props) {
                   top: (tp.start - START_H) * ROW_H,
                   height: Math.max((tp.end - tp.start) * ROW_H, 6),
                   left: 2, right: 2,
+                  boxSizing: 'border-box',
                   background: bad
                     ? 'repeating-linear-gradient(45deg,rgba(220,38,38,0.2) 0 4px,rgba(220,38,38,0.35) 4px 8px)'
                     : 'repeating-linear-gradient(45deg,rgba(24,24,27,0.1) 0 4px,rgba(24,24,27,0.2) 4px 8px)',
