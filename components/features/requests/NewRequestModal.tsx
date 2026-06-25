@@ -16,6 +16,8 @@ export function NewRequestModal({ onClose, onCreate }: Props) {
   const [startDate,    setStartDate]    = useState('');
   const [notes,        setNotes]        = useState('');
   const [offeredRate,  setOfferedRate]  = useState<number>(20);
+  const [duration,     setDuration]     = useState(60);
+  const [frequency,    setFrequency]    = useState(1);
   const [submitting,   setSubmitting]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
 
@@ -35,6 +37,8 @@ export function NewRequestModal({ onClose, onCreate }: Props) {
           start_date:    startDate || null,
           notes:         notes.trim() || null,
           offered_rate:  offeredRate,
+          session_duration_minutes: duration,
+          sessions_per_week: frequency,
         }),
       });
       const body = await res.json() as { id?: string; error?: string };
@@ -56,6 +60,8 @@ export function NewRequestModal({ onClose, onCreate }: Props) {
         notes:        notes.trim(),
         receivedAt:   'Just now',
         offeredRate,
+        sessionDurationMinutes: duration,
+        sessionsPerWeek: frequency,
       };
       onCreate(newRequest);
     } catch {
@@ -123,6 +129,45 @@ export function NewRequestModal({ onClose, onCreate }: Props) {
               ))}
             </div>
           </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Session length">
+              <div className="flex gap-1.5">
+                {[30, 45, 60, 90, 120].map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setDuration(m)}
+                    className={`flex-1 h-8 rounded-lg text-[12px] font-semibold border transition-colors ${
+                      duration === m
+                        ? 'bg-brand-ink text-white border-brand-ink'
+                        : 'bg-surface-1 text-fg-2 border-border-default hover:bg-surface-2'
+                    }`}
+                  >
+                    {m}m
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Sessions / week">
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setFrequency(n)}
+                    className={`flex-1 h-8 rounded-lg text-[12px] font-semibold border transition-colors ${
+                      frequency === n
+                        ? 'bg-brand-ink text-white border-brand-ink'
+                        : 'bg-surface-1 text-fg-2 border-border-default hover:bg-surface-2'
+                    }`}
+                  >
+                    {n}×
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Timezone">

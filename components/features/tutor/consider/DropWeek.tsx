@@ -19,7 +19,7 @@ interface Props {
   setOverSlot: (s: { day: number; start: number } | null) => void;
   /** True while the session card is being dragged. */
   dragging: boolean;
-  /** Returns true if a 1-hr session starting at (day, start) fits within any availability window. */
+  /** Returns true if a session starting at (day, start) fits within any availability window. */
   canDrop: (day: number, start: number) => boolean;
   onDrop: (day: number, start: number, e: React.DragEvent) => void;
   startHr: number;
@@ -82,10 +82,10 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
                   onMouseEnter={() => onCandidateHover(true)}
                   onMouseLeave={() => onCandidateHover(false)}
                   onClick={() => onCandidateClick(ti, dayIdx, w.start)}
-                  title={`${proposal.subject} · 1 hr session · click to place at window start`}
+                  title={`${proposal.subject} · ${(proposal.sessionDurationMinutes ?? 60)}m session · click to place at window start`}
                   style={{ position: 'absolute', top: (w.start - startHr) * ROW_H, height: (w.end - w.start) * ROW_H, left: 2, right: 2, boxSizing: 'border-box', background: bg, border: bdr, borderRadius: 4, cursor: 'pointer', zIndex: focused ? 3 : 1, transition: 'background 120ms', display: 'flex', alignItems: 'flex-start', padding: '2px 4px', overflow: 'hidden', pointerEvents: dragging ? 'none' : 'auto' }}>
                   {focused && (w.end - w.start) * ROW_H >= 24 && (
-                    <span style={{ background: 'rgba(255,255,255,0.9)', padding: '1px 5px', borderRadius: 3, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: color.strong }}>1hr session</span>
+                    <span style={{ background: 'rgba(255,255,255,0.9)', padding: '1px 5px', borderRadius: 3, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: color.strong }}>{(proposal.sessionDurationMinutes ?? 60)}m session</span>
                   )}
                 </div>
               ));
@@ -136,13 +136,14 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
               </div>
             ))}
 
-            {/* Placed session — 1 hr block */}
+            {/* Placed sessions — duration-aware */}
             {placements.map((pl, i) => {
               if (!pl || pl.day !== dayIdx) return null;
+              const durHrs = (proposal.sessionDurationMinutes ?? 60) / 60;
               return (
-                <div key={`pl-${i}`} style={{ position: 'absolute', top: (pl.start - startHr) * ROW_H + 1, height: ROW_H - 2, left: 4, right: 4, background: '#22C55E', borderRadius: 6, padding: '4px 6px', fontSize: 11, fontWeight: 700, color: '#fff', overflow: 'hidden', boxShadow: '0 2px 6px rgba(34,197,94,0.35)', pointerEvents: 'none', animation: 'crpSlotPulse 800ms ease-out', zIndex: 6 }}>
+                <div key={`pl-${i}`} style={{ position: 'absolute', top: (pl.start - startHr) * ROW_H + 1, height: durHrs * ROW_H - 2, left: 4, right: 4, boxSizing: 'border-box', background: '#22C55E', borderRadius: 6, padding: '4px 6px', fontSize: 11, fontWeight: 700, color: '#fff', overflow: 'hidden', boxShadow: '0 2px 6px rgba(34,197,94,0.35)', pointerEvents: 'none', animation: 'crpSlotPulse 800ms ease-out', zIndex: 6 }}>
                   <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proposal.studentName}</div>
-                  <div style={{ fontSize: 9, opacity: 0.9, marginTop: 1 }}>{fmtH(pl.start)}–{fmtH(pl.start + 1)}</div>
+                  <div style={{ fontSize: 9, opacity: 0.9, marginTop: 1 }}>{fmtH(pl.start)}–{fmtH(pl.start + durHrs)}</div>
                 </div>
               );
             })}

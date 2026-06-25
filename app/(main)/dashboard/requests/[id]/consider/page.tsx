@@ -31,6 +31,8 @@ function rowToRequest(
     receivedAt:   '',
     asanaTaskId:  row.asana_task_id ?? undefined,
     offeredRate:  row.offered_rate ?? undefined,
+    sessionDurationMinutes: row.session_duration_minutes ?? 60,
+    sessionsPerWeek: row.sessions_per_week ?? 1,
   };
 }
 

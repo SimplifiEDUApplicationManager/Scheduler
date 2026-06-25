@@ -101,7 +101,7 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
                   )}
                   {p.testDates    && <SnapField label="Test dates" value={p.testDates} />}
                   <SnapField label="Start date" value={p.startDate} />
-                  <SnapField label="Hours / week" value="1 hr" />
+                  <SnapField label="Sessions / week" value={`${p.sessionsPerWeek ?? 1}× ${p.sessionDurationMinutes ?? 60}m`} />
                   <SnapField label="Timezone" value={tz} />
                   {p.offeredRate !== undefined && (
                     <SnapField
@@ -222,8 +222,8 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
                 </div>
                 <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: overCap ? '#FEF2F2' : '#F0FDF4', border: `1px solid ${overCap ? '#FECACA' : '#BBF7D0'}`, fontSize: 12, color: overCap ? '#991B1B' : '#166534', lineHeight: 1.4 }}>
                   {overCap
-                    ? <><b>Over cap.</b> Accepting adds 1 hr · you&apos;d be {newTotal - me.hoursMax} hr{newTotal - me.hoursMax === 1 ? '' : 's'} over.</>
-                    : <><b>Room to take this on.</b> Accepting adds 1 hr · {remaining} hr{remaining === 1 ? '' : 's'} left after.</>}
+                    ? <><b>Over cap.</b> Accepting adds {Math.round(((p.sessionDurationMinutes ?? 60) / 60) * (p.sessionsPerWeek ?? 1) * 10) / 10} hr{((p.sessionDurationMinutes ?? 60) / 60) * (p.sessionsPerWeek ?? 1) !== 1 ? 's' : ''} · you&apos;d be {newTotal - me.hoursMax} hr{newTotal - me.hoursMax === 1 ? '' : 's'} over.</>
+                    : <><b>Room to take this on.</b> Accepting adds {Math.round(((p.sessionDurationMinutes ?? 60) / 60) * (p.sessionsPerWeek ?? 1) * 10) / 10} hr{((p.sessionDurationMinutes ?? 60) / 60) * (p.sessionsPerWeek ?? 1) !== 1 ? 's' : ''} · {remaining} hr{remaining === 1 ? '' : 's'} left after.</>}
                 </div>
               </SideCard>
 

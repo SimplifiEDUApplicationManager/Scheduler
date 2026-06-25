@@ -20,118 +20,158 @@ interface Props {
 }
 
 function fmtH(h: number): string {
-  const hr = Math.floor(h); const mn = Math.round((h - hr) * 60);
+  const hr = Math.floor(h % 24); const mn = Math.round((h % 1) * 60);
   const suf = hr >= 12 ? 'p' : 'a'; const h12 = hr % 12 === 0 ? 12 : hr % 12;
   return mn === 0 ? `${h12}${suf}` : `${h12}:${String(mn).padStart(2, '0')}${suf}`;
 }
 
 export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props) {
-  // One session per student — a single 1-hr placement anywhere within any availability window.
-  const [placement, setPlacement] = useState<Placement>(null);
+  const sessionsNeeded = p.sessionsPerWeek ?? 1;
+  const durationHrs = (p.sessionDurationMinutes ?? 60) / 60;
+  const durationMin = p.sessionDurationMinutes ?? 60;
+
+  const [placements, setPlacements] = useState<Placement[]>(() => Array(sessionsNeeded).fill(null));
+  const [activeIdx, setActiveIdx] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [overSlot, setOverSlot] = useState<{ day: number; start: number } | null>(null);
   const [focused, setFocused] = useState(false);
   const [pinned, setPinned] = useState(false);
 
-  // Valid drop: any 15-min-aligned start such that a 1-hr session fits within a window.
   const canDrop = (day: number, start: number): boolean => {
-    return p.tuples.some(tp => tp.day === day && start >= tp.start && start + 1 <= tp.end);
+    return p.tuples.some(tp => tp.day === day && start >= tp.start && start + durationHrs <= tp.end);
   };
 
-  // All availability windows shown as candidate zones until the session is placed.
   const candidateWindows = useMemo(() => {
-    if (placement) return p.tuples.map(() => [] as { day: number; start: number; end: number }[]);
+    if (placements[activeIdx]) return p.tuples.map(() => [] as { day: number; start: number; end: number }[]);
     return p.tuples.map(tp => [{ day: tp.day, start: tp.start, end: tp.end }]);
-  }, [p.tuples, placement]);
+  }, [p.tuples, placements, activeIdx]);
 
   const totalFitSlots = useMemo(
-    () => countFitSlots(p.tuples.map(tp => ({ start: tp.start, end: tp.end })), 1),
-    [p.tuples],
+    () => countFitSlots(p.tuples.map(tp => ({ start: tp.start, end: tp.end })), durationHrs),
+    [p.tuples, durationHrs],
   );
 
   const autoPlace = () => {
     const tp = p.tuples[0];
-    if (tp) setPlacement({ day: tp.day, start: tp.start });
+    if (tp) {
+      const next = [...placements];
+      next[activeIdx] = { day: tp.day, start: tp.start };
+      setPlacements(next);
+    }
   };
 
   const onDrop = (day: number, start: number, e: React.DragEvent) => {
     e.preventDefault();
     if (!canDrop(day, start)) return;
-    setPlacement({ day, start });
+    const next = [...placements];
+    next[activeIdx] = { day, start };
+    setPlacements(next);
     setOverSlot(null); setDragging(false);
+    // Auto-advance to next unplaced session
+    const nextEmpty = next.findIndex((pl, i) => i > activeIdx && pl === null);
+    if (nextEmpty >= 0) setActiveIdx(nextEmpty);
   };
 
-  // Clicking a candidate window places the session at that window's start.
   const placeAt = (_idx: number, day: number, start: number) => {
     if (!canDrop(day, start)) return;
-    setPlacement({ day, start });
+    const next = [...placements];
+    next[activeIdx] = { day, start };
+    setPlacements(next);
     setFocused(false); setPinned(false);
+    const nextEmpty = next.findIndex((pl, i) => i > activeIdx && pl === null);
+    if (nextEmpty >= 0) setActiveIdx(nextEmpty);
+  };
+
+  const resetPlacement = (idx: number) => {
+    const next = [...placements];
+    next[idx] = null;
+    setPlacements(next);
+    setActiveIdx(idx);
   };
 
   const color = TUPLE_COLORS[0];
-  // Pass a single-element array to keep the API shape (onConfirm expects Placement[]).
-  const placements: Placement[] = [placement];
-  const allPlaced = placement != null;
+  const allPlaced = placements.every(pl => pl !== null);
+  const placedCount = placements.filter(pl => pl !== null).length;
+
+  const durationLabel = durationMin === 60 ? '1 hr' : durationMin === 90 ? '1.5 hr' : `${durationMin}m`;
+  const headerLabel = sessionsNeeded === 1
+    ? `Pick a ${durationLabel} slot`
+    : `Place ${sessionsNeeded} × ${durationLabel} sessions`;
 
   return (
     <>
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         <aside style={{ width: 300, background: '#fff', borderRight: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           <div style={{ padding: '16px 18px', borderBottom: '1px solid #F5F5F5' }}>
-            <div style={{ fontSize: 11, color: '#71717A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Schedule session</div>
-            <h2 style={{ fontSize: 17, fontWeight: 800, margin: '4px 0 0', letterSpacing: '-0.01em' }}>Pick a 1-hour slot</h2>
+            <div style={{ fontSize: 11, color: '#71717A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Schedule session{sessionsNeeded > 1 ? 's' : ''}</div>
+            <h2 style={{ fontSize: 17, fontWeight: 800, margin: '4px 0 0', letterSpacing: '-0.01em' }}>{headerLabel}</h2>
             <div style={{ marginTop: 6, fontSize: 12, color: '#52525B', lineHeight: 1.4 }}>
-              Drag the card onto any highlighted window — or click a window directly to place the session there.
+              {sessionsNeeded > 1
+                ? `Drag each card onto a highlighted window. ${placedCount}/${sessionsNeeded} placed.`
+                : 'Drag the card onto any highlighted window — or click a window directly to place the session there.'}
             </div>
             <button onClick={autoPlace} style={{ marginTop: 12, height: 28, padding: '0 10px', borderRadius: 7, border: '1px solid #E4E4E7', background: '#fff', color: '#18181B', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
               ✦ Auto-place
             </button>
           </div>
-          <div style={{ flex: 1, overflow: 'auto', padding: 14 }}>
-            {/* Single draggable card — one session per student */}
-            <div
-              className={'crp-draggable' + (dragging ? ' dragging' : '')}
-              draggable={!placement}
-              onDragStart={e => { setDragging(true); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', '0'); }}
-              onDragEnd={() => { setDragging(false); setOverSlot(null); }}
-              onMouseEnter={() => { if (!placement && !pinned) setFocused(true); }}
-              onMouseLeave={() => { if (!pinned) setFocused(false); }}
-              onClick={() => {
-                if (placement) return;
-                if (focused && pinned) { setFocused(false); setPinned(false); }
-                else { setFocused(true); setPinned(true); }
-              }}
-              style={{ padding: '12px 14px', borderRadius: 10, background: placement ? '#ECFDF5' : focused ? color.soft : '#fff', border: `1px solid ${placement ? '#86EFAC' : focused ? color.strong : '#E4E4E7'}`, borderLeft: placement ? '1px solid #86EFAC' : `4px solid ${color.strong}`, cursor: placement ? 'default' : 'grab', transition: 'transform 120ms, box-shadow 120ms, background 120ms', boxShadow: focused ? `0 2px 10px ${color.shadow}` : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                {!placement
-                  ? <span style={{ color: '#A1A1AA', fontSize: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>⋮⋮ Drag</span>
-                  : <span style={{ padding: '2px 7px', borderRadius: 999, background: '#22C55E', color: '#fff', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>✓ Placed</span>}
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#18181B' }}>{p.studentName}</div>
-              <div style={{ fontSize: 11, color: '#52525B', marginTop: 2 }}>{p.subject} · 1 hr/week</div>
-              <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#18181B' }}>
-                {placement
-                  ? `${DAY_SHORT[placement.day]} · ${fmtH(placement.start)}–${fmtH(placement.start + 1)}`
-                  : 'Drop into any highlighted window'}
-              </div>
-              {!placement && (
-                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {p.tuples.map((tp, i) => (
-                    <div key={i} style={{ fontSize: 11, color: '#71717A' }}>
-                      {DAY_SHORT[tp.day]} · {fmtH(tp.start)}–{fmtH(tp.end)}
-                    </div>
-                  ))}
-                  <div style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 999, background: focused ? color.soft : '#FAFAFA', border: `1px solid ${focused ? color.strong : '#E4E4E7'}`, fontSize: 10, color: focused ? color.strong : '#71717A', fontWeight: 600, alignSelf: 'flex-start' }}>
-                    {totalFitSlots} slots available
+          <div style={{ flex: 1, overflow: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {placements.map((pl, idx) => {
+              const isActive = idx === activeIdx;
+              const isPlaced = pl !== null;
+              return (
+                <div
+                  key={idx}
+                  className={'crp-draggable' + (dragging && isActive ? ' dragging' : '')}
+                  draggable={!isPlaced && isActive}
+                  onDragStart={e => { setDragging(true); setActiveIdx(idx); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(idx)); }}
+                  onDragEnd={() => { setDragging(false); setOverSlot(null); }}
+                  onClick={() => {
+                    if (isPlaced) return;
+                    setActiveIdx(idx);
+                    if (focused && pinned && isActive) { setFocused(false); setPinned(false); }
+                    else { setFocused(true); setPinned(true); }
+                  }}
+                  onMouseEnter={() => { if (!isPlaced && isActive && !pinned) setFocused(true); }}
+                  onMouseLeave={() => { if (!pinned) setFocused(false); }}
+                  style={{
+                    padding: '12px 14px', borderRadius: 10,
+                    background: isPlaced ? '#ECFDF5' : isActive && focused ? color.soft : '#fff',
+                    border: `1px solid ${isPlaced ? '#86EFAC' : isActive && focused ? color.strong : isActive ? color.borderDash : '#E4E4E7'}`,
+                    borderLeft: isPlaced ? '1px solid #86EFAC' : `4px solid ${isActive ? color.strong : '#D4D4D8'}`,
+                    cursor: isPlaced ? 'default' : isActive ? 'grab' : 'pointer',
+                    transition: 'background 120ms, border-color 120ms',
+                    opacity: !isActive && !isPlaced ? 0.6 : 1,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                    {isPlaced
+                      ? <span style={{ padding: '2px 7px', borderRadius: 999, background: '#22C55E', color: '#fff', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>✓ Placed</span>
+                      : isActive
+                        ? <span style={{ color: '#A1A1AA', fontSize: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>⋮⋮ Drag</span>
+                        : <span style={{ color: '#A1A1AA', fontSize: 10 }}>Session {idx + 1}</span>}
                   </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#18181B' }}>{p.studentName}</div>
+                  <div style={{ fontSize: 11, color: '#52525B', marginTop: 2 }}>
+                    {p.subject} · {durationLabel}{sessionsNeeded > 1 ? ` (${idx + 1}/${sessionsNeeded})` : '/week'}
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#18181B' }}>
+                    {pl
+                      ? `${DAY_SHORT[pl.day]} · ${fmtH(pl.start)}–${fmtH(pl.start + durationHrs)}`
+                      : 'Drop into any highlighted window'}
+                  </div>
+                  {!isPlaced && isActive && (
+                    <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 999, background: focused ? color.soft : '#FAFAFA', border: `1px solid ${focused ? color.strong : '#E4E4E7'}`, fontSize: 10, color: focused ? color.strong : '#71717A', fontWeight: 600, alignSelf: 'flex-start' }}>
+                      {totalFitSlots} slots available
+                    </div>
+                  )}
+                  {isPlaced && (
+                    <button onClick={() => resetPlacement(idx)} style={{ marginTop: 8, border: 'none', background: 'transparent', color: '#047857', fontSize: 11, fontWeight: 600, padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      ✕ Reset
+                    </button>
+                  )}
                 </div>
-              )}
-              {placement && (
-                <button onClick={() => setPlacement(null)} style={{ marginTop: 8, border: 'none', background: 'transparent', color: '#047857', fontSize: 11, fontWeight: 600, padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  ✕ Reset
-                </button>
-              )}
-            </div>
+              );
+            })}
           </div>
         </aside>
 
@@ -169,8 +209,8 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
       <div style={{ background: '#fff', borderTop: '1px solid #E4E4E7', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 -6px 16px rgba(22,32,51,0.04)' }}>
         <div style={{ flex: 1, fontSize: 12, color: '#71717A' }}>
           {allPlaced
-            ? <><b style={{ color: '#047857' }}>Session placed.</b> Confirm to add it to your calendar.</>
-            : 'Drag the card onto an available window to schedule the session.'}
+            ? <><b style={{ color: '#047857' }}>{sessionsNeeded === 1 ? 'Session' : `All ${sessionsNeeded} sessions`} placed.</b> Confirm to add {sessionsNeeded === 1 ? 'it' : 'them'} to your calendar.</>
+            : `Place ${sessionsNeeded - placedCount} more session${sessionsNeeded - placedCount !== 1 ? 's' : ''} to continue.`}
         </div>
         <button onClick={onDecline} style={{ height: 40, padding: '0 18px', borderRadius: 10, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Decline</button>
         <button onClick={onBack} style={{ height: 40, padding: '0 16px', borderRadius: 10, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Back</button>

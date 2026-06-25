@@ -23,4 +23,6 @@ export const DEMO_PROPOSAL: TutorProposal = {
   offeredRate: 30,
   parentName: 'Wei Chen',
   scheduleNotes: 'Tuesday 4–6 pm works best. Family is flexible by ±30 min.',
+  sessionDurationMinutes: 60,
+  sessionsPerWeek: 1,
 };
