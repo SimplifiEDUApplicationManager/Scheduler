@@ -39,6 +39,11 @@ export function fmtHour(h: number): string {
   return mins === 0 ? `${h12} ${suffix}` : `${h12}:${String(mins).padStart(2, '0')} ${suffix}`;
 }
 
+/** Like fmtHour but appends "(+1d)" for values ≥ 24 — used in time pickers. */
+export function fmtHourWithDay(h: number): string {
+  return h >= 24 ? `${fmtHour(h)} (+1d)` : fmtHour(h);
+}
+
 /** Formats a time range, e.g. 16–19 → "4–7 PM". */
 export function fmtRange(start: number, end: number): string {
   const s = fmtHour(start);

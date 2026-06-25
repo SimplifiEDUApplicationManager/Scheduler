@@ -3,6 +3,34 @@
 import type { DayKey, HoursMap, TimeWindow } from '@/lib/types/scheduler';
 import { DAY_ORDER } from '@/lib/types/scheduler';
 
+// Build time options in 30-min increments: "00:00" to "23:30" for start,
+// "00:30" to "47:30" for end (allows cross-midnight up to +24h).
+const START_OPTS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = (i % 2) * 30;
+  return { value: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`, label: fmtTime(h, m) };
+});
+const END_OPTS = Array.from({ length: 96 }, (_, i) => {
+  const half = i + 1; // start from 00:30
+  const h = Math.floor(half / 2);
+  const m = (half % 2) * 30;
+  const value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  const label = h >= 24 ? `${fmtTime(h % 24, m)} (+1d)` : fmtTime(h, m);
+  return { value, label };
+});
+
+function fmtTime(h: number, m: number): string {
+  const h24 = h % 24;
+  const suffix = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return m === 0 ? `${h12} ${suffix}` : `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
+}
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
 interface Props {
   hours: HoursMap;
   onChange: (hours: HoursMap) => void;
@@ -17,14 +45,19 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
   );
 }
 
+const selectStyle: React.CSSProperties = { height: 32, padding: '0 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', background: '#fff' };
+
 function WindowRow({ w, onChange, onRemove }: { w: TimeWindow; onChange: (w: TimeWindow) => void; onRemove: () => void }) {
+  const startMins = timeToMinutes(w.start);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <input type="time" value={w.start} onChange={e => onChange({ ...w, start: e.target.value })}
-        style={{ height: 32, padding: '0 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', background: '#fff' }} />
+      <select value={w.start} onChange={e => onChange({ ...w, start: e.target.value })} style={selectStyle}>
+        {START_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
       <span style={{ fontSize: 12, color: '#A1A1AA' }}>→</span>
-      <input type="time" value={w.end} onChange={e => onChange({ ...w, end: e.target.value })}
-        style={{ height: 32, padding: '0 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', background: '#fff' }} />
+      <select value={w.end} onChange={e => onChange({ ...w, end: e.target.value })} style={selectStyle}>
+        {END_OPTS.filter(o => timeToMinutes(o.value) > startMins).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
       <button onClick={onRemove} type="button"
         style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid #E4E4E7', background: '#fff', color: '#71717A', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
     </div>
