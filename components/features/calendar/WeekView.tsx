@@ -59,7 +59,8 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
 
   const maxOverlap = Math.max(1, ...perDay.flatMap(b => b.map(x => x.free.length)));
   const tint = (n: number) => `rgba(63,156,139,${(0.08 + 0.45 * (n / maxOverlap)).toFixed(2)})`;
-  const bdr  = (n: number) => `rgba(31,83,73,${(0.2 + 0.5 * (n / maxOverlap)).toFixed(2)})`;
+  // Opaque border so it's visible between adjacent blocks with different coverage
+  const bdr  = (_n: number) => '#B0D4CD';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -164,7 +165,7 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
                       }}
                       onMouseLeave={() => setHoverSlot(null)}
                       style={{
-                        position:'absolute', top:(b.start-START_H)*ROW_H+1, height:h-2, left:2, right:2,
+                        position:'absolute', top:(b.start-START_H)*ROW_H, height:h, left:2, right:2,
                         boxSizing:'border-box',
                         background:tint(b.free.length), border:`1px solid ${bdr(b.free.length)}`,
                         borderRadius: continuesUp && continuesDown ? 0 : continuesUp ? '0 0 4px 4px' : continuesDown ? '4px 4px 0 0' : 4,
@@ -205,7 +206,7 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
                 {/* Request tuple overlays */}
                 {dayTups.map((tp, ti) => (
                   <div key={`tp${ti}`} style={{
-                    position:'absolute', top:(tp.start-START_H)*ROW_H+1, height:(tp.end-tp.start)*ROW_H-2, left:2, right:2,
+                    position:'absolute', top:(tp.start-START_H)*ROW_H, height:(tp.end-tp.start)*ROW_H, left:2, right:2,
                     boxSizing:'border-box',
                     background:'repeating-linear-gradient(45deg,rgba(24,24,27,.06) 0 6px,rgba(24,24,27,.12) 6px 12px)',
                     border:'1.5px dashed #18181B', borderRadius:6, pointerEvents:'none', zIndex:4,
