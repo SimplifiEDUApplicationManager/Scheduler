@@ -106,15 +106,27 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
               );
             })}
 
-            {/* Student's available windows (striped) */}
-            {tuples.map((tp, i) => {
-              if (tp.day !== dayIdx || placements[0]) return null;
-              return (
-                <div key={`pref-${i}`} style={{ position: 'absolute', top: (tp.start - startHr) * ROW_H + 1, height: (tp.end - tp.start) * ROW_H - 2, left: 4, right: 4, background: 'repeating-linear-gradient(45deg,rgba(24,24,27,0.06) 0 6px,rgba(24,24,27,0.12) 6px 12px)', border: '1.5px dashed #71717A', borderRadius: 4, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: '#52525B', textAlign: 'center', padding: 4, zIndex: 4 }}>
-                  Student available
-                </div>
-              );
-            })}
+            {/* Student's available windows (striped) — split cross-midnight */}
+            {!placements[0] && (() => {
+              const slots: { start: number; end: number }[] = [];
+              for (const tp of tuples) {
+                if (tp.day === dayIdx) {
+                  slots.push({ start: tp.start, end: Math.min(tp.end, endHr) });
+                }
+                if (tp.day === (dayIdx + 6) % 7 && tp.end > 24) {
+                  slots.push({ start: 0, end: Math.min(tp.end - 24, endHr) });
+                }
+              }
+              return slots.map((s, i) => {
+                const h = (s.end - s.start) * ROW_H;
+                if (h <= 0) return null;
+                return (
+                  <div key={`pref-${i}`} style={{ position: 'absolute', top: (s.start - startHr) * ROW_H + 1, height: h - 2, left: 4, right: 4, boxSizing: 'border-box', background: 'repeating-linear-gradient(45deg,rgba(24,24,27,0.06) 0 6px,rgba(24,24,27,0.12) 6px 12px)', border: '1.5px dashed #71717A', borderRadius: 4, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: '#52525B', textAlign: 'center', padding: 4, zIndex: 4 }}>
+                    Student available
+                  </div>
+                );
+              });
+            })()}
 
             {/* Existing events */}
             {events.filter(e => e.day === dayIdx).map((e, ei) => (

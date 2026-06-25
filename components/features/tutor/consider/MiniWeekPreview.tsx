@@ -69,30 +69,38 @@ export function MiniWeekPreview({ tuples, conflicts, events }: Props) {
               </div>
             ))}
 
-            {/* Proposed tuples */}
-            {tuples.filter(tp => tp.day === dayIdx).map((tp, i) => {
-              const conflict = conflicts.find(c => c.tp === tp);
-              const bad = (conflict?.clashes.length ?? 0) > 0;
-              return (
-                <div key={`p${i}`} style={{
-                  position: 'absolute',
-                  top: (tp.start - START_H) * ROW_H + 1,
-                  height: Math.max((tp.end - tp.start) * ROW_H - 2, 6),
-                  left: 2, right: 2,
-                  boxSizing: 'border-box',
-                  background: bad
-                    ? 'repeating-linear-gradient(45deg,rgba(220,38,38,0.2) 0 4px,rgba(220,38,38,0.35) 4px 8px)'
-                    : 'repeating-linear-gradient(45deg,rgba(24,24,27,0.1) 0 4px,rgba(24,24,27,0.2) 4px 8px)',
-                  border: `1.5px dashed ${bad ? '#DC2626' : '#18181B'}`,
-                  borderRadius: 3, overflow: 'hidden',
-                  fontSize: 8, fontWeight: 700,
-                  color: bad ? '#991B1B' : '#18181B',
-                  padding: '1px 2px', textAlign: 'center', zIndex: 2,
-                }}>
-                  {bad ? '⚠' : '●'}
-                </div>
-              );
-            })}
+            {/* Proposed tuples — split cross-midnight */}
+            {(() => {
+              const slots: { start: number; end: number; tp: typeof tuples[0] }[] = [];
+              for (const tp of tuples) {
+                if (tp.day === dayIdx) slots.push({ start: tp.start, end: Math.min(tp.end, END_H), tp });
+                if (tp.day === (dayIdx + 6) % 7 && tp.end > 24) slots.push({ start: 0, end: Math.min(tp.end - 24, END_H), tp });
+              }
+              return slots.map((s, i) => {
+                const conflict = conflicts.find(c => c.tp === s.tp);
+                const bad = (conflict?.clashes.length ?? 0) > 0;
+                const h = Math.max((s.end - s.start) * ROW_H - 2, 6);
+                return (
+                  <div key={`p${i}`} style={{
+                    position: 'absolute',
+                    top: (s.start - START_H) * ROW_H + 1,
+                    height: h,
+                    left: 2, right: 2,
+                    boxSizing: 'border-box',
+                    background: bad
+                      ? 'repeating-linear-gradient(45deg,rgba(220,38,38,0.2) 0 4px,rgba(220,38,38,0.35) 4px 8px)'
+                      : 'repeating-linear-gradient(45deg,rgba(24,24,27,0.1) 0 4px,rgba(24,24,27,0.2) 4px 8px)',
+                    border: `1.5px dashed ${bad ? '#DC2626' : '#18181B'}`,
+                    borderRadius: 3, overflow: 'hidden',
+                    fontSize: 8, fontWeight: 700,
+                    color: bad ? '#991B1B' : '#18181B',
+                    padding: '1px 2px', textAlign: 'center', zIndex: 2,
+                  }}>
+                    {bad ? '⚠' : '●'}
+                  </div>
+                );
+              });
+            })()}
           </div>
         ))}
       </div>
