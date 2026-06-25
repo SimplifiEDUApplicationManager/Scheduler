@@ -72,6 +72,7 @@ export default async function RequestsPage() {
       .from('requests')
       .select('*')
       .eq('coordinator_id', user.id)
+      .eq('status', 'open')
       .order('created_at', { ascending: false }),
     fetchAllTutors(supabase),
     supabase.from('subjects').select('id, name'),
