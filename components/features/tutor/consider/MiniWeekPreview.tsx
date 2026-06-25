@@ -54,8 +54,8 @@ export function MiniWeekPreview({ tuples, conflicts, events }: Props) {
             {events.filter(e => e.day === dayIdx).map((e, ei) => (
               <div key={ei} style={{
                 position: 'absolute',
-                top: (e.start - START_H) * ROW_H,
-                height: Math.max((e.end - e.start) * ROW_H, 6),
+                top: (e.start - START_H) * ROW_H + 1,
+                height: Math.max((e.end - e.start) * ROW_H - 2, 6),
                 left: 2, right: 2,
                 boxSizing: 'border-box',
                 background: e.status === 'cancelled' ? '#F4F4F5' : '#E8F4F1',
@@ -76,8 +76,8 @@ export function MiniWeekPreview({ tuples, conflicts, events }: Props) {
               return (
                 <div key={`p${i}`} style={{
                   position: 'absolute',
-                  top: (tp.start - START_H) * ROW_H,
-                  height: Math.max((tp.end - tp.start) * ROW_H, 6),
+                  top: (tp.start - START_H) * ROW_H + 1,
+                  height: Math.max((tp.end - tp.start) * ROW_H - 2, 6),
                   left: 2, right: 2,
                   boxSizing: 'border-box',
                   background: bad
