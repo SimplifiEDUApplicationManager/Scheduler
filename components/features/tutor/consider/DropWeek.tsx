@@ -82,7 +82,7 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
                   onMouseLeave={() => onCandidateHover(false)}
                   onClick={() => onCandidateClick(ti, dayIdx, w.start)}
                   title={`${proposal.subject} · 1 hr session · click to place at window start`}
-                  style={{ position: 'absolute', top: (w.start - startHr) * ROW_H, height: (w.end - w.start) * ROW_H, left: 2, right: 2, background: bg, border: bdr, borderRadius: 4, cursor: 'pointer', zIndex: focused ? 3 : 1, transition: 'background 120ms', display: 'flex', alignItems: 'flex-start', padding: '2px 4px', overflow: 'hidden', pointerEvents: dragging ? 'none' : 'auto' }}>
+                  style={{ position: 'absolute', top: (w.start - startHr) * ROW_H, height: (w.end - w.start) * ROW_H, left: 2, right: 2, boxSizing: 'border-box', background: bg, border: bdr, borderRadius: 4, cursor: 'pointer', zIndex: focused ? 3 : 1, transition: 'background 120ms', display: 'flex', alignItems: 'flex-start', padding: '2px 4px', overflow: 'hidden', pointerEvents: dragging ? 'none' : 'auto' }}>
                   {focused && (w.end - w.start) * ROW_H >= 24 && (
                     <span style={{ background: 'rgba(255,255,255,0.9)', padding: '1px 5px', borderRadius: 3, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: color.strong }}>1hr session</span>
                   )}

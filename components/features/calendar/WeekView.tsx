@@ -165,6 +165,7 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
                       onMouseLeave={() => setHoverSlot(null)}
                       style={{
                         position:'absolute', top:(b.start-START_H)*ROW_H, height:h, left:2, right:2,
+                        boxSizing:'border-box',
                         background:tint(b.free.length), border:`1px solid ${bdr(b.free.length)}`,
                         borderRadius: continuesUp && continuesDown ? 0 : continuesUp ? '0 0 4px 4px' : continuesDown ? '4px 4px 0 0' : 4,
                         borderTop: continuesUp ? 'none' : undefined,
@@ -205,6 +206,7 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
                 {dayTups.map((tp, ti) => (
                   <div key={`tp${ti}`} style={{
                     position:'absolute', top:(tp.start-START_H)*ROW_H, height:(tp.end-tp.start)*ROW_H, left:2, right:2,
+                    boxSizing:'border-box',
                     background:'repeating-linear-gradient(45deg,rgba(24,24,27,.06) 0 6px,rgba(24,24,27,.12) 6px 12px)',
                     border:'1.5px dashed #18181B', borderRadius:6, pointerEvents:'none', zIndex:4,
                     display:'flex', alignItems:'flex-start', justifyContent:'flex-end', padding:'3px 5px',
