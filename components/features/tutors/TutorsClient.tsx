@@ -13,6 +13,7 @@ import {
   DEFAULT_CONF,
   type FilterState,
 } from '@/lib/utils/tutors';
+import { convertTupleTimezone } from '@/lib/utils/timezone';
 import { RequestPickerBlock } from './RequestPickerBlock';
 import { FilterPanel } from './FilterPanel';
 import { TutorCard } from './TutorCard';
@@ -76,12 +77,16 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
     : null;
 
   // Apply a request → fill subject + tuples + reqId
+  // Convert tuples from the request's timezone to the coordinator's timezone.
   function applyRequest(req: TuitionRequest) {
+    const convertedTuples = req.tz && req.tz !== coordinatorTz
+      ? req.tuples.map(t => convertTupleTimezone(t, req.tz, coordinatorTz))
+      : req.tuples;
     setFilters({
       ...filters,
       reqId:    req.id,
       subjects: [req.subjectId],
-      tuples:   req.tuples,
+      tuples:   convertedTuples,
       conf:     ['HIGH', 'MEDIUM'],
     });
   }
@@ -275,7 +280,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
         </div>
         <WeekView
           tutors={selectedTutorId ? filtered.filter(t => t.id === selectedTutorId) : filtered}
-          requestTuples={activeReq?.tuples ?? filters.tuples}
+          requestTuples={filters.tuples}
           weekOffset={weekOffset}
           busySlotsPerTutor={weeklyBusy}
         />
