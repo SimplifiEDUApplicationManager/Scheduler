@@ -80,7 +80,7 @@ async function createBookingEvent(
   const [{ data: proposal }, { data: tutor }] = await Promise.all([
     supabase
       .from('proposals')
-      .select('student_name, student_email, subject, requested_schedule, timezone, start_date')
+      .select('student_name, student_email, subject, requested_schedule, timezone, start_date, session_duration_minutes, sessions_per_week')
       .eq('id', proposalId)
       .single(),
     supabase
@@ -106,35 +106,39 @@ async function createBookingEvent(
     return;
   }
 
-  // One session per student. Use the tutor's confirmed placement if provided;
-  // fall back to the start of the first availability window.
-  const pl    = placements?.[0];
-  const tp    = schedule[0];
-  const day   = pl?.day   ?? tp.day;
-  const start = pl?.start ?? tp.start;
+  const durationHrs = (proposal.session_duration_minutes ?? 60) / 60;
 
-  const { startUnix, endUnix } = tupleToUnix(
-    day, start, start + 1, // 1-hr session
-    proposal.timezone,
-    proposal.start_date,
-  );
+  // Create one calendar event per session placement.
+  let firstEventId: string | null = null;
+  const effectivePlacements = (placements && placements.length > 0)
+    ? placements
+    : [{ day: schedule[0].day, start: schedule[0].start }];
 
-  const nylasEventId = await createTutoringEvent(tutor.nylas_grant_id, {
-    studentName:  proposal.student_name,
-    studentEmail: proposal.student_email,
-    subject:      proposal.subject,
-    startUnix,
-    endUnix,
-    meetingLink: tutor.meeting_link ?? undefined,
-    calendarId:  tutor.email ?? undefined,
-  });
+  for (const pl of effectivePlacements) {
+    if (!pl) continue;
+    const { startUnix, endUnix } = tupleToUnix(
+      pl.day, pl.start, pl.start + durationHrs,
+      proposal.timezone,
+      proposal.start_date,
+    );
 
-  let savedEventId = nylasEventId ?? null;
+    const eventId = await createTutoringEvent(tutor.nylas_grant_id, {
+      studentName:  proposal.student_name,
+      studentEmail: proposal.student_email,
+      subject:      proposal.subject,
+      startUnix,
+      endUnix,
+      meetingLink: tutor.meeting_link ?? undefined,
+      calendarId:  tutor.email ?? undefined,
+    });
 
-  if (savedEventId) {
+    if (eventId && !firstEventId) firstEventId = eventId;
+  }
+
+  if (firstEventId) {
     await supabase
       .from('proposals')
-      .update({ nylas_event_id: savedEventId })
+      .update({ nylas_event_id: firstEventId })
       .eq('id', proposalId);
   }
 }

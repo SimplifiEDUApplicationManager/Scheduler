@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
   const {
     student_name, student_email, subject, requested_schedule, timezone,
     start_date, notes, asana_task_id, asana_task_url, offered_rate,
+    session_duration_minutes, sessions_per_week,
   } = body;
 
   if (!student_name || typeof student_name !== 'string') {
@@ -64,6 +65,8 @@ export async function POST(req: NextRequest) {
     asana_task_id:      typeof asana_task_id   === 'string' ? asana_task_id   : null,
     asana_task_url:     typeof asana_task_url  === 'string' ? asana_task_url  : null,
     offered_rate:       isValidRate(offered_rate) ? offered_rate : null,
+    session_duration_minutes: typeof session_duration_minutes === 'number' ? session_duration_minutes : 60,
+    sessions_per_week:        typeof sessions_per_week === 'number' ? sessions_per_week : 1,
   };
 
   // Upsert when an asana_task_id is provided so re-running the skill is idempotent.

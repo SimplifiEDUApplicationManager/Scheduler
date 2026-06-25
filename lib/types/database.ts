@@ -57,6 +57,8 @@ export type Database = {
           requested_schedule: Json
           resolved_at: string | null
           schedule_notes: string | null
+          session_duration_minutes: number
+          sessions_per_week: number
           start_date: string | null
           starting_score: number | null
           status: Database["public"]["Enums"]["proposal_status"]
@@ -86,6 +88,8 @@ export type Database = {
           requested_schedule?: Json
           resolved_at?: string | null
           schedule_notes?: string | null
+          session_duration_minutes?: number
+          sessions_per_week?: number
           start_date?: string | null
           starting_score?: number | null
           status?: Database["public"]["Enums"]["proposal_status"]
@@ -115,6 +119,8 @@ export type Database = {
           requested_schedule?: Json
           resolved_at?: string | null
           schedule_notes?: string | null
+          session_duration_minutes?: number
+          sessions_per_week?: number
           start_date?: string | null
           starting_score?: number | null
           status?: Database["public"]["Enums"]["proposal_status"]
@@ -155,6 +161,8 @@ export type Database = {
           notes: string | null
           offered_rate: number | null
           requested_schedule: Json | null
+          session_duration_minutes: number
+          sessions_per_week: number
           source: string
           start_date: string | null
           status: string
@@ -174,6 +182,8 @@ export type Database = {
           notes?: string | null
           offered_rate?: number | null
           requested_schedule?: Json | null
+          session_duration_minutes?: number
+          sessions_per_week?: number
           source?: string
           start_date?: string | null
           status?: string
@@ -193,6 +203,8 @@ export type Database = {
           notes?: string | null
           offered_rate?: number | null
           requested_schedule?: Json | null
+          session_duration_minutes?: number
+          sessions_per_week?: number
           source?: string
           start_date?: string | null
           status?: string

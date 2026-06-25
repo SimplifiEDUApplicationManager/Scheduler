@@ -33,7 +33,8 @@ export function ConsiderModal({ proposal: p, me, events, onClose, onAccept, onDe
     ? (me.subjects.find(s => s.id === subjectMeta.id)?.conf ?? null)
     : null;
 
-  const newTotal = me.hoursCurrent + 1; // one 1-hr session per student
+  const sessionHours = ((p?.sessionDurationMinutes ?? 60) / 60) * (p?.sessionsPerWeek ?? 1);
+  const newTotal = me.hoursCurrent + sessionHours;
   const overCap = newTotal > me.hoursMax;
 
   const activeStudents = new Set(

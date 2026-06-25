@@ -132,6 +132,8 @@ export interface TuitionRequest {
   matchedTutorId?: string;
   asanaTaskId?: string;
   offeredRate?: number;
+  sessionDurationMinutes: number;
+  sessionsPerWeek: number;
 }
 
 // ── Invitation (system onboarding — not a Proposal) ────────────────────────
@@ -197,6 +199,8 @@ export interface TutorProposal {
   rationale?: string;
   studentGrade?: string;
   offeredRate?: number;
+  sessionDurationMinutes: number;
+  sessionsPerWeek: number;
   // Extended student context fields (all optional — absent on older proposals)
   parentName?: string;
   testName?: string;

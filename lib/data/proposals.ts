@@ -90,6 +90,8 @@ export async function getTutorProposals(
       status:           row.status.toLowerCase() as TutorProposal['status'],
       declineReason:    row.decline_reason ?? undefined,
       offeredRate:      row.offered_rate ?? undefined,
+      sessionDurationMinutes: row.session_duration_minutes ?? 60,
+      sessionsPerWeek: row.sessions_per_week ?? 1,
       studentGrade:     row.student_grade ?? undefined,
       parentName:       row.parent_name ?? undefined,
       testName:         row.test_name ?? undefined,

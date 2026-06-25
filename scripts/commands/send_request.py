@@ -183,6 +183,8 @@ def main():
             "offered_rate":       args.rate or req_row.get("offered_rate"),
             "asana_task_id":      req_row.get("asana_task_id"),
             "request_id":         req_row["id"],
+            "session_duration_minutes": req_row.get("session_duration_minutes", 60),
+            "sessions_per_week":        req_row.get("sessions_per_week", 1),
         }
         student_name = req_row["student_name"]
         subject      = req_row["subject"]
