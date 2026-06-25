@@ -115,7 +115,20 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
           {/* Day columns */}
           {Array.from({ length: 7 }).map((_, di) => {
             const blocks  = perDay[di];
-            const dayTups = requestTuples.filter(tp => tp.day === di);
+            // Build request overlays for this day column, splitting cross-midnight
+            // tuples so the evening part stays in this column and the morning part
+            // appears in the next day's column.
+            const dayTups: { start: number; end: number; label: string }[] = [];
+            for (const tp of requestTuples) {
+              if (tp.day === di) {
+                // Same-day or evening half of cross-midnight
+                dayTups.push({ start: tp.start, end: Math.min(tp.end, END_H), label: 'Requested' });
+              }
+              // Spillover from previous day's cross-midnight tuple
+              if (tp.day === (di + 6) % 7 && tp.end > 24) {
+                dayTups.push({ start: 0, end: tp.end - 24, label: 'Requested' });
+              }
+            }
             return (
               <div key={di} className="border-l border-neutral-100 relative">
                 {HOURS.map(h => <div key={h} style={{ height: ROW_H }} className="border-t border-neutral-100" />)}
@@ -204,17 +217,21 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
                 })}
 
                 {/* Request tuple overlays */}
-                {dayTups.map((tp, ti) => (
-                  <div key={`tp${ti}`} style={{
-                    position:'absolute', top:(tp.start-START_H)*ROW_H, height:(tp.end-tp.start)*ROW_H, left:2, right:2,
-                    boxSizing:'border-box',
-                    background:'repeating-linear-gradient(45deg,rgba(24,24,27,.06) 0 6px,rgba(24,24,27,.12) 6px 12px)',
-                    border:'1.5px dashed #18181B', borderRadius:6, pointerEvents:'none', zIndex:4,
-                    display:'flex', alignItems:'flex-start', justifyContent:'flex-end', padding:'3px 5px',
-                  }}>
-                    <span style={{ fontSize:9, fontWeight:700, color:'#18181B', background:'rgba(255,255,255,0.85)', padding:'1px 5px', borderRadius:3, letterSpacing:'.04em', textTransform:'uppercase' }}>Requested</span>
-                  </div>
-                ))}
+                {dayTups.map((tp, ti) => {
+                  const h = (tp.end - tp.start) * ROW_H;
+                  if (h <= 0) return null;
+                  return (
+                    <div key={`tp${ti}`} style={{
+                      position:'absolute', top:(tp.start-START_H)*ROW_H, height:h, left:2, right:2,
+                      boxSizing:'border-box',
+                      background:'repeating-linear-gradient(45deg,rgba(24,24,27,.06) 0 6px,rgba(24,24,27,.12) 6px 12px)',
+                      border:'1.5px dashed #18181B', borderRadius:6, pointerEvents:'none', zIndex:4,
+                      display:'flex', alignItems:'flex-start', justifyContent:'flex-end', padding:'3px 5px',
+                    }}>
+                      <span style={{ fontSize:9, fontWeight:700, color:'#18181B', background:'rgba(255,255,255,0.85)', padding:'1px 5px', borderRadius:3, letterSpacing:'.04em', textTransform:'uppercase' }}>{tp.label}</span>
+                    </div>
+                  );
+                })}
 
               </div>
             );
