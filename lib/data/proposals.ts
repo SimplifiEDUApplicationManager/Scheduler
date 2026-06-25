@@ -19,6 +19,7 @@ import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/lib/types/database';
 import type { TutorProposal } from '@/lib/types/domain';
 import { findExpiredProposals } from '@/lib/utils/expire-proposals';
+import { convertTupleTimezone } from '@/lib/utils/timezone';
 
 type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
 
@@ -51,6 +52,7 @@ export async function getTutorProposals(
   tutorId: string,
   supabase: SupabaseInstance,
   pendingOnly = true,
+  tutorTz?: string,
 ): Promise<TutorProposal[]> {
   let query = supabase
     .from('proposals')
@@ -66,14 +68,19 @@ export async function getTutorProposals(
 
   return (rows ?? []).map(row => {
     const coord    = row.coordinator as { name: string; email: string } | null;
-    const schedule = (row.requested_schedule ?? []) as { day: number; start: number; end: number }[];
+    const rawSchedule = (row.requested_schedule ?? []) as { day: number; start: number; end: number }[];
+    const requestTz = row.timezone;
+    // Convert tuples to the tutor's timezone so the calendar shows correct local times
+    const schedule = tutorTz && requestTz && tutorTz !== requestTz
+      ? rawSchedule.map(t => convertTupleTimezone(t, requestTz, tutorTz))
+      : rawSchedule;
     return {
       id:               row.id,
       studentName:      row.student_name,
       studentEmail:     row.student_email,
       subject:          row.subject,
       tuples:           schedule,
-      tz:               row.timezone,
+      tz:               tutorTz ?? requestTz,
       startDate:        formatDate(row.start_date),
       hoursPerWeek:     0,
       notes:            row.notes ?? '',

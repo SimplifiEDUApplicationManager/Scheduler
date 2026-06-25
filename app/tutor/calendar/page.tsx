@@ -76,7 +76,7 @@ export default async function TutorCalendarPage() {
       .reduce((sum, e) => sum + Math.max(0, e.end - e.start), 0)
     * 100) / 100;
 
-  const initialProposals = await getTutorProposals(row.id, supabase);
+  const initialProposals = await getTutorProposals(row.id, supabase, true, row.timezone ?? undefined);
 
   // Fetch all resolved proposals in the rolling 90-day window to compute the leaderboard.
   const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();

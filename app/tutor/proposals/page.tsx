@@ -22,9 +22,13 @@ export default async function TutorProposalsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
+  // Fetch timezone first (lightweight) so proposals can be converted
+  const { data: tzRow } = await supabase.from('users').select('timezone').eq('id', user.id).single();
+  const tutorTz = tzRow?.timezone ?? undefined;
+
   const [me, proposals] = await Promise.all([
     fetchTutor(user.id, supabase),
-    getTutorProposals(user.id, supabase, false),
+    getTutorProposals(user.id, supabase, false, tutorTz),
   ]);
 
   if (!me) redirect('/login');

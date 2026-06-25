@@ -32,6 +32,7 @@ interface Props {
 }
 
 function fmtH(h: number): string {
+  if (h === 0 || h === 24) return '';
   const hr = Math.floor(h); const mn = Math.round((h - hr) * 60);
   const suf = hr >= 12 ? 'p' : 'a'; const h12 = hr % 12 === 0 ? 12 : hr % 12;
   return mn === 0 ? `${h12}${suf}` : `${h12}:${String(mn).padStart(2, '0')}${suf}`;
