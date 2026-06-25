@@ -63,7 +63,12 @@ export function TutorWeekView({ events, proposal, weekOffset, onOpenSession }: P
         {/* Day columns */}
         {Array.from({ length: 7 }).map((_, di) => {
           const dayEvents  = events.filter(e => e.day === di);
-          const dayTuples  = proposal?.tuples.filter(tp => tp.day === di) ?? [];
+          // Split cross-midnight proposal tuples across day columns
+          const dayTuples: { start: number; end: number; day: number }[] = [];
+          for (const tp of proposal?.tuples ?? []) {
+            if (tp.day === di) dayTuples.push({ ...tp, end: Math.min(tp.end, END_H) });
+            if (tp.day === (di + 6) % 7 && tp.end > 24) dayTuples.push({ day: di, start: 0, end: Math.min(tp.end - 24, END_H) });
+          }
 
           return (
             <div key={di} className="border-l border-neutral-100 relative">
