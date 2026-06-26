@@ -38,7 +38,15 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
   const [pinned, setPinned] = useState(false);
 
   const canDrop = (day: number, start: number): boolean => {
-    return p.tuples.some(tp => tp.day === day && start >= tp.start && start + durationHrs <= tp.end);
+    // Must fit within a student availability window
+    const fitsWindow = p.tuples.some(tp => tp.day === day && start >= tp.start && start + durationHrs <= tp.end);
+    if (!fitsWindow) return false;
+    // Must not overlap with any already-placed session
+    const end = start + durationHrs;
+    const overlaps = placements.some((pl, i) =>
+      pl !== null && i !== activeIdx && pl.day === day && start < pl.start + durationHrs && end > pl.start,
+    );
+    return !overlaps;
   };
 
   const candidateWindows = useMemo(() => {

@@ -9,6 +9,7 @@ const SLOT_MIN = 15; // minutes per drop-zone slot
 const SLOTS_PER_HOUR = 60 / SLOT_MIN;
 const SLOT_H = ROW_H / SLOTS_PER_HOUR;
 const COL_TO_DAY = [1, 2, 3, 4, 5, 6, 0]; // Mon–Sun
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface Props {
   events: TutorEvent[];
@@ -150,6 +151,20 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
           </div>
         ))}
       </div>
+
+      {/* Hover time tooltip while dragging */}
+      {dragging && overSlot && (
+        <div style={{
+          position: 'sticky', bottom: 16, marginLeft: 'auto', marginRight: 16,
+          float: 'right', zIndex: 20,
+          background: '#18181B', color: '#fff', padding: '6px 12px',
+          borderRadius: 8, fontSize: 13, fontWeight: 700,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.25)', pointerEvents: 'none',
+          fontFeatureSettings: '"tnum"',
+        }}>
+          {DAY_SHORT[overSlot.day]} · {fmtH(overSlot.start)}–{fmtH(overSlot.start + (proposal.sessionDurationMinutes ?? 60) / 60)}
+        </div>
+      )}
     </div>
   );
 }
