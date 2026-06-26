@@ -59,6 +59,7 @@ export default async function RequestsPage() {
           requests={REQUESTS}
           invitations={INVITATIONS}
           tutors={TUTORS}
+          subjects={[]}
           coordinatorTz="America/New_York"
         />
       </Suspense>
@@ -93,6 +94,7 @@ export default async function RequestsPage() {
         requests={requests}
         invitations={[]}
         tutors={tutors}
+        subjects={(subjects ?? []).map(s => ({ id: s.id, name: s.name, cat: '' }))}
         coordinatorTz={coordinatorTz}
       />
     </Suspense>

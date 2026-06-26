@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as Record<string, unknown>;
   const {
     student_name, student_email, subject, requested_schedule, timezone,
-    start_date, notes, asana_task_id, asana_task_url, offered_rate,
+    start_date, end_date, notes, asana_task_id, asana_task_url, offered_rate,
     session_duration_minutes, sessions_per_week,
   } = body;
 
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
     requested_schedule: requested_schedule != null ? (requested_schedule as Json) : null,
     timezone:           typeof timezone        === 'string' ? timezone        : null,
     start_date:         typeof start_date      === 'string' ? start_date      : null,
+    end_date:           typeof end_date        === 'string' ? end_date        : null,
     notes:              typeof notes           === 'string' ? notes           : null,
     asana_task_id:      typeof asana_task_id   === 'string' ? asana_task_id   : null,
     asana_task_url:     typeof asana_task_url  === 'string' ? asana_task_url  : null,

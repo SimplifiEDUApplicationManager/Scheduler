@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { TuitionRequest, Invitation, Tutor } from '@/lib/types/domain';
+import type { TuitionRequest, Invitation, Tutor, Subject } from '@/lib/types/domain';
 import { RequestListItem } from './RequestListItem';
 import { RequestDetail } from './RequestDetail';
 import { ProposeModal } from '@/components/features/tutors/ProposeModal';
@@ -12,10 +12,11 @@ interface Props {
   requests: TuitionRequest[];
   invitations: Invitation[];
   tutors: Tutor[];
+  subjects: Subject[];
   coordinatorTz: string;
 }
 
-export function RequestsClient({ requests: initialRequests, invitations, tutors, coordinatorTz }: Props) {
+export function RequestsClient({ requests: initialRequests, invitations, tutors, subjects, coordinatorTz }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reqParam = searchParams.get('req');
@@ -140,6 +141,7 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
       {/* ── New request modal ────────────────────────────────────────────── */}
       {showNewRequest && (
         <NewRequestModal
+          subjects={subjects}
           onClose={() => setShowNewRequest(false)}
           onCreate={handleNewRequestCreated}
         />
