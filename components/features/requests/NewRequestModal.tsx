@@ -204,10 +204,10 @@ export function NewRequestModal({ subjects, onClose, onCreate }: Props) {
           {/* Start date + End date — calendar pickers */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Start date">
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={inputCls} />
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={dateCls + (!startDate ? ' text-fg-muted' : '')} />
             </Field>
             <Field label="End date">
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={inputCls} />
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={dateCls + (!endDate ? ' text-fg-muted' : '')} />
             </Field>
           </div>
 
@@ -246,6 +246,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const inputCls =
   'w-full h-9 px-3 border border-border-default rounded-lg text-[13px] text-fg-1 bg-surface-1 focus:outline-none focus:border-neutral-400 placeholder:text-fg-muted';
+
+const dateCls =
+  inputCls + ' [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:cursor-pointer';
 
 const stepBtnCls =
   'w-9 h-9 rounded-lg border border-border-default bg-surface-1 text-fg-1 text-[16px] font-semibold hover:bg-surface-2 transition-colors flex items-center justify-center shrink-0 cursor-pointer';
