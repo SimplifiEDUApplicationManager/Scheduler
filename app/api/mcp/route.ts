@@ -330,6 +330,151 @@ After calling this tool, for each task:
       return textContent(JSON.stringify(rows, null, 2));
     }),
 
+  tool('dashboard', 'Full coordinator dashboard — open requests, pending proposals, active jobs, team capacity, stalled requests, pending reviews, availability requests. All in one call.',
+    {},
+    async (_args, authKey) => {
+      const profile = await appGet('/api/coordinator/profile', authKey) as { id: string };
+      const uid = profile.id;
+      const cutoff48h = new Date(Date.now() - 48 * 3600_000).toISOString();
+      const [openReqs, pendingProps, activeJobs, tutors, pendingSubjects, availReqs] = await Promise.all([
+        sbGet('requests', `status=eq.open&coordinator_id=eq.${uid}&select=id,student_name,subject,source,created_at`),
+        sbGet('proposals', `status=eq.PENDING&coordinator_id=eq.${uid}&select=id,tutor_id,student_name,subject,expires_at`),
+        sbGet('proposals', `status=eq.ACCEPTED&coordinator_id=eq.${uid}&select=id,tutor_id,student_name,subject`),
+        sbGet('users', 'role=eq.TUTOR&status=eq.ACTIVE&select=id,name,max_weekly_hours,nylas_grant_id'),
+        sbGet('tutor_subject_changes', 'status=eq.PENDING&select=id,tutor_id,subject_id,change_type'),
+        sbGet('tutor_availability_requests', 'status=eq.PENDING&select=id,tutor_id,request_type,reason'),
+      ]) as [Record<string, unknown>[], Record<string, unknown>[], Record<string, unknown>[], Record<string, unknown>[], unknown[], unknown[]];
+      const stalled = openReqs.filter(r => (r.created_at as string) <= cutoff48h);
+      const tutorNames = new Map((tutors as { id: string; name: string }[]).map(t => [t.id, t.name]));
+      return textContent(JSON.stringify({
+        open_requests: openReqs.length,
+        pending_proposals: pendingProps.length,
+        active_jobs: activeJobs.length,
+        team_size: tutors.length,
+        connected_tutors: tutors.filter((t: Record<string, unknown>) => t.nylas_grant_id).length,
+        stalled_requests: stalled.map(r => ({ student_name: r.student_name, subject: r.subject, source: r.source, created_at: r.created_at })),
+        pending_proposals_detail: pendingProps.map(p => ({ student_name: p.student_name, subject: p.subject, tutor: tutorNames.get(p.tutor_id as string) ?? p.tutor_id, expires_at: p.expires_at })),
+        active_jobs_detail: activeJobs.map(j => ({ student_name: j.student_name, subject: j.subject, tutor: tutorNames.get(j.tutor_id as string) ?? j.tutor_id })),
+        pending_subject_reviews: pendingSubjects.length,
+        pending_availability_requests: availReqs.length,
+      }, null, 2));
+    }),
+
+  tool('pending_proposals', 'List all pending proposals awaiting tutor response.',
+    {},
+    async (_args, _authKey) => {
+      const props = await sbGet('proposals', 'status=eq.PENDING&select=id,tutor_id,student_name,subject,created_at,expires_at&order=created_at') as Record<string, unknown>[];
+      const tutors = await sbGet('users', 'role=eq.TUTOR&select=id,name') as { id: string; name: string }[];
+      const nameMap = new Map(tutors.map(t => [t.id, t.name]));
+      const result = props.map(p => ({
+        student_name: p.student_name, subject: p.subject,
+        tutor: nameMap.get(p.tutor_id as string) ?? p.tutor_id,
+        created_at: p.created_at, expires_at: p.expires_at,
+      }));
+      return textContent(JSON.stringify({ count: result.length, proposals: result }, null, 2));
+    }),
+
+  tool('tutor_capacity', 'Show capacity for all active tutors — active jobs count, max hours, calendar connection.',
+    {},
+    async (_args, _authKey) => {
+      const [tutors, jobs] = await Promise.all([
+        sbGet('users', 'role=eq.TUTOR&status=eq.ACTIVE&select=id,name,max_weekly_hours,nylas_grant_id&order=name'),
+        sbGet('proposals', 'status=eq.ACCEPTED&select=tutor_id'),
+      ]) as [Record<string, unknown>[], { tutor_id: string }[]];
+      const jobCounts = new Map<string, number>();
+      for (const j of jobs) jobCounts.set(j.tutor_id, (jobCounts.get(j.tutor_id) ?? 0) + 1);
+      const result = (tutors as { id: string; name: string; max_weekly_hours: number; nylas_grant_id: string | null }[]).map(t => ({
+        name: t.name, active_jobs: jobCounts.get(t.id) ?? 0,
+        max_weekly_hours: t.max_weekly_hours, calendar_connected: !!t.nylas_grant_id,
+      }));
+      const avg = result.length > 0 ? +(result.reduce((s, t) => s + t.active_jobs, 0) / result.length).toFixed(1) : 0;
+      return textContent(JSON.stringify({ tutor_count: result.length, avg_active_jobs: avg, tutors: result }, null, 2));
+    }),
+
+  tool('capacity', 'Show capacity for a specific tutor by name or email.',
+    { tutor: z.string().describe('Tutor name or email') },
+    async ({ tutor: query }, _authKey) => {
+      const isEmail = query.includes('@');
+      const qs = isEmail
+        ? `email=eq.${encodeURIComponent(query)}&role=eq.TUTOR&select=id,name,email,max_weekly_hours,nylas_grant_id,status`
+        : `name=ilike.*${encodeURIComponent(query)}*&role=eq.TUTOR&select=id,name,email,max_weekly_hours,nylas_grant_id,status`;
+      const tutors = await sbGet('users', qs) as Record<string, unknown>[];
+      if (!tutors.length) return errorContent(`No tutor found matching "${query}".`);
+      const t = tutors[0] as { id: string; name: string; email: string; max_weekly_hours: number; nylas_grant_id: string | null; status: string };
+      const [active, pending] = await Promise.all([
+        sbGet('proposals', `tutor_id=eq.${t.id}&status=eq.ACCEPTED&select=student_name,subject`),
+        sbGet('proposals', `tutor_id=eq.${t.id}&status=eq.PENDING&select=student_name,subject`),
+      ]);
+      return textContent(JSON.stringify({
+        name: t.name, email: t.email, status: t.status,
+        max_weekly_hours: t.max_weekly_hours, calendar_connected: !!t.nylas_grant_id,
+        active_jobs: active, pending_proposals: pending,
+      }, null, 2));
+    }),
+
+  tool('needs_attention', 'List open requests older than 48 hours that have not been matched.',
+    {},
+    async (_args, _authKey) => {
+      const cutoff = new Date(Date.now() - 48 * 3600_000).toISOString();
+      const rows = await sbGet('requests', `status=eq.open&created_at=lte.${cutoff}&select=student_name,subject,source,created_at&order=created_at`) as Record<string, unknown>[];
+      return textContent(JSON.stringify({ count: rows.length, requests: rows }, null, 2));
+    }),
+
+  tool('response_times', 'Show the tutor response time leaderboard (last 90 days).',
+    {},
+    async (_args, _authKey) => {
+      const window = new Date(Date.now() - 90 * 86_400_000).toISOString();
+      const [resolved, tutors] = await Promise.all([
+        sbGet('proposals', `status=in.(ACCEPTED,DECLINED,EXPIRED)&resolved_at=not.is.null&created_at=gte.${window}&select=tutor_id,created_at,resolved_at`),
+        sbGet('users', 'role=eq.TUTOR&select=id,name'),
+      ]) as [{ tutor_id: string; created_at: string; resolved_at: string }[], { id: string; name: string }[]];
+      const nameMap = new Map(tutors.map(t => [t.id, t.name]));
+      const totals = new Map<string, { totalMs: number; count: number }>();
+      for (const r of resolved) {
+        const ms = new Date(r.resolved_at).getTime() - new Date(r.created_at).getTime();
+        const prev = totals.get(r.tutor_id) ?? { totalMs: 0, count: 0 };
+        totals.set(r.tutor_id, { totalMs: prev.totalMs + ms, count: prev.count + 1 });
+      }
+      const entries = [...totals.entries()].map(([id, { totalMs, count }]) => ({
+        tutor: nameMap.get(id) ?? id, avg_hours: +(totalMs / count / 3_600_000).toFixed(1), proposals: count,
+      })).sort((a, b) => a.avg_hours - b.avg_hours);
+      return textContent(JSON.stringify({ tutor_count: entries.length, leaderboard: entries }, null, 2));
+    }),
+
+  tool('pending_subjects', 'List all pending tutor subject change requests awaiting approval.',
+    {},
+    async (_args, _authKey) => {
+      const [changes, tutors, subjects] = await Promise.all([
+        sbGet('tutor_subject_changes', 'status=eq.PENDING&select=id,tutor_id,subject_id,change_type,requested_confidence,requested_note&order=created_at'),
+        sbGet('users', 'role=eq.TUTOR&select=id,name'),
+        sbGet('subjects', 'select=id,name'),
+      ]) as [Record<string, unknown>[], { id: string; name: string }[], { id: string; name: string }[]];
+      const tutorMap = new Map(tutors.map(t => [t.id, t.name]));
+      const subjectMap = new Map(subjects.map(s => [s.id, s.name]));
+      const result = changes.map(c => ({
+        tutor: tutorMap.get(c.tutor_id as string) ?? c.tutor_id,
+        subject: subjectMap.get(c.subject_id as string) ?? c.subject_id,
+        change_type: c.change_type, requested_confidence: c.requested_confidence,
+        note: c.requested_note,
+      }));
+      return textContent(JSON.stringify({ count: result.length, reviews: result }, null, 2));
+    }),
+
+  tool('availability_requests', 'List all pending tutor availability change requests (pause, low hours, low windows).',
+    {},
+    async (_args, _authKey) => {
+      const [reqs, tutors] = await Promise.all([
+        sbGet('tutor_availability_requests', 'status=eq.PENDING&select=id,tutor_id,request_type,reason,details&order=created_at'),
+        sbGet('users', 'role=eq.TUTOR&select=id,name'),
+      ]) as [Record<string, unknown>[], { id: string; name: string }[]];
+      const tutorMap = new Map(tutors.map(t => [t.id, t.name]));
+      const result = reqs.map(r => ({
+        tutor: tutorMap.get(r.tutor_id as string) ?? r.tutor_id,
+        request_type: r.request_type, reason: r.reason, details: r.details,
+      }));
+      return textContent(JSON.stringify({ count: result.length, requests: result }, null, 2));
+    }),
+
 ];
 
 // ── MCP protocol handler ──────────────────────────────────────────────────────
