@@ -198,11 +198,23 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
         setTimeout(() => setToastName(null), 3200);
         return;
       }
-      // Success — clear request and reset filters
-      setProposedReqIds(prev => new Set(prev).add(activeReq.id));
-      setFilters({ q: '', subjects: [], conf: DEFAULT_CONF, tuples: [], reqId: null });
-      setToastName(confirmFor.name);
+      // Success — clear everything in one batch
+      const reqId = activeReq.id;
+      const tutorName = confirmFor.name;
+      setConfirmBusy(false);
+      setConfirmFor(null);
+      setProposedReqIds(prev => new Set(prev).add(reqId));
+      setOptimisticFilters({ q: '', subjects: [], conf: DEFAULT_CONF, tuples: [], reqId: null });
+      setSelectedTutorId(null);
+      setToastName(tutorName);
       setTimeout(() => setToastName(null), 3200);
+      // Sync URL in background
+      const params = filtersToParams({ q: '', subjects: [], conf: DEFAULT_CONF, tuples: [], reqId: null });
+      const qs = params.toString();
+      startTransition(() => {
+        router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
+      });
+      return;
     } finally {
       setConfirmBusy(false);
       setConfirmFor(null);
