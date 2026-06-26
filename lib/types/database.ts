@@ -165,6 +165,7 @@ export type Database = {
           sessions_per_week: number
           source: string
           start_date: string | null
+          end_date: string | null
           status: string
           student_email: string
           student_name: string
@@ -186,6 +187,7 @@ export type Database = {
           sessions_per_week?: number
           source?: string
           start_date?: string | null
+          end_date?: string | null
           status?: string
           student_email?: string
           student_name: string
