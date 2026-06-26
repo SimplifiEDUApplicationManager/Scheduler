@@ -2,7 +2,7 @@
 // Fetch and map Nylas calendar events → TutorEvent[].
 // Server-side only.
 
-import { nylasList, nylasPost, nylasDelete, grantPath } from './client';
+import { nylasList, nylasPost, nylasPut, nylasDelete, grantPath } from './client';
 import type { TutorEvent, TutorEventKind, TutorEventStatus } from '@/lib/types/domain';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
@@ -311,6 +311,38 @@ export async function createTutoringEvent(
   }
 
   return result.data.id;
+}
+
+// ── End recurring event (keep past, cancel future) ───────────────────────────
+
+/**
+ * Stop a recurring event from generating future occurrences by adding an
+ * UNTIL clause to its RRULE. Past sessions remain on the calendar.
+ *
+ * Falls back to full deletion if the update fails (e.g., non-recurring event
+ * or the event was already deleted by the tutor).
+ */
+export async function endRecurringEvent(
+  grantId: string,
+  eventId: string,
+  calendarId?: string,
+): Promise<boolean> {
+  const calId = calendarId ?? (await fetchCalendarIds(grantId))[0] ?? 'primary';
+  const path = `${grantPath(grantId, 'events')}/${eventId}?calendar_id=${encodeURIComponent(calId)}`;
+
+  // UNTIL in iCalendar format: YYYYMMDDTHHMMSSZ (today at end of day UTC)
+  const now = new Date();
+  const until = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+
+  const result = await nylasPut<unknown>(path, {
+    recurrence: [`RRULE:FREQ=WEEKLY;UNTIL=${until}`],
+  });
+
+  if (result.ok) return true;
+
+  // If update fails (non-recurring, already gone, etc.), try deleting instead
+  console.error('[nylas/events] endRecurringEvent update failed, falling back to delete:', result.error);
+  return deleteTutoringEvent(grantId, eventId, calendarId);
 }
 
 // ── Event deletion ───────────────────────────────────────────────────────────
