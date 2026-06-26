@@ -17,9 +17,10 @@ import { convertTupleTimezone } from '@/lib/utils/timezone';
 import { RequestPickerBlock } from './RequestPickerBlock';
 import { FilterPanel } from './FilterPanel';
 import { TutorCard } from './TutorCard';
-import { ProposeModal } from './ProposeModal';
 import { TutorProfileDrawer } from './TutorProfileDrawer';
 import { WeekView } from '@/components/features/calendar/WeekView';
+import { NewRequestModal } from '@/components/features/requests/NewRequestModal';
+import { toIsoDate } from '@/lib/utils/dates';
 
 interface TutorsClientProps {
   tutors: Tutor[];
@@ -50,10 +51,13 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
 
   // UI-only state (not bookmarkable)
   const [selectedTutorId, setSelectedTutorId] = useState<string | null>(null);
-  const [proposeFor, setProposeFor]            = useState<Tutor | null>(null);
+  const [confirmFor, setConfirmFor]            = useState<Tutor | null>(null);
+  const [confirmBusy, setConfirmBusy]          = useState(false);
   const [profileTutor, setProfileTutor]        = useState<Tutor | null>(null);
   const [toastName, setToastName]              = useState<string | null>(null);
   const [proposedReqIds, setProposedReqIds]    = useState<Set<string>>(new Set());
+  const [showNewRequest, setShowNewRequest]    = useState(false);
+  const [localRequests, setLocalRequests]      = useState<TuitionRequest[]>([]);
   const [weekOffset, setWeekOffset]            = useState(0);
   const [calendarStatuses, setCalendarStatuses] = useState<Record<string, CalendarStatus>>({});
   const [weeklyBusy, setWeeklyBusy]             = useState<Record<string, BusyBlock[]>>({});
@@ -165,15 +169,44 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
     return () => ctrl.abort();
   }, [filteredIdKey, weekOffset, coordinatorTz]);
 
-  function handleProposeSend(tutorName: string) {
-    // Remove the proposed request from the picker and fully reset filters
-    if (activeReq) {
+  async function handleConfirmPropose() {
+    if (!confirmFor || !activeReq) return;
+    setConfirmBusy(true);
+    try {
+      const res = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tutor_id:           confirmFor.id,
+          student_name:       activeReq.studentName,
+          student_email:      activeReq.studentEmail,
+          subject:            activeReq.subject,
+          requested_schedule: activeReq.tuples,
+          timezone:           activeReq.tz,
+          start_date:         toIsoDate(activeReq.startDate),
+          notes:              activeReq.notes || null,
+          asana_task_id:      activeReq.asanaTaskId ?? null,
+          offered_rate:       activeReq.offeredRate ?? null,
+          request_id:         activeReq.id,
+          session_duration_minutes: activeReq.sessionDurationMinutes ?? 60,
+          sessions_per_week:        activeReq.sessionsPerWeek ?? 1,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        setToastName(`Error: ${body.error ?? 'Failed to send'}`);
+        setTimeout(() => setToastName(null), 3200);
+        return;
+      }
+      // Success — clear request and reset filters
       setProposedReqIds(prev => new Set(prev).add(activeReq.id));
+      setFilters({ q: '', subjects: [], conf: DEFAULT_CONF, tuples: [], reqId: null });
+      setToastName(confirmFor.name);
+      setTimeout(() => setToastName(null), 3200);
+    } finally {
+      setConfirmBusy(false);
+      setConfirmFor(null);
     }
-    setFilters({ q: '', subjects: [], conf: DEFAULT_CONF, tuples: [], reqId: null });
-    setProposeFor(null);
-    setToastName(tutorName);
-    setTimeout(() => setToastName(null), 3200);
   }
 
   return (
@@ -181,7 +214,8 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
       {/* ── Left panel: request picker + filters + tutor list ─────────────── */}
       <aside className="w-[380px] border-r border-border-default bg-surface-1 flex flex-col shrink-0 min-h-0">
         <RequestPickerBlock
-          requests={requests.filter(r => r.status === 'open' && !proposedReqIds.has(r.id))}
+          requests={[...localRequests, ...requests].filter(r => r.status === 'open' && !proposedReqIds.has(r.id))}
+          onNewRequest={() => setShowNewRequest(true)}
           activeReq={activeReq}
           onPick={applyRequest}
           onClear={clearRequest}
@@ -228,7 +262,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
               offeredRate={activeReq?.offeredRate}
               calendarStatus={filters.tuples.length > 0 ? (calendarStatuses[t.id] ?? 'unknown') : undefined}
               onSelect={() => setSelectedTutorId(prev => prev === t.id ? null : t.id)}
-              onPropose={() => setProposeFor(t)}
+              onPropose={() => setConfirmFor(t)}
               onProfile={() => setProfileTutor(t)}
             />
           ))}
@@ -286,14 +320,40 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
         />
       </main>
 
-      {/* ── Propose modal ──────────────────────────────────────────────────── */}
-      {proposeFor && (
-        <ProposeModal
-          tutor={proposeFor}
-          request={activeReq}
-          onClose={() => setProposeFor(null)}
-          onSend={() => handleProposeSend(proposeFor.name)}
-          asanaTaskId={activeReq?.asanaTaskId}
+      {/* ── Confirm propose dialog ─────────────────────────────────────────── */}
+      {confirmFor && activeReq && (
+        <div onClick={() => setConfirmFor(null)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div onClick={e => e.stopPropagation()} className="bg-surface-1 rounded-2xl w-full max-w-[400px] p-6 shadow-[0_16px_48px_rgba(22,32,51,0.20)]">
+            <h2 className="text-base font-semibold text-fg-1 mb-2">Send proposal?</h2>
+            <p className="text-[13px] text-fg-2 mb-4 leading-relaxed">
+              Send <strong>{activeReq.studentName}</strong> · {activeReq.subject} to <strong>{confirmFor.name}</strong>?
+              {(activeReq.sessionsPerWeek ?? 1) > 1 || (activeReq.sessionDurationMinutes ?? 60) !== 60
+                ? ` (${activeReq.sessionsPerWeek ?? 1}× ${activeReq.sessionDurationMinutes ?? 60}m/week)`
+                : ''}
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirmFor(null)} disabled={confirmBusy}
+                className="h-9 px-4 rounded-lg text-[13px] font-semibold bg-surface-2 text-fg-2 hover:bg-surface-3 transition-colors">Cancel</button>
+              <button onClick={handleConfirmPropose} disabled={confirmBusy}
+                className="h-9 px-4 rounded-lg text-[13px] font-semibold bg-brand-ink text-white hover:bg-neutral-700 transition-colors disabled:opacity-50">
+                {confirmBusy ? 'Sending…' : 'Send proposal'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── New request modal ──────────────────────────────────────────────── */}
+      {showNewRequest && (
+        <NewRequestModal
+          subjects={subjects}
+          onClose={() => setShowNewRequest(false)}
+          onCreate={req => {
+            setShowNewRequest(false);
+            setLocalRequests(prev => [req, ...prev]);
+            setToastName('Request created');
+            setTimeout(() => setToastName(null), 2800);
+          }}
         />
       )}
 
@@ -304,7 +364,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
           subjects={subjects}
           invitations={invitations}
           onClose={() => setProfileTutor(null)}
-          onPropose={() => { setProfileTutor(null); setProposeFor(profileTutor); }}
+          onPropose={() => { setProfileTutor(null); setConfirmFor(profileTutor); }}
         />
       )}
 

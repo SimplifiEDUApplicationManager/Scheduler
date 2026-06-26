@@ -6,9 +6,10 @@ interface RequestPickerBlockProps {
   activeReq: TuitionRequest | null;
   onPick: (req: TuitionRequest) => void;
   onClear: () => void;
+  onNewRequest?: () => void;
 }
 
-export function RequestPickerBlock({ requests, activeReq, onPick, onClear }: RequestPickerBlockProps) {
+export function RequestPickerBlock({ requests, activeReq, onPick, onClear, onNewRequest }: RequestPickerBlockProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -29,19 +30,29 @@ export function RequestPickerBlock({ requests, activeReq, onPick, onClear }: Req
         <span className="text-[10px] font-bold text-fg-muted uppercase tracking-[0.06em]">
           {activeReq ? 'Matching for' : 'Open requests'}
         </span>
-        <button
-          onClick={() => setOpen(v => !v)}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-3 border border-border-default text-[11px] font-semibold text-fg-2 hover:bg-neutral-150 transition-colors"
-        >
-          {requests.length} open
-          <svg
-            width={10} height={10} viewBox="0 0 10 10"
-            className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
-            aria-hidden
+        <div className="flex items-center gap-1.5">
+          {onNewRequest && (
+            <button
+              onClick={onNewRequest}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-border-default text-[11px] font-semibold text-fg-2 hover:bg-surface-2 transition-colors"
+            >
+              + New
+            </button>
+          )}
+          <button
+            onClick={() => setOpen(v => !v)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-3 border border-border-default text-[11px] font-semibold text-fg-2 hover:bg-neutral-150 transition-colors"
           >
-            <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+            {requests.length} open
+            <svg
+              width={10} height={10} viewBox="0 0 10 10"
+              className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+              aria-hidden
+            >
+              <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Active request card */}
