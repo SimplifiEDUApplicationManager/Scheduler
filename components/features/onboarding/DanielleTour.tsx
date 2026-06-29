@@ -23,7 +23,7 @@ interface Step {
   title: string;
   body: string;
   cta: string;
-  placement?: 'center' | 'top-left';  // default: fixed bottom-right corner
+  placement?: 'center' | 'bottom-left';  // default: fixed bottom-right corner
   waitForEvent?: boolean; // hide the Next button — step only advances via a window event
   hideBack?: boolean;     // hide the Back button (e.g., during practice sub-steps)
 }
@@ -97,7 +97,7 @@ const STEPS: Step[] = [
     body: "Scroll down and click \"Accept & schedule\" to confirm you want this student.",
     cta: 'Next',
     waitForEvent: true,
-    placement: 'top-left',
+    placement: 'bottom-left',
     hideBack: true,
   },
   {
@@ -108,7 +108,7 @@ const STEPS: Step[] = [
     body: "Click \"Accept & schedule\" one more time to proceed to the scheduling step.",
     cta: 'Next',
     waitForEvent: true,
-    placement: 'top-left',
+    placement: 'bottom-left',
     hideBack: true,
   },
   {
@@ -129,7 +129,7 @@ const STEPS: Step[] = [
     body: "Click \"Confirm schedule\" to finalize.",
     cta: 'Next',
     waitForEvent: true,
-    placement: 'top-left',
+    placement: 'bottom-left',
     hideBack: true,
   },
   {
@@ -141,12 +141,12 @@ const STEPS: Step[] = [
   },
   // ── Settings page ──────────────────────────────────────────────────────
   {
-    key: 'set-tab',
+    key: 'set-capacity',
     path: '/tutor/settings',
-    target: '[data-tour="tab-Settings"]',
+    target: '[data-tour="settings-capacity"]',
     pose: 'point',
-    title: 'Settings',
-    body: "This is where you manage your profile, capacity, subjects, working hours, and calendar connection. Changes save automatically.",
+    title: 'Capacity & rate',
+    body: "Set your maximum weekly hours and minimum hourly rate here. Coordinators use these to decide how many sessions to route to you and at what rate.",
     cta: 'Next',
   },
   {
@@ -156,6 +156,23 @@ const STEPS: Step[] = [
     title: 'Your subjects',
     body: "Add the subjects you teach and rate your confidence level. Coordinators use this to match you with the right students.",
     cta: 'Next',
+  },
+  {
+    key: 'set-hours',
+    target: '[data-tour="settings-hours"]',
+    pose: 'point',
+    title: 'Working hours & meeting link',
+    body: "Set your weekly availability windows and permanent meeting link. Your meeting link auto-populates in every session invite sent to students.",
+    cta: 'Next',
+  },
+  {
+    key: 'set-calendar',
+    target: '[data-tour="settings-calendar"]',
+    pose: 'point',
+    title: 'Connect your calendar',
+    body: "Connect your Google or Outlook calendar so coordinators can see your real availability. This step is required — you won't receive proposals until your calendar is connected.",
+    cta: 'Next',
+    waitForEvent: true, // waits for calendar connection (or skip if already connected)
   },
   {
     key: 'finish',
@@ -226,6 +243,23 @@ export function DanielleTour() {
 
   // ── Auto-advance on practice step events ──────────────────────────────
   // Each practice step waits for a specific event. Map step key → event name.
+  // ── Auto-advance calendar step if already connected ─────────────────
+  useEffect(() => {
+    if (!open || STEPS[step]?.key !== 'set-calendar') return;
+    // Check if calendar is already connected — look for the "Connected" text
+    const check = () => {
+      const el = document.querySelector('[data-tour="settings-calendar"]');
+      if (el?.textContent?.includes('Connected')) {
+        setSpot(null);
+        setStep(s => s + 1);
+      }
+    };
+    check(); // immediate check
+    // Also poll in case the page hasn't rendered yet
+    const interval = setInterval(check, 500);
+    return () => clearInterval(interval);
+  }, [step, open]);
+
   const STEP_EVENTS: Record<string, string> = {
     'prop-practice-click':      'sim:demo-opened',
     'prop-practice-accept-btn': 'sim:demo-confirm',
@@ -358,7 +392,7 @@ export function DanielleTour() {
 
   const current    = STEPS[step]!;
   const isCenter   = current.placement === 'center';
-  const isTopLeft  = current.placement === 'top-left';
+  const isBottomLeft  = current.placement === 'bottom-left';
 
   // Compute display step number: practice sub-steps all count as one step
   const isPracticeStep = current.key.startsWith('prop-practice-') && current.key !== 'prop-practice-done';
@@ -373,17 +407,17 @@ export function DanielleTour() {
   // ── Positioning ───────────────────────────────────────────────────────────
   const danielleStyle: React.CSSProperties = isCenter
     ? { position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%) translateY(40px)', zIndex: 1002 }
-    : isTopLeft
-    ? { position: 'fixed', left: 24, top: 24, zIndex: 1002 }
+    : isBottomLeft
+    ? { position: 'fixed', left: 24, bottom: 24, zIndex: 1002 }
     : { position: 'fixed', right: 24, bottom: 24, zIndex: 1002 };
 
   const bubbleStyle: React.CSSProperties = isCenter
     ? { position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -100%) translateY(-60px)', width: 380, zIndex: 1002 }
-    : isTopLeft
-    ? { position: 'fixed', left: 200, top: 24, width: 360, zIndex: 1002 }
+    : isBottomLeft
+    ? { position: 'fixed', left: 200, bottom: 80, width: 360, zIndex: 1002 }
     : { position: 'fixed', right: 200, bottom: 80, width: 360, zIndex: 1002 };
 
-  const tailSide: 'bottom' | 'right' | 'none' = isCenter ? 'bottom' : isTopLeft ? 'none' : 'right';
+  const tailSide: 'bottom' | 'right' | 'none' = isCenter ? 'bottom' : 'none';
 
   if (!open) {
     return seen ? <DanielleFABButton onOpen={replay} /> : null;
