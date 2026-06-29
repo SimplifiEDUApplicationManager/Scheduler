@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { TutorCalendarClient, type ResponseTimeStat } from '@/components/features/tutor/TutorCalendarClient';
 import { fetchTutorEvents, weekRange } from '@/lib/nylas/events';
 import { getTutorProposals } from '@/lib/data/proposals';
@@ -78,9 +78,11 @@ export default async function TutorCalendarPage() {
 
   const initialProposals = await getTutorProposals(row.id, supabase, true, row.timezone ?? undefined);
 
-  // Fetch all resolved proposals in the rolling 90-day window to compute the leaderboard.
+  // Use service client to see ALL tutors' proposals (RLS scopes the user client
+  // to only this tutor's rows, which gives a misleading rank-1-of-1).
+  const svc = createServiceClient();
   const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: resolvedProposals } = await supabase
+  const { data: resolvedProposals } = await svc
     .from('proposals')
     .select('tutor_id, created_at, resolved_at')
     .in('status', ['ACCEPTED', 'DECLINED', 'EXPIRED', 'TUTOR_ACCEPTED', 'CLIENT_DECLINED', 'FINISHED'])
