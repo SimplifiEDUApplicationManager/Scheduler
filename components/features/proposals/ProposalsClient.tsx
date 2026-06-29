@@ -33,7 +33,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'accepted',        label: 'Active'           },
   { key: 'finished',        label: 'Finished'         },
   { key: 'declined',        label: 'Declined'         },
-  { key: 'client_declined', label: 'Client declined'  },
   { key: 'expired',         label: 'Expired'          },
 ];
 
@@ -48,7 +47,10 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
   const [tab, setTab] = useState<Tab>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const filtered = tab === 'all' ? invitations : invitations.filter(i => i.status === tab);
+  // client_declined shows under the declined tab
+  const filtered = tab === 'all' ? invitations
+    : tab === 'declined' ? invitations.filter(i => i.status === 'declined' || i.status === 'client_declined')
+    : invitations.filter(i => i.status === tab);
 
   const counts: Record<Tab, number> = {
     all:             invitations.length,
@@ -56,8 +58,8 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
     tutor_accepted:  invitations.filter(i => i.status === 'tutor_accepted').length,
     accepted:        invitations.filter(i => i.status === 'accepted').length,
     finished:        invitations.filter(i => i.status === 'finished').length,
-    declined:        invitations.filter(i => i.status === 'declined').length,
-    client_declined: invitations.filter(i => i.status === 'client_declined').length,
+    declined:        invitations.filter(i => i.status === 'declined' || i.status === 'client_declined').length,
+    client_declined: 0, // merged into declined tab
     expired:         invitations.filter(i => i.status === 'expired').length,
   };
 
