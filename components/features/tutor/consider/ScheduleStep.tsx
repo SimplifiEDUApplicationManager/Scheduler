@@ -109,7 +109,7 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
 
   return (
     <>
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+      <div data-tour="schedule-area" style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         <aside style={{ width: 300, background: '#fff', borderRight: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           <div style={{ padding: '16px 18px', borderBottom: '1px solid #F5F5F5' }}>
             <div style={{ fontSize: 11, color: '#71717A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Schedule session{sessionsNeeded > 1 ? 's' : ''}</div>
