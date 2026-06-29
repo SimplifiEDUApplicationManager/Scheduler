@@ -9,7 +9,7 @@
 //
 // Target elements are marked with data-tour="<key>" attributes.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 
@@ -70,10 +70,10 @@ const STEPS: Step[] = [
   {
     key: 'prop-tab',
     path: '/tutor/proposals',
-    target: '[data-tour="tab-Proposals"]',
+    target: '[data-tour="proposals-filters"]',
     pose: 'point',
     title: 'Proposals',
-    body: "This is your inbox for student matches. When a coordinator sends you a student, it shows up here. Use the filter tabs to see proposals by status — \"Needs response\" for ones waiting on you, \"Awaiting client\" for ones the family is reviewing.",
+    body: "This is your inbox for student matches. Use the filter tabs to see proposals by status — \"Needs response\" for ones waiting on you, \"Awaiting client\" for ones the family is reviewing, and more.",
     cta: 'Next',
   },
   {
@@ -81,16 +81,17 @@ const STEPS: Step[] = [
     path: '/tutor/proposals',
     pose: 'wave',
     title: 'Try it out!',
-    body: "I've added a sample proposal — Alex Chen — to your inbox so you can walk through the review and accept flow. Click the row to open it.",
+    body: "I've added a sample proposal — Alex Chen — to your inbox. Click \"Review\" on the row to open it, then walk through the accept flow — pick a time slot and confirm.",
     cta: "Let's go",
     placement: 'center',
   },
   {
     key: 'prop-practice-wait',
     path: '/tutor/proposals',
-    pose: 'idle',
-    title: 'Open Alex Chen\'s proposal',
-    body: "Click the Alex Chen row in your inbox. I'll move to the next step automatically once you do.",
+    target: '[data-tour="proposals-first-row"]',
+    pose: 'point',
+    title: 'Accept Alex Chen\'s proposal',
+    body: "Click \"Review\" on the Alex Chen row, then accept and schedule the session. I'll advance automatically once you've completed the accept flow.",
     cta: 'Next',
     waitForEvent: true,
   },
@@ -98,7 +99,7 @@ const STEPS: Step[] = [
     key: 'prop-practice-done',
     pose: 'wave',
     title: 'Nice work! 🎉',
-    body: "You're looking at a real proposal review. You can accept or decline using the buttons at the bottom. When you accept, you'll pick a time slot and the student's family will be notified. Let's continue to Settings.",
+    body: "You just accepted your first proposal! In a real scenario, the student's family would be notified and the session would appear on your calendar. Let's continue to Settings.",
     cta: 'Continue',
   },
   // ── Settings page ──────────────────────────────────────────────────────
@@ -186,12 +187,15 @@ export function DanielleTour() {
     }
   }, [step, open]);
 
-  // ── Auto-advance past prop-practice-wait when the tutor opens the demo ───
+  // ── Auto-advance past prop-practice-wait when the tutor accepts the demo ──
+  const demoAccepted = useRef(false);
   useEffect(() => {
     if (!open || STEPS[step]?.key !== 'prop-practice-wait') return;
-    const handler = () => { setSpot(null); setStep(s => s + 1); };
-    window.addEventListener('sim:demo-opened', handler);
-    return () => window.removeEventListener('sim:demo-opened', handler);
+    // If they already accepted (e.g., navigated back), skip immediately
+    if (demoAccepted.current) { setSpot(null); setStep(s => s + 1); return; }
+    const handler = () => { demoAccepted.current = true; setSpot(null); setStep(s => s + 1); };
+    window.addEventListener('sim:demo-accepted', handler);
+    return () => window.removeEventListener('sim:demo-accepted', handler);
   }, [step, open]);
 
   // ── Measure target element whenever step or pathname changes ──────────────
