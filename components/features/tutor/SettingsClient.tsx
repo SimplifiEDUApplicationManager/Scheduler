@@ -435,7 +435,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           </Card>
 
           {/* Capacity */}
-          <Card id="capacity" title="Capacity" subtitle="Coordinators use these numbers to decide how many sessions to route to you. Max is required and must be between 1 and 40.">
+          <Card id="capacity" dataTour="settings-capacity" title="Capacity" subtitle="Coordinators use these numbers to decide how many sessions to route to you. Max is required and must be between 1 and 40.">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div>
                 <label style={metaLabel}>Maximum weekly hours</label>
@@ -608,7 +608,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           </Card>
 
           {/* Working hours & meeting link */}
-          <Card id="hours" title="Working hours & meeting link" subtitle="Set your weekly working hours, date-specific exceptions, and session cushion. Your permanent meeting link auto-populates in all calendar invites.">
+          <Card id="hours" dataTour="settings-hours" title="Working hours & meeting link" subtitle="Set your weekly working hours, date-specific exceptions, and session cushion. Your permanent meeting link auto-populates in all calendar invites.">
             <Row label="Permanent meeting link" sub="Pasted into every confirmed session invite. Use a link that doesn't expire (e.g. Google Meet personal room or Zoom PMI).">
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ position: 'relative', flex: 1 }}>
@@ -650,7 +650,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           </Card>
 
           {/* Calendar connection & booking page */}
-          <Card id="calendar" title="Calendar connection" subtitle="We read your existing events via Nylas to block off busy time — so coordinators never propose a session on top of something you already have.">
+          <Card id="calendar" dataTour="settings-calendar" title="Calendar connection" subtitle="We read your existing events via Nylas to block off busy time — so coordinators never propose a session on top of something you already have.">
             {me.nylasGrantId ? (
               <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr auto', gap: 14, alignItems: 'center', background: '#F0FDF9', border: '1px solid #A7F3D0', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#18181B' }}>G</div>
