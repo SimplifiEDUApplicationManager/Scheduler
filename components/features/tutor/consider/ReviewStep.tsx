@@ -247,7 +247,7 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
               {overCap ? "You're at or over your weekly cap — accept only if you're sure." : 'Next: drag proposed times onto your calendar to schedule them.'}
             </div>
             <button onClick={onDecline} style={{ height: 40, padding: '0 18px', borderRadius: 10, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Decline</button>
-            <button onClick={() => setShowConfirm(true)} style={{ height: 40, padding: '0 22px', borderRadius: 10, border: 'none', background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <button data-tour="accept-schedule-btn" onClick={() => { setShowConfirm(true); window.dispatchEvent(new CustomEvent('sim:demo-confirm')); }} style={{ height: 40, padding: '0 22px', borderRadius: 10, border: 'none', background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               Accept &amp; schedule
               <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" aria-hidden><path d="M2.5 6.5h8M7 3l3 3.5-3 3.5" /></svg>
             </button>

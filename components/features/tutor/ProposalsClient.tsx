@@ -40,8 +40,15 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
         prev.some(p => p.id === 'demo-proposal') ? prev : [DEMO_PROPOSAL, ...prev],
       );
     };
+    const removeHandler = () => {
+      setProposals(prev => prev.filter(p => p.id !== 'demo-proposal'));
+    };
     window.addEventListener('sim:inject-demo', handler);
-    return () => window.removeEventListener('sim:inject-demo', handler);
+    window.addEventListener('sim:remove-demo', removeHandler);
+    return () => {
+      window.removeEventListener('sim:inject-demo', handler);
+      window.removeEventListener('sim:remove-demo', removeHandler);
+    };
   }, []);
 
   function showToast(msg: string) {

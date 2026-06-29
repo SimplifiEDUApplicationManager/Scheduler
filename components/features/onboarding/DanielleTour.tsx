@@ -51,19 +51,11 @@ const STEPS: Step[] = [
     cta: 'Next',
   },
   {
-    key: 'cal-capacity',
-    target: '[data-tour="tutor-capacity"]',
+    key: 'cal-stats',
+    target: '[data-tour="tutor-profile-card"]',
     pose: 'point',
-    title: 'Weekly capacity',
-    body: "This shows how many hours you've booked this week out of your maximum. Coordinators use this to know how much room you have for new students. You can adjust your max hours in Settings anytime.",
-    cta: 'Next',
-  },
-  {
-    key: 'cal-response',
-    target: '[data-tour="tutor-response-time"]',
-    pose: 'point',
-    title: 'Response time & rank',
-    body: "This tracks how quickly you respond to proposals. Faster responses earn a higher rank — coordinators see this when deciding who to send a student to. Respond within 24 hours or the proposal expires automatically.",
+    title: 'Capacity & response time',
+    body: "Your weekly capacity shows hours booked vs. your max — coordinators use this to know your availability. Your response time rank tracks how quickly you respond to proposals. Faster responses earn a higher rank, and proposals expire after 24 hours.",
     cta: 'Next',
   },
   // ── Proposals page ─────────────────────────────────────────────────────
@@ -81,25 +73,61 @@ const STEPS: Step[] = [
     path: '/tutor/proposals',
     pose: 'wave',
     title: 'Try it out!',
-    body: "I've added a sample proposal — Alex Chen — to your inbox. Click \"Review\" on the row to open it, then walk through the accept flow — pick a time slot and confirm.",
+    body: "I've added a sample proposal — Alex Chen — to your inbox. Let me walk you through the accept flow step by step.",
     cta: "Let's go",
     placement: 'center',
   },
   {
-    key: 'prop-practice-wait',
+    key: 'prop-practice-click',
     path: '/tutor/proposals',
     target: '[data-tour="proposals-first-row"]',
     pose: 'point',
-    title: 'Accept Alex Chen\'s proposal',
-    body: "Click \"Review\" on the Alex Chen row, then accept and schedule the session. I'll advance automatically once you've completed the accept flow.",
+    title: 'Step 1: Click "Review"',
+    body: "Click the \"Review\" button on Alex Chen's row to open the proposal details.",
     cta: 'Next',
-    waitForEvent: true,
+    waitForEvent: true, // waits for sim:demo-opened
+  },
+  {
+    key: 'prop-practice-accept-btn',
+    target: '[data-tour="accept-schedule-btn"]',
+    pose: 'point',
+    title: 'Step 2: Accept & schedule',
+    body: "Scroll down and click \"Accept & schedule\" to confirm you want this student.",
+    cta: 'Next',
+    waitForEvent: true, // waits for sim:demo-confirm (ConfirmAcceptModal opens)
+  },
+  {
+    key: 'prop-practice-confirm',
+    target: '[data-tour="confirm-accept-btn"]',
+    pose: 'point',
+    title: 'Step 3: Confirm',
+    body: "Click \"Accept & schedule\" one more time to proceed to the scheduling step.",
+    cta: 'Next',
+    waitForEvent: true, // waits for sim:demo-schedule
+  },
+  {
+    key: 'prop-practice-drag',
+    target: '[data-tour="schedule-drag-card"]',
+    pose: 'point',
+    title: 'Step 4: Place the session',
+    body: "Drag this card onto one of the highlighted \"Student available\" windows on the calendar, or click a window to place it automatically.",
+    cta: 'Next',
+    waitForEvent: true, // waits for sim:demo-placed (session placed)
+  },
+  {
+    key: 'prop-practice-final',
+    target: '[data-tour="confirm-schedule-btn"]',
+    pose: 'point',
+    title: 'Step 5: Confirm schedule',
+    body: "Click \"Confirm schedule\" to finalize. In a real scenario, the student's family would be notified.",
+    cta: 'Next',
+    waitForEvent: true, // waits for sim:demo-accepted
   },
   {
     key: 'prop-practice-done',
     pose: 'wave',
     title: 'Nice work! 🎉',
-    body: "You just accepted your first proposal! In a real scenario, the student's family would be notified and the session would appear on your calendar. Let's continue to Settings.",
+    body: "You just walked through the complete accept flow! In real proposals, the student's family reviews your profile before sessions are confirmed. Let's continue to Settings.",
     cta: 'Continue',
   },
   // ── Settings page ──────────────────────────────────────────────────────
@@ -182,20 +210,36 @@ export function DanielleTour() {
   useEffect(() => {
     if (!open) return;
     const key = STEPS[step]?.key;
-    if (key === 'prop-practice-intro' || key === 'prop-practice-wait') {
+    if (key?.startsWith('prop-practice')) {
       window.dispatchEvent(new CustomEvent('sim:inject-demo'));
     }
   }, [step, open]);
 
-  // ── Auto-advance past prop-practice-wait when the tutor accepts the demo ──
-  const demoAccepted = useRef(false);
+  // ── Auto-advance on practice step events ──────────────────────────────
+  // Each practice step waits for a specific event. Map step key → event name.
+  const STEP_EVENTS: Record<string, string> = {
+    'prop-practice-click':      'sim:demo-opened',
+    'prop-practice-accept-btn': 'sim:demo-confirm',
+    'prop-practice-confirm':    'sim:demo-schedule',
+    'prop-practice-drag':       'sim:demo-placed',
+    'prop-practice-final':      'sim:demo-accepted',
+  };
+  const demoCompleted = useRef(false);
   useEffect(() => {
-    if (!open || STEPS[step]?.key !== 'prop-practice-wait') return;
-    // If they already accepted (e.g., navigated back), skip immediately
-    if (demoAccepted.current) { setSpot(null); setStep(s => s + 1); return; }
-    const handler = () => { demoAccepted.current = true; setSpot(null); setStep(s => s + 1); };
-    window.addEventListener('sim:demo-accepted', handler);
-    return () => window.removeEventListener('sim:demo-accepted', handler);
+    if (!open) return;
+    const key = STEPS[step]?.key;
+    if (!key || !STEP_EVENTS[key]) return;
+    // If the full flow was already completed, skip all remaining practice steps
+    if (demoCompleted.current) { setSpot(null); setStep(s => s + 1); return; }
+    const eventName = STEP_EVENTS[key];
+    const handler = () => {
+      if (key === 'prop-practice-final') demoCompleted.current = true;
+      setSpot(null);
+      setStep(s => s + 1);
+    };
+    window.addEventListener(eventName, handler);
+    return () => window.removeEventListener(eventName, handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, open]);
 
   // ── Measure target element whenever step or pathname changes ──────────────
@@ -279,6 +323,7 @@ export function DanielleTour() {
     document.cookie = 'sim_tour_replay=;path=/;max-age=0;SameSite=Lax';
     setSeen(true);
     window.dispatchEvent(new CustomEvent('sim:tour-stop'));
+    window.dispatchEvent(new CustomEvent('sim:remove-demo'));
   }
 
   function next() {

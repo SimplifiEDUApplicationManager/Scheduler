@@ -105,7 +105,7 @@ export function ConfirmAcceptModal({ p, overCap, anyConflict, newTotal, capHours
 
         <div style={{ padding: '16px 24px 20px', marginTop: 16, display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #F5F5F5' }}>
           <button onClick={onCancel} style={{ height: 36, padding: '0 16px', borderRadius: 8, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>Back</button>
-          <button onClick={onConfirm} style={{ height: 36, padding: '0 18px', borderRadius: 8, border: 'none', background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <button data-tour="confirm-accept-btn" onClick={onConfirm} style={{ height: 36, padding: '0 18px', borderRadius: 8, border: 'none', background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {anyConflict ? 'Continue to schedule' : 'Accept & schedule'}
             <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" aria-hidden><path d="M2 6h8M7 3l3 3-3 3" /></svg>
           </button>

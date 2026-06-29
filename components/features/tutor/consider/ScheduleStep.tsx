@@ -75,7 +75,7 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
     next[activeIdx] = { day, start };
     setPlacements(next);
     setOverSlot(null); setDragging(false);
-    // Auto-advance to next unplaced session
+    window.dispatchEvent(new CustomEvent('sim:demo-placed'));
     const nextEmpty = next.findIndex((pl, i) => i > activeIdx && pl === null);
     if (nextEmpty >= 0) setActiveIdx(nextEmpty);
   };
@@ -86,6 +86,7 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
     next[activeIdx] = { day, start };
     setPlacements(next);
     setFocused(false); setPinned(false);
+    window.dispatchEvent(new CustomEvent('sim:demo-placed'));
     const nextEmpty = next.findIndex((pl, i) => i > activeIdx && pl === null);
     if (nextEmpty >= 0) setActiveIdx(nextEmpty);
   };
@@ -129,6 +130,7 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
               return (
                 <div
                   key={idx}
+                  data-tour={isActive ? 'schedule-drag-card' : undefined}
                   className={'crp-draggable' + (dragging && isActive ? ' dragging' : '')}
                   draggable={!isPlaced && isActive}
                   onDragStart={e => { setDragging(true); setActiveIdx(idx); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(idx)); }}
@@ -222,7 +224,7 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
         </div>
         <button onClick={onDecline} style={{ height: 40, padding: '0 18px', borderRadius: 10, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Decline</button>
         <button onClick={onBack} style={{ height: 40, padding: '0 16px', borderRadius: 10, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Back</button>
-        <button disabled={!allPlaced} onClick={() => onConfirm(placements)} style={{ height: 40, padding: '0 22px', borderRadius: 10, border: 'none', background: allPlaced ? '#18181B' : '#E4E4E7', color: allPlaced ? '#fff' : '#A1A1AA', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: allPlaced ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <button data-tour="confirm-schedule-btn" disabled={!allPlaced} onClick={() => onConfirm(placements)} style={{ height: 40, padding: '0 22px', borderRadius: 10, border: 'none', background: allPlaced ? '#18181B' : '#E4E4E7', color: allPlaced ? '#fff' : '#A1A1AA', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: allPlaced ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           ✓ Confirm schedule
         </button>
       </div>
