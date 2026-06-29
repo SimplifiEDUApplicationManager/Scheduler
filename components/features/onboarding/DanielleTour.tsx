@@ -36,116 +36,62 @@ const STEPS: Step[] = [
     key: 'welcome',
     pose: 'wave',
     title: "Hi, I'm Danielle 👋",
-    body: "I'll walk you through every part of your tutor dashboard so you know exactly what each piece does. It only takes a minute.",
+    body: "Welcome to Simplifi EDU! In this quick tour, we'll walk through the three pages on your account — Calendar, Proposals, and Settings. Let's start with your Calendar.",
     cta: 'Start the tour',
     placement: 'center',
   },
-  {
-    key: 'tabs',
-    path: '/tutor/calendar',
-    target: '[data-tour="tab-Calendar"]',
-    pose: 'point',
-    title: 'These tabs are your home base',
-    body: 'Calendar, Proposals, and Settings — that\'s the whole app. I\'ll show you each one in turn.',
-    cta: 'Show me Calendar',
-  },
-  {
-    key: 'cal-profile',
-    target: '[data-tour="tutor-profile-card"]',
-    pose: 'point',
-    title: 'Your profile card',
-    body: 'A quick snapshot of your week — capacity, hours booked, and your response-time ranking. Coordinators see a version of this when matching.',
-    cta: 'Got it',
-  },
-  {
-    key: 'cal-proposals',
-    target: '[data-tour="tutor-proposals-sidebar"]',
-    pose: 'point',
-    title: 'Incoming proposals',
-    body: 'Pending requests live here on the left. Hover one to preview where it\'d fit on your calendar; click "Consider" to open the full review.',
-    cta: 'Next',
-  },
+  // ── Calendar page ──────────────────────────────────────────────────────
   {
     key: 'cal-grid',
+    path: '/tutor/calendar',
     target: '[data-tour="tutor-calendar-grid"]',
     pose: 'point',
-    title: 'Your calendar grid',
-    body: 'Every confirmed session is a teal block. Click any one to see student info, the meeting link, and options to cancel or reschedule.',
+    title: 'Your calendar',
+    body: "This is where you'll see all your tutoring sessions. I've placed some sample sessions so you can see what it looks like once you're up and running. Each teal block is a confirmed session — click any one to see details.",
     cta: 'Next',
   },
   {
-    key: 'cal-toggle',
-    target: '[data-tour="tutor-cal-toggle"]',
+    key: 'cal-capacity',
+    target: '[data-tour="tutor-capacity"]',
     pose: 'point',
-    title: 'Switch week or month view',
-    body: 'Swap between a week-at-a-glance and a fuller month overview when you\'re planning further out.',
-    cta: 'Onward',
+    title: 'Weekly capacity',
+    body: "This shows how many hours you've booked this week out of your maximum. Coordinators use this to know how much room you have for new students. You can adjust your max hours in Settings anytime.",
+    cta: 'Next',
   },
+  {
+    key: 'cal-response',
+    target: '[data-tour="tutor-response-time"]',
+    pose: 'point',
+    title: 'Response time & rank',
+    body: "This tracks how quickly you respond to proposals. Faster responses earn a higher rank — coordinators see this when deciding who to send a student to. Respond within 24 hours or the proposal expires automatically.",
+    cta: 'Next',
+  },
+  // ── Proposals page ─────────────────────────────────────────────────────
   {
     key: 'prop-tab',
     path: '/tutor/proposals',
     target: '[data-tour="tab-Proposals"]',
     pose: 'point',
-    title: 'The Proposals inbox',
-    body: 'A dedicated page for every match a coordinator has sent you — past and present.',
-    cta: 'Show me',
+    title: 'Proposals',
+    body: "This is your inbox for student matches. When a coordinator finds a student who's a good fit for you, they'll send a proposal here. You can accept or decline each one.",
+    cta: 'Next',
   },
   {
     key: 'prop-filters',
     target: '[data-tour="proposals-filters"]',
     pose: 'point',
-    title: 'Filter by status',
-    body: '"Needs response" is what you\'ll usually want — proposals still waiting on you. Toggle to see ones you\'ve accepted, declined, or all of them.',
+    title: 'Filter proposals',
+    body: '"Needs response" shows proposals waiting on you. "Awaiting client" means the student\'s family is reviewing your profile. You can also see accepted, finished, and declined proposals.',
     cta: 'Next',
   },
-  {
-    key: 'prop-row',
-    target: '[data-tour="proposals-first-row"]',
-    pose: 'point',
-    title: 'The proposals list',
-    body: 'Each row is a match a coordinator sent you. Click any row to open the full detail — student context, a calendar preview, and the Accept / Decline buttons.',
-    cta: 'Next',
-  },
-  {
-    key: 'prop-practice-intro',
-    path: '/tutor/proposals',
-    pose: 'wave',
-    title: 'Time to practice!',
-    body: "I've added a practice proposal — Alex Chen — straight to your inbox so you can try the review flow for real. Click the row to open it.",
-    cta: "Let's do it",
-    placement: 'center',
-  },
-  {
-    key: 'prop-practice-wait',
-    path: '/tutor/proposals',
-    pose: 'idle',
-    title: 'Open Alex Chen\'s proposal',
-    body: "Click the Alex Chen row in your inbox. I'll automatically move to the next step once you do.",
-    cta: 'Next',
-    waitForEvent: true,
-  },
-  {
-    key: 'prop-practice-done',
-    pose: 'wave',
-    title: "That's how it works! 🎉",
-    body: "You're now looking at a real proposal. Accept or Decline using the buttons — a calendar invite goes out automatically on accept. Click Keep going when you're done.",
-    cta: 'Keep going',
-  },
+  // ── Settings page ──────────────────────────────────────────────────────
   {
     key: 'set-tab',
     path: '/tutor/settings',
     target: '[data-tour="tab-Settings"]',
     pose: 'point',
-    title: 'Last stop: Settings',
-    body: 'Profile, capacity, subjects, calendar connection, and your personal booking page all live here.',
-    cta: 'Show me',
-  },
-  {
-    key: 'set-subnav',
-    target: '[data-tour="settings-subnav"]',
-    pose: 'point',
-    title: 'Quick-jump sub-nav',
-    body: 'Jump straight to any section without scrolling. The sticky save bar at the bottom applies your changes.',
+    title: 'Settings',
+    body: "This is where you manage your profile, capacity, subjects, working hours, and calendar connection. Changes save automatically.",
     cta: 'Next',
   },
   {
@@ -153,22 +99,14 @@ const STEPS: Step[] = [
     target: '[data-tour="settings-subjects"]',
     pose: 'point',
     title: 'Your subjects',
-    body: 'Add the subjects you teach and self-rate your confidence — coordinators use that signal to send you matches you\'ll feel great about.',
+    body: "Add the subjects you teach and rate your confidence level. Coordinators use this to match you with the right students.",
     cta: 'Next',
-  },
-  {
-    key: 'set-booking',
-    target: '[data-tour="settings-booking-preview"]',
-    pose: 'point',
-    title: 'Your personal booking page',
-    body: 'A live preview of the Nylas-hosted page students use to book time directly with you. Copy the link or open it in a new tab.',
-    cta: 'Wrap up',
   },
   {
     key: 'finish',
     pose: 'wave',
-    title: "You're all set!",
-    body: "I'll stay tucked in the bottom corner — tap me anytime to replay this tour. Happy tutoring 💛",
+    title: "You're all set! 🎉",
+    body: "That's everything you need to know. I'll stay tucked in the bottom corner — tap me anytime to replay this tour. Happy tutoring!",
     cta: 'Start tutoring',
     placement: 'center',
   },
@@ -203,6 +141,7 @@ export function DanielleTour() {
       localStorage.removeItem('sim_tour_replay');
       setSeen(true);
       setOpen(true);
+      window.dispatchEvent(new CustomEvent('sim:tour-start'));
       return;
     }
 
@@ -210,6 +149,7 @@ export function DanielleTour() {
     setSeen(alreadySeen);
     if (!alreadySeen) {
       setOpen(true);
+      window.dispatchEvent(new CustomEvent('sim:tour-start'));
     } else {
       // Tour was already completed — sync the server-side cookie so the server
       // knows not to inject the demo proposal on this and future page loads.
@@ -317,6 +257,7 @@ export function DanielleTour() {
     document.cookie = 'sim_tour_done=1;path=/;max-age=31536000;SameSite=Lax';
     document.cookie = 'sim_tour_replay=;path=/;max-age=0;SameSite=Lax';
     setSeen(true);
+    window.dispatchEvent(new CustomEvent('sim:tour-stop'));
   }
 
   function next() {

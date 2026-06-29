@@ -45,6 +45,31 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
   const [weekOffset, setWeekOffset]   = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const [toast, setToast]             = useState<Toast | null>(null);
+  const [tourActive, setTourActive]   = useState(false);
+
+  // Listen for tour start/stop events to show sample schedule
+  useEffect(() => {
+    const onStart = () => setTourActive(true);
+    const onStop = () => setTourActive(false);
+    window.addEventListener('sim:tour-start', onStart);
+    window.addEventListener('sim:tour-stop', onStop);
+    return () => {
+      window.removeEventListener('sim:tour-start', onStart);
+      window.removeEventListener('sim:tour-stop', onStop);
+    };
+  }, []);
+
+  // Sample events shown during the tour
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const sampleEvents: TutorEvent[] = [
+    { id: 'tour-1', day: (dayOfWeek + 1) % 7, start: 10, end: 11, title: 'Sarah Johnson · Algebra II', kind: 'session', status: 'upcoming', studentName: 'Sarah Johnson', studentInitials: 'SJ', subject: 'Algebra II', recurring: true },
+    { id: 'tour-2', day: (dayOfWeek + 1) % 7, start: 14, end: 15, title: 'Marcus Lee · SAT Prep', kind: 'session', status: 'upcoming', studentName: 'Marcus Lee', studentInitials: 'ML', subject: 'SAT Prep', recurring: true },
+    { id: 'tour-3', day: (dayOfWeek + 3) % 7, start: 11, end: 12, title: 'Sarah Johnson · Algebra II', kind: 'session', status: 'upcoming', studentName: 'Sarah Johnson', studentInitials: 'SJ', subject: 'Algebra II', recurring: true },
+    { id: 'tour-4', day: (dayOfWeek + 4) % 7, start: 16, end: 17.5, title: 'Emma Chen · AP Physics', kind: 'session', status: 'upcoming', studentName: 'Emma Chen', studentInitials: 'EC', subject: 'AP Physics', recurring: true },
+  ];
+
+  const displayEvents = tourActive ? sampleEvents : events;
   const [consideringId, setConsideringId] = useState<string | null>(null);
 
   // Refetch events from Nylas whenever the user navigates to a different week.
@@ -139,7 +164,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
               <div className="text-[11px] text-fg-3">{me.email}</div>
             </div>
           </div>
-          <div className="p-3 bg-surface-2 rounded-xl flex items-center justify-between gap-4">
+          <div data-tour="tutor-capacity" className="p-3 bg-surface-2 rounded-xl flex items-center justify-between gap-4">
             <div>
               <div className="text-[9px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-1">Capacity · this week</div>
               <div className="flex items-baseline gap-1.5">
@@ -152,7 +177,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
           </div>
 
           {/* Response time leaderboard widget */}
-          <div className="mt-2 p-3 bg-surface-2 rounded-xl">
+          <div data-tour="tutor-response-time" className="mt-2 p-3 bg-surface-2 rounded-xl">
             <div className="text-[9px] font-bold text-fg-muted uppercase tracking-[0.06em] mb-1.5">Response time · 90 days</div>
             {responseTimeStat.avgMs === null ? (
               <div className="text-[11px] text-fg-3">No proposals yet — respond to earn a rank.</div>
@@ -261,8 +286,8 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
         </div>
 
         {calView === 'week'
-          ? <TutorWeekView events={events} proposal={activeProposal?.status === 'pending' ? activeProposal : null} weekOffset={weekOffset} onOpenSession={setOpenId} />
-          : <TutorMonthView events={events} proposal={activeProposal?.status === 'pending' ? activeProposal : null} monthOffset={monthOffset} onOpenSession={setOpenId} />
+          ? <TutorWeekView events={displayEvents} proposal={tourActive ? null : (activeProposal?.status === 'pending' ? activeProposal : null)} weekOffset={weekOffset} onOpenSession={setOpenId} />
+          : <TutorMonthView events={displayEvents} proposal={tourActive ? null : (activeProposal?.status === 'pending' ? activeProposal : null)} monthOffset={monthOffset} onOpenSession={setOpenId} />
         }
       </main>
 
