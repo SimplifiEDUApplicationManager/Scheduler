@@ -113,10 +113,10 @@ const STEPS: Step[] = [
   },
   {
     key: 'prop-practice-drag',
-    target: '[data-tour="schedule-drag-card"]',
+    target: '[data-tour="schedule-area"]',
     pose: 'point',
     title: 'Place the session',
-    body: "Drag this card onto one of the highlighted \"Student available\" windows on the calendar, or click a window to place it.",
+    body: "Drag the session card on the left onto one of the striped \"Student available\" windows on the calendar, or click a window to place it.",
     cta: 'Next',
     waitForEvent: true,
     hideBack: true,
