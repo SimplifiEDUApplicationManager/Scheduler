@@ -75,7 +75,7 @@ export function ConsiderModal({ proposal: p, me, events, onClose, onAccept, onDe
           subjectConf={subjectConf} overCap={overCap} newTotal={newTotal}
           activeStudents={activeStudents}
           onDecline={onDecline}
-          onContinue={() => setStep('schedule')}
+          onContinue={() => { setStep('schedule'); window.dispatchEvent(new CustomEvent('sim:demo-schedule')); }}
         />
       ) : (
         <ScheduleStep
