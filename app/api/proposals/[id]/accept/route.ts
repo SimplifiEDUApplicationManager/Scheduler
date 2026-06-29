@@ -5,7 +5,7 @@ import { acceptProposal, transitionHttpStatus } from '@/lib/data/proposals';
 import { createTutoringEvent, tupleToUnix } from '@/lib/nylas/events';
 import { createServiceClient } from '@/lib/supabase/server';
 import { listAsanaSections, moveTaskToSection } from '@/lib/asana/client';
-import type { Database } from '@/lib/types/database';
+import type { Database, Json } from '@/lib/types/database';
 
 type SupabaseInstance = ReturnType<typeof createServerClient<Database>>;
 
@@ -58,16 +58,15 @@ export async function POST(
     );
   }
 
-  // Side-effects run after the accept is committed; failures never block the response.
-  await Promise.all([
-    createBookingEvent(id, tutorId, auth.supabase, placements).catch(err => {
-      console.error('[proposals/accept] Nylas booking failed:', err);
-    }),
-    matchRequestOnAccept(id).catch(err => {
-      console.error('[proposals/accept] Request matching failed:', err);
-    }),
-  ]);
+  // Save placements for later (coordinator approval creates the calendar events).
+  // Store as JSON on the proposal so the coordinator-approve endpoint can use them.
+  if (placements && placements.length > 0) {
+    const svc = createServiceClient();
+    await svc.from('proposals').update({ placements: placements as unknown as Json }).eq('id', id);
+  }
 
+  // No calendar event or request matching here — that happens when the
+  // coordinator approves after client confirmation.
   return NextResponse.json({ id });
 }
 

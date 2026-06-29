@@ -128,7 +128,7 @@ export async function acceptProposal(
 
   const { error } = await supabase
     .from('proposals')
-    .update({ status: 'ACCEPTED', resolved_at: new Date().toISOString() })
+    .update({ status: 'TUTOR_ACCEPTED', resolved_at: new Date().toISOString() })
     .eq('id', id);
 
   if (error) return { ok: false, code: 'db_error', message: error.message };
