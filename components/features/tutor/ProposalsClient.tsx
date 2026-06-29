@@ -7,7 +7,7 @@ import { DeclineModal } from './DeclineModal';
 import { ProposalRow, type DisplayStatus } from './ProposalRow';
 import { DEMO_PROPOSAL } from '@/lib/data/demo';
 
-type FilterKey = 'pending' | 'accepted' | 'finished' | 'declined' | 'all';
+type FilterKey = 'pending' | 'tutor_accepted' | 'accepted' | 'finished' | 'declined' | 'all';
 
 interface EnrichedProposal extends TutorProposal {
   displayStatus: DisplayStatus;
@@ -82,6 +82,8 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     ? enriched
     : filter === 'pending'
     ? enriched.filter(p => p.displayStatus === 'pending' || p.displayStatus === 'reviewed')
+    : filter === 'declined'
+    ? enriched.filter(p => p.displayStatus === 'declined' || p.displayStatus === 'client_declined')
     : enriched.filter(p => p.displayStatus === filter);
 
   function openDetail(id: string) {
@@ -176,11 +178,12 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
   const considering = consideringId ? proposals.find(p => p.id === consideringId) ?? null : null;
 
   const FILTERS = [
-    ['pending',  'Needs response', actionCount,                                            '#F59E0B'],
-    ['accepted', 'Active',         enriched.filter(p => p.displayStatus === 'accepted').length, '#22C55E'],
-    ['finished', 'Finished',       enriched.filter(p => p.displayStatus === 'finished').length, '#3B82F6'],
-    ['declined', 'Declined',       enriched.filter(p => p.displayStatus === 'declined').length, '#DC2626'],
-    ['all',      'All',            enriched.length,                                        '#52525B'],
+    ['pending',          'Needs response',          actionCount,                                            '#F59E0B'],
+    ['tutor_accepted',   'Awaiting client',         enriched.filter(p => p.displayStatus === 'tutor_accepted').length, '#8B5CF6'],
+    ['accepted',         'Active',                  enriched.filter(p => p.displayStatus === 'accepted').length, '#22C55E'],
+    ['finished',         'Finished',                enriched.filter(p => p.displayStatus === 'finished').length, '#3B82F6'],
+    ['declined',         'Declined',                enriched.filter(p => p.displayStatus === 'declined' || p.displayStatus === 'client_declined').length, '#DC2626'],
+    ['all',              'All',                     enriched.length,                                        '#52525B'],
   ] as const;
 
   return (
