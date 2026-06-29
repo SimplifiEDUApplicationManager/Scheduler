@@ -475,6 +475,22 @@ After calling this tool, for each task:
       return textContent(JSON.stringify({ count: result.length, requests: result }, null, 2));
     }),
 
+  tool('awaiting_client', 'List proposals where the tutor accepted but the client has not yet approved. Coordinator can approve or reject via the web UI.',
+    {},
+    async (_args, _authKey) => {
+      const [props, tutors] = await Promise.all([
+        sbGet('proposals', 'status=eq.TUTOR_ACCEPTED&select=id,tutor_id,student_name,subject,resolved_at&order=resolved_at'),
+        sbGet('users', 'role=eq.TUTOR&select=id,name'),
+      ]) as [Record<string, unknown>[], { id: string; name: string }[]];
+      const nameMap = new Map(tutors.map(t => [t.id, t.name]));
+      const result = props.map(p => ({
+        student_name: p.student_name, subject: p.subject,
+        tutor: nameMap.get(p.tutor_id as string) ?? p.tutor_id,
+        tutor_accepted_at: p.resolved_at,
+      }));
+      return textContent(JSON.stringify({ count: result.length, proposals: result }, null, 2));
+    }),
+
 ];
 
 // ── MCP protocol handler ──────────────────────────────────────────────────────

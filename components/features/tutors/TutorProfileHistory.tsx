@@ -1,19 +1,23 @@
 import type { Tutor, Invitation, InvitationStatus } from '@/lib/types/domain';
 
 const STATUS_COLOR: Record<InvitationStatus, string> = {
-  pending:  '#F59E0B',
-  accepted: '#22C55E',
-  declined: '#DC2626',
-  expired:  '#A1A1AA',
-  finished: '#3B82F6',
+  pending:         '#F59E0B',
+  tutor_accepted:  '#8B5CF6',
+  accepted:        '#22C55E',
+  declined:        '#DC2626',
+  expired:         '#A1A1AA',
+  finished:        '#3B82F6',
+  client_declined: '#DC2626',
 };
 
 const STATUS_LABEL: Record<InvitationStatus, string> = {
-  pending:  'Pending',
-  accepted: 'Active',
-  declined: 'Declined',
-  expired:  'Expired',
-  finished: 'Finished',
+  pending:         'Pending',
+  tutor_accepted:  'Awaiting client',
+  accepted:        'Active',
+  declined:        'Declined',
+  expired:         'Expired',
+  finished:        'Finished',
+  client_declined: 'Client declined',
 };
 
 function StatusPill({ status }: { status: InvitationStatus }) {

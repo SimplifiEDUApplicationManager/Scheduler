@@ -53,6 +53,7 @@ export type Database = {
           nylas_event_id: string | null
           offered_rate: number | null
           parent_name: string | null
+          placements: Json | null
           request_id: string | null
           requested_schedule: Json
           resolved_at: string | null
@@ -84,6 +85,7 @@ export type Database = {
           nylas_event_id?: string | null
           offered_rate?: number | null
           parent_name?: string | null
+          placements?: Json | null
           request_id?: string | null
           requested_schedule?: Json
           resolved_at?: string | null
@@ -115,6 +117,7 @@ export type Database = {
           nylas_event_id?: string | null
           offered_rate?: number | null
           parent_name?: string | null
+          placements?: Json | null
           request_id?: string | null
           requested_schedule?: Json
           resolved_at?: string | null
@@ -622,7 +625,7 @@ export type Database = {
     }
     Enums: {
       confidence_level: "HIGH" | "MEDIUM" | "UNPROVEN" | "LOW"
-      proposal_status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "FINISHED"
+      proposal_status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "FINISHED" | "TUTOR_ACCEPTED" | "CLIENT_DECLINED"
       user_role: "SUPER_ADMIN" | "COORDINATOR" | "TUTOR"
       user_status: "PENDING" | "ACTIVE" | "DISABLED"
     }
@@ -756,7 +759,7 @@ export const Constants = {
   public: {
     Enums: {
       confidence_level: ["HIGH", "MEDIUM", "UNPROVEN", "LOW"],
-      proposal_status: ["PENDING", "ACCEPTED", "DECLINED", "EXPIRED", "FINISHED"],
+      proposal_status: ["PENDING", "ACCEPTED", "DECLINED", "EXPIRED", "FINISHED", "TUTOR_ACCEPTED", "CLIENT_DECLINED"],
       user_role: ["SUPER_ADMIN", "COORDINATOR", "TUTOR"],
       user_status: ["PENDING", "ACTIVE", "DISABLED"],
     },

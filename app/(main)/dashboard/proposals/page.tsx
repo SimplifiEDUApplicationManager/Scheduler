@@ -18,11 +18,13 @@ function fmtRelative(iso: string): string {
 }
 
 const STATUS_MAP: Record<string, InvitationStatus> = {
-  PENDING:  'pending',
-  ACCEPTED: 'accepted',
-  DECLINED: 'declined',
-  EXPIRED:  'expired',
-  FINISHED: 'finished',
+  PENDING:         'pending',
+  TUTOR_ACCEPTED:  'tutor_accepted',
+  ACCEPTED:        'accepted',
+  DECLINED:        'declined',
+  EXPIRED:         'expired',
+  FINISHED:        'finished',
+  CLIENT_DECLINED: 'client_declined',
 };
 
 export default async function ProposalsPage() {

@@ -4,7 +4,7 @@ import type { TutorProposal, TutorEvent } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { DAY_NAMES } from '@/lib/utils/tutors';
 
-export type DisplayStatus = 'pending' | 'reviewed' | 'accepted' | 'declined' | 'expired' | 'finished';
+export type DisplayStatus = 'pending' | 'reviewed' | 'accepted' | 'declined' | 'expired' | 'finished' | 'tutor_accepted' | 'client_declined';
 
 interface ConflictEntry { tupleIdx: number; hits: TutorEvent[] }
 
@@ -23,8 +23,10 @@ const STATUS_META: Record<DisplayStatus, { label: string; bg: string; fg: string
   reviewed: { label: 'Reviewed', bg: '#EEF2FF', fg: '#3730A3', dot: '#6366F1' },
   accepted: { label: 'Accepted', bg: '#DCFCE7', fg: '#166534', dot: '#22C55E' },
   declined: { label: 'Declined', bg: '#FEE2E2', fg: '#991B1B', dot: '#DC2626' },
-  expired:  { label: 'Expired',  bg: '#F4F4F5', fg: '#71717A', dot: '#A1A1AA' },
-  finished: { label: 'Finished', bg: '#DBEAFE', fg: '#1E40AF', dot: '#3B82F6' },
+  expired:         { label: 'Expired',                    bg: '#F4F4F5', fg: '#71717A', dot: '#A1A1AA' },
+  finished:        { label: 'Finished',                   bg: '#DBEAFE', fg: '#1E40AF', dot: '#3B82F6' },
+  tutor_accepted:  { label: 'Awaiting client approval',   bg: '#FEF3C7', fg: '#92400E', dot: '#F59E0B' },
+  client_declined: { label: 'Client declined',            bg: '#FEE2E2', fg: '#991B1B', dot: '#DC2626' },
 };
 
 function fmtH(h: number): string {

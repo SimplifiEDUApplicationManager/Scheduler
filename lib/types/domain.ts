@@ -13,7 +13,7 @@ export type AvailabilityRequestStatus = 'PENDING' | 'APPROVED' | 'DECLINED';
 export type TutorStatus    = 'active' | 'onboarding';
 export type RequestSource  = 'asana' | 'manual';
 export type RequestStatus  = 'open' | 'matched';
-export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'finished';
+export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'finished' | 'tutor_accepted' | 'client_declined';
 export type AtRiskSeverity = 'high' | 'medium';
 
 // ── Availability ────────────────────────────────────────────────────────────
@@ -179,7 +179,7 @@ export interface TutorEvent {
   recurring?: boolean;
 }
 
-export type TutorProposalStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'finished';
+export type TutorProposalStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'finished' | 'tutor_accepted' | 'client_declined';
 
 export interface TutorProposal {
   id: string;

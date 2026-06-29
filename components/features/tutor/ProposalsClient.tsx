@@ -51,6 +51,8 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
 
   function getDisplayStatus(p: TutorProposal): DisplayStatus {
     if (p.status === 'finished') return 'finished';
+    if (p.status === 'tutor_accepted') return 'tutor_accepted';
+    if (p.status === 'client_declined') return 'client_declined';
     if (p.status === 'accepted') return 'accepted';
     if (p.status === 'declined') return 'declined';
     if (p.status === 'expired')  return 'expired';
@@ -125,26 +127,11 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
       return;
     }
 
-    const newEvents: TutorEvent[] = placements
-      .map((pl, i) => {
-        if (!pl) return null;
-        const dur = 1;
-        return {
-          id: `prop-${p.id}-${i}`,
-          day: pl.day, start: pl.start, end: pl.start + dur,
-          title: `${p.studentName} · ${p.subject}`,
-          kind: 'session' as const, status: 'upcoming' as const,
-          studentName: p.studentName,
-          studentInitials: p.studentName.split(/\s+/).map((w: string) => w[0]).join('').slice(0, 2),
-          subject: p.subject, recurring: true,
-        };
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== null) as TutorEvent[];
-    setEvents(ev => [...ev, ...newEvents]);
-    setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'accepted' } : prop));
+    // Don't add calendar events — that happens on coordinator approval after client confirms
+    setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'tutor_accepted' } : prop));
     setConsideringId(null);
     setBusyAction(null);
-    showToast(`Accepted ${p.studentName} · calendar invite sent to family`);
+    showToast(`Accepted ${p.studentName} · awaiting client approval`);
   }
 
   async function handleDecline(id: string, reason: string) {

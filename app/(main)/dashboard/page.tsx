@@ -46,7 +46,7 @@ export default async function DashboardPage() {
   startOfToday.setHours(0, 0, 0, 0);
   const todayIso = startOfToday.toISOString();
 
-  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }, { count: pendingProposalCount }, { count: activeJobCount }, { count: acceptedToday }, { count: finishedToday }] = await Promise.all([
+  const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }, { count: pendingProposalCount }, { count: activeJobCount }, { count: acceptedToday }, { count: finishedToday }, { count: awaitingClientCount }] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
       .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
@@ -107,6 +107,11 @@ export default async function DashboardPage() {
       .eq('coordinator_id', uid)
       .eq('status', 'FINISHED')
       .gte('updated_at', todayIso),
+    supabase
+      .from('proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('coordinator_id', uid)
+      .eq('status', 'TUTOR_ACCEPTED'),
   ]);
 
   // Fetch tutor names for availability requests
@@ -259,11 +264,13 @@ export default async function DashboardPage() {
           <KpiTile
             label="Pending proposals"
             value={pendingProposalCount ?? 0}
-            hint="Awaiting tutor response"
+            hint={`Awaiting tutor response${(awaitingClientCount ?? 0) > 0 ? ` · ${awaitingClientCount} awaiting client` : ''}`}
             trend={
-              (pendingProposalCount ?? 0) > 2
-                ? { dir: 'flat', text: 'Some proposals awaiting response', warn: true }
-                : { dir: 'flat', text: 'All recent' }
+              (awaitingClientCount ?? 0) > 0
+                ? { dir: 'flat', text: `${awaitingClientCount} need client approval`, warn: true }
+                : (pendingProposalCount ?? 0) > 2
+                  ? { dir: 'flat', text: 'Some proposals awaiting response', warn: true }
+                  : { dir: 'flat', text: 'All recent' }
             }
             href="/dashboard/proposals"
             accentColor="var(--brand-teal-500)"

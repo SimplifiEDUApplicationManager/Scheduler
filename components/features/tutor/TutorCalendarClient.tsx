@@ -89,21 +89,8 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
       return;
     }
 
-    const pl = placements[0];
-    if (pl) {
-      const initials = p.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2);
-      const newEvent: TutorEvent = {
-        id: `ev-new-${p.id}-${Date.now()}`,
-        day: pl.day, start: pl.start, end: pl.start + 1,
-        title: `${p.studentName} · ${p.subject}`,
-        kind: 'session' as TutorEventKind,
-        status: 'upcoming' as TutorEventStatus,
-        studentName: p.studentName, studentInitials: initials,
-        subject: p.subject, recurring: true,
-      };
-      setEvents(es => [...es, newEvent]);
-    }
-    setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'accepted' } : prop));
+    // Don't add calendar events client-side — that happens on coordinator approval
+    setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'tutor_accepted' } : prop));
     setConsideringId(null);
     showToast({ type: 'accept', name: p.studentName });
   }

@@ -5,30 +5,36 @@ import type { Invitation, InvitationStatus, Tutor, TuitionRequest } from '@/lib/
 import { Avatar } from '@/components/ui/Avatar';
 
 const STATUS_COLOR: Record<InvitationStatus, string> = {
-  pending:  '#F59E0B',
-  accepted: '#22C55E',
-  declined: '#DC2626',
-  expired:  '#A1A1AA',
-  finished: '#3B82F6',
+  pending:         '#F59E0B',
+  tutor_accepted:  '#8B5CF6',
+  accepted:        '#22C55E',
+  declined:        '#DC2626',
+  expired:         '#A1A1AA',
+  finished:        '#3B82F6',
+  client_declined: '#DC2626',
 };
 
 const STATUS_LABEL: Record<InvitationStatus, string> = {
-  pending:  'Pending',
-  accepted: 'Active',
-  declined: 'Declined',
-  expired:  'Expired',
-  finished: 'Finished',
+  pending:         'Pending',
+  tutor_accepted:  'Awaiting client',
+  accepted:        'Active',
+  declined:        'Declined',
+  expired:         'Expired',
+  finished:        'Finished',
+  client_declined: 'Client declined',
 };
 
 type Tab = 'all' | InvitationStatus;
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'all',      label: 'All'      },
-  { key: 'pending',  label: 'Pending'  },
-  { key: 'accepted', label: 'Active'   },
-  { key: 'finished', label: 'Finished' },
-  { key: 'declined', label: 'Declined' },
-  { key: 'expired',  label: 'Expired'  },
+  { key: 'all',             label: 'All'              },
+  { key: 'pending',         label: 'Pending'          },
+  { key: 'tutor_accepted',  label: 'Awaiting client'  },
+  { key: 'accepted',        label: 'Active'           },
+  { key: 'finished',        label: 'Finished'         },
+  { key: 'declined',        label: 'Declined'         },
+  { key: 'client_declined', label: 'Client declined'  },
+  { key: 'expired',         label: 'Expired'          },
 ];
 
 interface Props {
@@ -37,19 +43,41 @@ interface Props {
   requests: TuitionRequest[];
 }
 
-export function ProposalsClient({ invitations, tutors, requests }: Props) {
+export function ProposalsClient({ invitations: initialInvitations, tutors, requests }: Props) {
+  const [invitations, setInvitations] = useState(initialInvitations);
   const [tab, setTab] = useState<Tab>('all');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const filtered = tab === 'all' ? invitations : invitations.filter(i => i.status === tab);
 
   const counts: Record<Tab, number> = {
-    all:      invitations.length,
-    pending:  invitations.filter(i => i.status === 'pending').length,
-    accepted: invitations.filter(i => i.status === 'accepted').length,
-    finished: invitations.filter(i => i.status === 'finished').length,
-    declined: invitations.filter(i => i.status === 'declined').length,
-    expired:  invitations.filter(i => i.status === 'expired').length,
+    all:             invitations.length,
+    pending:         invitations.filter(i => i.status === 'pending').length,
+    tutor_accepted:  invitations.filter(i => i.status === 'tutor_accepted').length,
+    accepted:        invitations.filter(i => i.status === 'accepted').length,
+    finished:        invitations.filter(i => i.status === 'finished').length,
+    declined:        invitations.filter(i => i.status === 'declined').length,
+    client_declined: invitations.filter(i => i.status === 'client_declined').length,
+    expired:         invitations.filter(i => i.status === 'expired').length,
   };
+
+  async function handleCoordinatorApprove(id: string) {
+    setBusyId(id);
+    const res = await fetch(`/api/proposals/${id}/coordinator-approve`, { method: 'POST' });
+    if (res.ok) {
+      setInvitations(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'accepted' as InvitationStatus } : inv));
+    }
+    setBusyId(null);
+  }
+
+  async function handleCoordinatorReject(id: string) {
+    setBusyId(id);
+    const res = await fetch(`/api/proposals/${id}/coordinator-reject`, { method: 'POST' });
+    if (res.ok) {
+      setInvitations(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'client_declined' as InvitationStatus } : inv));
+    }
+    setBusyId(null);
+  }
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -129,6 +157,26 @@ export function ProposalsClient({ invitations, tutors, requests }: Props) {
                       {STATUS_LABEL[inv.status]}
                     </span>
                   </div>
+
+                  {/* Approve/Reject buttons for awaiting client */}
+                  {inv.status === 'tutor_accepted' && (
+                    <div className="mt-2.5 flex gap-2">
+                      <button
+                        onClick={() => handleCoordinatorApprove(inv.id)}
+                        disabled={busyId === inv.id}
+                        className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                      >
+                        {busyId === inv.id ? 'Approving\u2026' : 'Client approved'}
+                      </button>
+                      <button
+                        onClick={() => handleCoordinatorReject(inv.id)}
+                        disabled={busyId === inv.id}
+                        className="h-8 px-3 rounded-lg text-[12px] font-semibold border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        Client declined
+                      </button>
+                    </div>
+                  )}
 
                   {/* Decline reason */}
                   {inv.declineReason && (
