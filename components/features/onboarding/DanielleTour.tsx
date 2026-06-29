@@ -23,8 +23,9 @@ interface Step {
   title: string;
   body: string;
   cta: string;
-  placement?: 'center';  // default: fixed bottom-right corner
+  placement?: 'center' | 'top-left';  // default: fixed bottom-right corner
   waitForEvent?: boolean; // hide the Next button — step only advances via a window event
+  hideBack?: boolean;     // hide the Back button (e.g., during practice sub-steps)
 }
 
 interface Spot { x: number; y: number; w: number; h: number }
@@ -82,46 +83,54 @@ const STEPS: Step[] = [
     path: '/tutor/proposals',
     target: '[data-tour="proposals-first-row"]',
     pose: 'point',
-    title: 'Step 1: Click "Review"',
+    title: 'Click "Review"',
     body: "Click the \"Review\" button on Alex Chen's row to open the proposal details.",
     cta: 'Next',
-    waitForEvent: true, // waits for sim:demo-opened
+    waitForEvent: true,
+    hideBack: true,
   },
   {
     key: 'prop-practice-accept-btn',
     target: '[data-tour="accept-schedule-btn"]',
     pose: 'point',
-    title: 'Step 2: Accept & schedule',
+    title: 'Accept & schedule',
     body: "Scroll down and click \"Accept & schedule\" to confirm you want this student.",
     cta: 'Next',
-    waitForEvent: true, // waits for sim:demo-confirm (ConfirmAcceptModal opens)
+    waitForEvent: true,
+    placement: 'top-left',
+    hideBack: true,
   },
   {
     key: 'prop-practice-confirm',
     target: '[data-tour="confirm-accept-btn"]',
     pose: 'point',
-    title: 'Step 3: Confirm',
+    title: 'Confirm',
     body: "Click \"Accept & schedule\" one more time to proceed to the scheduling step.",
     cta: 'Next',
-    waitForEvent: true, // waits for sim:demo-schedule
+    waitForEvent: true,
+    placement: 'top-left',
+    hideBack: true,
   },
   {
     key: 'prop-practice-drag',
     target: '[data-tour="schedule-drag-card"]',
     pose: 'point',
-    title: 'Step 4: Place the session',
-    body: "Drag this card onto one of the highlighted \"Student available\" windows on the calendar, or click a window to place it automatically.",
+    title: 'Place the session',
+    body: "Drag this card onto one of the highlighted \"Student available\" windows on the calendar, or click a window to place it.",
     cta: 'Next',
-    waitForEvent: true, // waits for sim:demo-placed (session placed)
+    waitForEvent: true,
+    hideBack: true,
   },
   {
     key: 'prop-practice-final',
     target: '[data-tour="confirm-schedule-btn"]',
     pose: 'point',
-    title: 'Step 5: Confirm schedule',
-    body: "Click \"Confirm schedule\" to finalize. In a real scenario, the student's family would be notified.",
+    title: 'Confirm schedule',
+    body: "Click \"Confirm schedule\" to finalize.",
     cta: 'Next',
-    waitForEvent: true, // waits for sim:demo-accepted
+    waitForEvent: true,
+    placement: 'top-left',
+    hideBack: true,
   },
   {
     key: 'prop-practice-done',
@@ -349,18 +358,32 @@ export function DanielleTour() {
 
   const current    = STEPS[step]!;
   const isCenter   = current.placement === 'center';
-  const totalSteps = STEPS.length;
+  const isTopLeft  = current.placement === 'top-left';
+
+  // Compute display step number: practice sub-steps all count as one step
+  const isPracticeStep = current.key.startsWith('prop-practice-') && current.key !== 'prop-practice-done';
+  const practiceStartIdx = STEPS.findIndex(s => s.key === 'prop-practice-intro');
+  const displayStep = isPracticeStep || current.key === 'prop-practice-intro'
+    ? practiceStartIdx + 1
+    : step < practiceStartIdx
+      ? step + 1
+      : step + 1 - (STEPS.filter((s, i) => i < step && i > practiceStartIdx && s.key.startsWith('prop-practice-') && s.key !== 'prop-practice-done').length);
+  const displayTotal = STEPS.length - STEPS.filter(s => s.key.startsWith('prop-practice-') && s.key !== 'prop-practice-intro' && s.key !== 'prop-practice-done').length;
 
   // ── Positioning ───────────────────────────────────────────────────────────
   const danielleStyle: React.CSSProperties = isCenter
     ? { position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%) translateY(40px)', zIndex: 1002 }
+    : isTopLeft
+    ? { position: 'fixed', left: 24, top: 24, zIndex: 1002 }
     : { position: 'fixed', right: 24, bottom: 24, zIndex: 1002 };
 
   const bubbleStyle: React.CSSProperties = isCenter
     ? { position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -100%) translateY(-60px)', width: 380, zIndex: 1002 }
+    : isTopLeft
+    ? { position: 'fixed', left: 200, top: 24, width: 360, zIndex: 1002 }
     : { position: 'fixed', right: 200, bottom: 80, width: 360, zIndex: 1002 };
 
-  const tailSide = isCenter ? 'bottom' : 'right';
+  const tailSide: 'bottom' | 'right' | 'none' = isCenter ? 'bottom' : isTopLeft ? 'none' : 'right';
 
   if (!open) {
     return seen ? <DanielleFABButton onOpen={replay} /> : null;
@@ -380,9 +403,9 @@ export function DanielleTour() {
           title={current.title}
           body={current.body}
           tail={tailSide}
-          step={step + 1}
-          total={totalSteps}
-          canBack={step > 0}
+          step={displayStep}
+          total={displayTotal}
+          canBack={step > 0 && !current.hideBack}
           canSkip={seen}
           ctaLabel={current.cta}
           hideCta={!!current.waitForEvent}
