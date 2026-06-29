@@ -47,7 +47,7 @@ const STEPS: Step[] = [
     target: '[data-tour="tutor-calendar-grid"]',
     pose: 'point',
     title: 'Your calendar',
-    body: "This is where you'll see all your tutoring sessions. I've placed some sample sessions so you can see what it looks like once you're up and running. Each teal block is a confirmed session — click any one to see details.",
+    body: "This is where you'll see all your tutoring sessions. I've placed some sample sessions so you can see what it looks like once you're up and running. Each teal block is a confirmed session with a student.",
     cta: 'Next',
   },
   {

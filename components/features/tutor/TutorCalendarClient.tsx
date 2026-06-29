@@ -286,7 +286,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
         </div>
 
         {calView === 'week'
-          ? <TutorWeekView events={displayEvents} proposal={tourActive ? null : (activeProposal?.status === 'pending' ? activeProposal : null)} weekOffset={weekOffset} onOpenSession={setOpenId} />
+          ? <TutorWeekView events={displayEvents} proposal={tourActive ? null : (activeProposal?.status === 'pending' ? activeProposal : null)} weekOffset={weekOffset} onOpenSession={tourActive ? () => {} : setOpenId} />
           : <TutorMonthView events={displayEvents} proposal={tourActive ? null : (activeProposal?.status === 'pending' ? activeProposal : null)} monthOffset={monthOffset} onOpenSession={setOpenId} />
         }
       </main>
