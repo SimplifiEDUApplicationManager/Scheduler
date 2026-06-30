@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
     redirect_uri:  nylasCallbackUri(),
     response_type: 'code',
     access_type:   'offline',
+    scope:         'https://www.googleapis.com/auth/calendar',
     state:         encodeOAuthState(user.id, openHours, cushionMinutes),
   });
 
