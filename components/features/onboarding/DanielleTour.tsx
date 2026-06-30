@@ -217,6 +217,19 @@ export function DanielleTour() {
       return;
     }
 
+    // Check if we're resuming the tour after a calendar OAuth redirect
+    const savedStep = localStorage.getItem('sim_tour_step');
+    if (savedStep) {
+      localStorage.removeItem('sim_tour_step');
+      const idx = parseInt(savedStep, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < STEPS.length) {
+        setStep(idx);
+        setOpen(true);
+        setSeen(true);
+        return;
+      }
+    }
+
     const alreadySeen = localStorage.getItem('sim_intro_seen') === '1';
     setSeen(alreadySeen);
     if (!alreadySeen) {
@@ -246,10 +259,14 @@ export function DanielleTour() {
   // ── Auto-advance calendar step if already connected ─────────────────
   useEffect(() => {
     if (!open || STEPS[step]?.key !== 'set-calendar') return;
+    // Save the finish step index so the tour resumes there after OAuth redirect
+    const finishIdx = STEPS.findIndex(s => s.key === 'finish');
+    if (finishIdx >= 0) localStorage.setItem('sim_tour_step', String(finishIdx));
     // Check if calendar is already connected — look for the "Connected" text
     const check = () => {
       const el = document.querySelector('[data-tour="settings-calendar"]');
       if (el?.textContent?.includes('Connected')) {
+        localStorage.removeItem('sim_tour_step');
         setSpot(null);
         setStep(s => s + 1);
       }
@@ -362,6 +379,7 @@ export function DanielleTour() {
   function close() {
     setOpen(false);
     localStorage.setItem('sim_intro_seen', '1');
+    localStorage.removeItem('sim_tour_step');
     document.cookie = 'sim_tour_done=1;path=/;max-age=31536000;SameSite=Lax';
     document.cookie = 'sim_tour_replay=;path=/;max-age=0;SameSite=Lax';
     setSeen(true);
