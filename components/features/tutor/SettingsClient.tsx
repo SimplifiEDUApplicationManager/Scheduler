@@ -662,7 +662,28 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button style={btn('secondary', 'sm')}>Disconnect</button>
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Disconnect your calendar? Coordinators won\'t see your availability until you reconnect.')) return;
+                      setSettingsBusy('disconnect');
+                      const res = await fetch('/api/tutor/profile', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ disconnectCalendar: true }),
+                      });
+                      if (res.ok) {
+                        showToast('Calendar disconnected');
+                        window.location.reload();
+                      } else {
+                        showToast('Failed to disconnect');
+                      }
+                      setSettingsBusy(null);
+                    }}
+                    disabled={settingsBusy === 'disconnect'}
+                    style={{ ...btn('secondary', 'sm'), opacity: settingsBusy === 'disconnect' ? 0.5 : 1 }}
+                  >
+                    {settingsBusy === 'disconnect' ? 'Disconnecting…' : 'Disconnect'}
+                  </button>
                 </div>
               </div>
             ) : (
