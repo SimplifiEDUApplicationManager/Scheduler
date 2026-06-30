@@ -9,7 +9,8 @@
 
 /** The OAuth redirect URI Nylas will call after the user authorises. */
 export function nylasCallbackUri(): string {
-  return `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://simplifi-scheduler.vercel.app'}/api/nylas/oauth/callback`;
+  const base = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'https://simplifi-scheduler.vercel.app').replace(/\/$/, '');
+  return `${base}/api/nylas/oauth/callback`;
 }
 
 /** The Nylas API base URL (region-specific). */
@@ -89,7 +90,8 @@ export async function exchangeCodeForGrant(code: string): Promise<ExchangeResult
   });
 
   if (!res.ok) {
-    console.error('Nylas token exchange failed:', await res.text());
+    const body = await res.text();
+    console.error('Nylas token exchange failed:', res.status, body, 'redirect_uri:', nylasCallbackUri());
     return { ok: false, error: 'token_exchange_failed' };
   }
 
