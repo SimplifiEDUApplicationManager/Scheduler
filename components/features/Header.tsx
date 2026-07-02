@@ -19,6 +19,7 @@ import { DEV_BYPASS } from '@/lib/env';
 export interface AuthUser {
   name: string;
   email: string;
+  photoUrl?: string | null;
   /** Which nav set to render — determined by the layout, not the DB role. */
   navRole: UserRole;
   /** Raw DB role — used to surface the Admin link for SUPER_ADMIN. */
@@ -130,7 +131,7 @@ export function Header({ authUser }: { authUser?: AuthUser }) {
           <p className="text-xs font-medium text-fg-1 leading-none">{displayEmail}</p>
           <p className="text-xxs text-fg-muted mt-0.5">{ROLE_LABEL[role]}</p>
         </div>
-        <Avatar initials={displayInitials} tone="brand" size="md" />
+        <Avatar initials={displayInitials} src={authUser?.photoUrl ?? undefined} tone="brand" size="md" />
         <LogoutButton />
       </div>
     </header>

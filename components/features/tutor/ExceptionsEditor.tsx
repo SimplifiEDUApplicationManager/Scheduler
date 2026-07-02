@@ -82,7 +82,8 @@ export function ExceptionsEditor({ exceptions, onChange }: Props) {
             onChange([...exceptions, { date: e.target.value, windows: [] }]);
             e.target.value = '';
           }}
-          style={{ height: 34, padding: '0 10px', border: '1px solid #E4E4E7', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', background: '#fff', cursor: 'pointer' }} />
+          style={{ height: 34, padding: '0 10px', border: '1px solid #E4E4E7', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', background: '#fff', cursor: 'pointer', colorScheme: 'light' }}
+          className="[&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:cursor-pointer" />
         <span style={{ fontSize: 12, color: '#A1A1AA' }}>Pick a date to add an exception</span>
       </div>
     </div>

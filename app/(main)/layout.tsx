@@ -19,7 +19,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   const { data: row } = await supabase
     .from('users')
-    .select('name, email, role, status')
+    .select('name, email, role, status, photo_url')
     .eq('id', user.id)
     .single();
 
@@ -29,7 +29,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   return (
     <>
-      <Header authUser={{ name: row.name, email: row.email, navRole: 'coordinator', dbRole: row.role }} />
+      <Header authUser={{ name: row.name, email: row.email, photoUrl: row.photo_url, navRole: 'coordinator', dbRole: row.role }} />
       <main className="flex-1 overflow-hidden flex flex-col min-h-0">{children}</main>
     </>
   );

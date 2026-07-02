@@ -45,19 +45,26 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
   );
 }
 
-const selectStyle: React.CSSProperties = { height: 32, padding: '0 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', background: '#fff' };
+const inputStyle: React.CSSProperties = { height: 32, padding: '0 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', background: '#fff', width: 110 };
 
 function WindowRow({ w, onChange, onRemove }: { w: TimeWindow; onChange: (w: TimeWindow) => void; onRemove: () => void }) {
-  const startMins = timeToMinutes(w.start);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <select value={w.start} onChange={e => onChange({ ...w, start: e.target.value })} style={selectStyle}>
-        {START_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+      <input type="time" value={w.start} onChange={e => onChange({ ...w, start: e.target.value })}
+        style={{ ...inputStyle, colorScheme: 'light' }} />
       <span style={{ fontSize: 12, color: '#A1A1AA' }}>→</span>
-      <select value={w.end} onChange={e => onChange({ ...w, end: e.target.value })} style={selectStyle}>
-        {END_OPTS.filter(o => timeToMinutes(o.value) > startMins).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+      <input type="time" value={w.end.length <= 5 ? w.end : `${String(parseInt(w.end) % 24).padStart(2, '0')}:${w.end.slice(3)}`}
+        onChange={e => {
+          const val = e.target.value;
+          // If end < start, treat as next day (add 24h)
+          if (val && w.start && timeToMinutes(val) <= timeToMinutes(w.start)) {
+            const [h, m] = val.split(':').map(Number);
+            onChange({ ...w, end: `${String(h + 24).padStart(2, '0')}:${String(m).padStart(2, '0')}` });
+          } else {
+            onChange({ ...w, end: val });
+          }
+        }}
+        style={{ ...inputStyle, colorScheme: 'light' }} />
       <button onClick={onRemove} type="button"
         style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid #E4E4E7', background: '#fff', color: '#71717A', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
     </div>
