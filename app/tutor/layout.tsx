@@ -21,7 +21,7 @@ export default async function TutorLayout({ children }: { children: React.ReactN
 
   const { data: row } = await supabase
     .from('users')
-    .select('name, email, role')
+    .select('name, email, role, photo_url')
     .eq('id', user.id)
     .single();
 
@@ -29,7 +29,7 @@ export default async function TutorLayout({ children }: { children: React.ReactN
 
   return (
     <>
-      <Header authUser={{ name: row.name, email: row.email, navRole: 'tutor', dbRole: row.role }} />
+      <Header authUser={{ name: row.name, email: row.email, photoUrl: row.photo_url, navRole: 'tutor', dbRole: row.role }} />
       <main className="flex-1 overflow-hidden flex flex-col min-h-0">{children}</main>
       <DanielleTour />
     </>

@@ -158,7 +158,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
         {/* Profile */}
         <div data-tour="tutor-profile-card" className="px-5 py-4 border-b border-border-default shrink-0">
           <div className="flex items-center gap-3 mb-3">
-            <Avatar initials={me.initials} size="xl" tone="brand" />
+            <Avatar initials={me.initials} src={me.photoUrl ?? undefined} size="xl" tone="brand" />
             <div className="min-w-0">
               <div className="text-[15px] font-bold text-fg-1">{me.name}</div>
               <div className="text-[11px] text-fg-3">{me.email}</div>
