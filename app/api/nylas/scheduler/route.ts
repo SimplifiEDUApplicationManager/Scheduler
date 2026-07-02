@@ -411,7 +411,7 @@ export async function PUT(request: Request) {
         .update({
           total_availability_hours: totalHours,
           availability: availabilityMap as unknown as Json,
-          scheduling_exceptions: exceptions as unknown as Json,
+          scheduling_exceptions: exceptions.filter(e => e.date >= new Date().toISOString().slice(0, 10)) as unknown as Json,
         })
         .eq('id', user.id),
       supabase.from('tutor_availability_activity').insert({
