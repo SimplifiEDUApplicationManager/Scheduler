@@ -110,6 +110,7 @@ export interface Tutor {
   photoUrl?: string;
   isPaused: boolean;
   totalAvailabilityHours: number;
+  schedulingExceptions: { date: string; windows: { start: string; end: string }[] }[];
   /** Active PENDING or most-recent DECLINED availability requests for this tutor. */
   availabilityRequests: TutorAvailabilityRequest[];
 }

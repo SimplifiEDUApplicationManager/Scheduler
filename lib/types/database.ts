@@ -542,6 +542,7 @@ export type Database = {
           photo_url: string | null
           region: string | null
           role: Database["public"]["Enums"]["user_role"]
+          scheduling_exceptions: Json
           skill_api_key: string | null
           status: Database["public"]["Enums"]["user_status"]
           timezone: string | null
@@ -569,6 +570,7 @@ export type Database = {
           photo_url?: string | null
           region?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          scheduling_exceptions?: Json
           skill_api_key?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           timezone?: string | null
@@ -596,6 +598,7 @@ export type Database = {
           photo_url?: string | null
           region?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          scheduling_exceptions?: Json
           skill_api_key?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           timezone?: string | null

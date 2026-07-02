@@ -58,6 +58,7 @@ export default async function TutorCalendarPage() {
     minRate:      row.min_rate ?? 20,
     isPaused:     false,
     totalAvailabilityHours: 0,
+    schedulingExceptions:   [],
     availabilityRequests:   [],
   };
 

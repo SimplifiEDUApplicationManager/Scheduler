@@ -408,7 +408,11 @@ export async function PUT(request: Request) {
     await Promise.all([
       supabase
         .from('users')
-        .update({ total_availability_hours: totalHours, availability: availabilityMap as unknown as Json })
+        .update({
+          total_availability_hours: totalHours,
+          availability: availabilityMap as unknown as Json,
+          scheduling_exceptions: exceptions as unknown as Json,
+        })
         .eq('id', user.id),
       supabase.from('tutor_availability_activity').insert({
         tutor_id:   user.id,

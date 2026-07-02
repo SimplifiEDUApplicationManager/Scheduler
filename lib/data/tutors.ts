@@ -31,6 +31,7 @@ const SELECT_TUTOR = [
   'is_paused',
   'total_availability_hours',
   'availability',
+  'scheduling_exceptions',
   'tutor_subjects!tutor_subjects_tutor_id_fkey(id, subject_id, tutor_confidence, coordinator_confidence, qualification_note)',
 ].join(', ');
 
@@ -58,6 +59,7 @@ type RawTutorRow = {
   is_paused: boolean;
   total_availability_hours: number;
   availability: Record<string, [number, number][]> | null;
+  scheduling_exceptions: { date: string; windows: { start: string; end: string }[] }[] | null;
   tutor_subjects: {
     id: string;
     subject_id: string;
@@ -180,6 +182,7 @@ function rowToTutor(row: RawTutorRow, pendingChanges: RawChangeRow[], availabili
     photoUrl:               row.photo_url ?? undefined,
     isPaused:               row.is_paused ?? false,
     totalAvailabilityHours: Number(row.total_availability_hours ?? 0),
+    schedulingExceptions:   (row.scheduling_exceptions ?? []) as { date: string; windows: { start: string; end: string }[] }[],
     availabilityRequests:   availabilityRequests.map(rowToAvailabilityRequest),
   };
 }

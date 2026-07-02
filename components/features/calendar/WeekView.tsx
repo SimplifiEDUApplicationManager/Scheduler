@@ -24,20 +24,41 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
   const weekDays = getWeekDays(weekOffset);
 
   const perDay = useMemo(() => {
+    // Build a map of date string → exception for each tutor, scoped to the displayed week
+    const weekDateStrings = weekDays.map(d => {
+      const dt = new Date(d.year, d.month, d.date);
+      return dt.toISOString().slice(0, 10);
+    });
+
     return Array.from({ length: 7 }, (_, di) => {
+      const dateStr = weekDateStrings[di];
       const steps: { h: number; free: number[] }[] = [];
       for (let h = START_H; h < END_H; h += 0.5) {
         const free: number[] = [];
         tutors.forEach((t, ti) => {
-          const windows = t.availability[di] ?? [];
-          const inWorkingHours = windows.some(([s, e]) => h >= s && h + 0.5 <= e);
+          // Check if this tutor has a scheduling exception for this date
+          const exception = t.schedulingExceptions?.find(ex => ex.date === dateStr);
+          if (exception) {
+            // All-day block (empty windows) = unavailable
+            if (exception.windows.length === 0) return;
+            // Partial override: use exception windows instead of regular availability
+            const inExceptionWindow = exception.windows.some(w => {
+              const wStart = parseInt(w.start) + parseInt(w.start.split(':')[1] ?? '0') / 60;
+              const wEnd = parseInt(w.end) + parseInt(w.end.split(':')[1] ?? '0') / 60;
+              return h >= wStart && h + 0.5 <= wEnd;
+            });
+            if (!inExceptionWindow) return;
+          } else {
+            const windows = t.availability[di] ?? [];
+            const inWorkingHours = windows.some(([s, e]) => h >= s && h + 0.5 <= e);
 
-          // Also check previous day for cross-midnight spillover
-          const prevDi = (di + 6) % 7;
-          const prevWindows = t.availability[prevDi] ?? [];
-          const inSpillover = prevWindows.some(([s, e]) => e > 24 && h >= 0 && h + 0.5 <= e - 24);
+            // Also check previous day for cross-midnight spillover
+            const prevDi = (di + 6) % 7;
+            const prevWindows = t.availability[prevDi] ?? [];
+            const inSpillover = prevWindows.some(([s, e]) => e > 24 && h >= 0 && h + 0.5 <= e - 24);
 
-          if (!inWorkingHours && !inSpillover) return;
+            if (!inWorkingHours && !inSpillover) return;
+          }
           const tutorBusy = busySlotsPerTutor[t.id] ?? [];
           const isBusy = tutorBusy.some(b => b.day === di && h < b.endH && h + 0.5 > b.startH);
           if (!isBusy) free.push(ti);
@@ -55,7 +76,8 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
       if (cur) merged.push(cur);
       return merged;
     });
-  }, [tutors, busySlotsPerTutor]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutors, busySlotsPerTutor, weekDays]);
 
   const maxOverlap = Math.max(1, ...perDay.flatMap(b => b.map(x => x.free.length)));
   const tint = (n: number) => `rgba(63,156,139,${(0.08 + 0.45 * (n / maxOverlap)).toFixed(2)})`;
