@@ -93,7 +93,7 @@ describe('enableSchedulerSessionAuth', () => {
 
 describe('createSchedulerConfig', () => {
   it('returns configId and bookingUrl pointing to our app domain', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://simplifi-scheduler.vercel.app');
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://simplifischedule.app');
     mockFetch(200, { data: { id: 'new-cfg-id' }, request_id: 'r3' });
     const result = await createSchedulerConfig({
       tutorName: 'Jane Doe',
@@ -103,7 +103,7 @@ describe('createSchedulerConfig', () => {
     });
     expect(result).toEqual({
       configId: 'new-cfg-id',
-      bookingUrl: 'https://simplifi-scheduler.vercel.app/book/jane',
+      bookingUrl: 'https://simplifischedule.app/book/jane',
     });
   });
 

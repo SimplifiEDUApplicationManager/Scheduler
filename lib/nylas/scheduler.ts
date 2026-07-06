@@ -311,7 +311,7 @@ export async function createSchedulerConfig(params: {
   openHours?: Array<{ days: number[]; start: string; end: string }>;
   cushionMinutes?: number;
 }): Promise<{ configId: string; bookingUrl: string } | { configId: null; error: string }> {
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://simplifi-scheduler.vercel.app').replace(/\/$/, '');
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://simplifischedule.app').replace(/\/$/, '');
 
   // Slug: derived from email local-part (unique per tutor), alphanumeric + hyphens only.
   // Used as the path segment in the booking URL: <appUrl>/book/<slug>
