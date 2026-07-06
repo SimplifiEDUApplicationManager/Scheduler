@@ -18,6 +18,7 @@ const thicccboi = localFont({
 export const metadata: Metadata = {
   title: 'Simplifi EDU — Tutor Scheduler',
   description: 'Tutor scheduling platform for Simplifi EDU',
+  verification: { google: '_Rdw3_ImJWF7TBHuJ_YyCRarrkFNZXbB8S9cj_f6gqg' },
 };
 
 export default function RootLayout({
