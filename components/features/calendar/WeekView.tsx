@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import type { Tutor, Tuple } from '@/lib/types/domain';
 import type { BusyBlock } from '@/app/api/nylas/weekly-busy/route';
 import { fmtRange, getWeekDays } from '@/lib/utils/tutors';
+import { convertTupleTimezone } from '@/lib/utils/timezone';
 import { cn } from '@/lib/utils/cn';
 
 interface Block { start: number; end: number; key: string; free: number[] }
@@ -11,6 +12,7 @@ interface WeekViewProps {
   requestTuples: Tuple[];
   weekOffset: number;
   busySlotsPerTutor?: Record<string, BusyBlock[]>;
+  viewerTz?: string;
 }
 
 const ROW_H = 44;
@@ -19,7 +21,7 @@ const END_H = 24;
 const HOURS = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i);
 const PALETTE = ['#3B82F6','#16A34A','#DB2777','#D97706','#6366F1','#0891B2','#EA580C','#7C3AED'];
 
-export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor = {} }: WeekViewProps) {
+export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor = {}, viewerTz }: WeekViewProps) {
   const [hoverSlot, setHoverSlot] = useState<{ day: number; start: number; end: number; free: number[]; pairKey?: string } | null>(null);
   const weekDays = getWeekDays(weekOffset);
 
@@ -28,6 +30,24 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
     const weekDateStrings = weekDays.map(d => {
       const dt = new Date(d.year, d.month, d.date);
       return dt.toISOString().slice(0, 10);
+    });
+
+    // Precompute each tutor's availability converted to the viewer's timezone.
+    // Each tutor stores availability in their own tz — we convert all windows
+    // so the calendar renders in the coordinator's local time.
+    const convertedAvail: Record<number, [number, number][]>[] = tutors.map(t => {
+      if (!viewerTz || t.tz === viewerTz) return t.availability;
+      const result: Record<number, [number, number][]> = {};
+      for (let day = 0; day < 7; day++) {
+        const windows = t.availability[day] ?? [];
+        for (const [s, e] of windows) {
+          const converted = convertTupleTimezone({ day, start: s, end: e }, t.tz, viewerTz);
+          const arr = result[converted.day] ?? [];
+          arr.push([converted.start, converted.end]);
+          result[converted.day] = arr;
+        }
+      }
+      return result;
     });
 
     return Array.from({ length: 7 }, (_, di) => {
@@ -49,12 +69,14 @@ export function WeekView({ tutors, requestTuples, weekOffset, busySlotsPerTutor 
             });
             if (!inExceptionWindow) return;
           } else {
-            const windows = t.availability[di] ?? [];
+            // Use timezone-converted availability
+            const avail = convertedAvail[ti];
+            const windows = avail[di] ?? [];
             const inWorkingHours = windows.some(([s, e]) => h >= s && h + 0.5 <= e);
 
             // Also check previous day for cross-midnight spillover
             const prevDi = (di + 6) % 7;
-            const prevWindows = t.availability[prevDi] ?? [];
+            const prevWindows = avail[prevDi] ?? [];
             const inSpillover = prevWindows.some(([s, e]) => e > 24 && h >= 0 && h + 0.5 <= e - 24);
 
             if (!inWorkingHours && !inSpillover) return;

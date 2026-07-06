@@ -329,6 +329,7 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
           requestTuples={filters.tuples}
           weekOffset={weekOffset}
           busySlotsPerTutor={weeklyBusy}
+          viewerTz={coordinatorTz}
         />
       </main>
 
