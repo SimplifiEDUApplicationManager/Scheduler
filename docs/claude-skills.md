@@ -166,4 +166,4 @@ Get a at-a-glance view of every active tutor's open hours over the next 7 days (
 - **You don't need exact syntax.** Claude understands natural language — just describe what you want.
 - **Skills chain well.** You can `/sync-requests` to pull in new Asana tasks, then immediately `/send-request` to propose one to a tutor, all in the same conversation.
 - **Proposals vs. bookings:** Use `/send-request` to *propose* a student to a tutor (tutor accepts/declines). Use `/book` to *directly* place a session on someone's calendar (no tutor confirmation step).
-- **The app is the source of truth.** Everything the skills do is reflected in the Simplifi web app at simplifi-scheduler.vercel.app.
+- **The app is the source of truth.** Everything the skills do is reflected in the Simplifi web app at simplifischedule.app.

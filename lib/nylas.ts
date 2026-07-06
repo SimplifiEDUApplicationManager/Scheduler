@@ -9,7 +9,7 @@
 
 /** The OAuth redirect URI Nylas will call after the user authorises. */
 export function nylasCallbackUri(): string {
-  const base = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'https://simplifi-scheduler.vercel.app').replace(/\/$/, '');
+  const base = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'https://simplifischedule.app').replace(/\/$/, '');
   return `${base}/api/nylas/oauth/callback`;
 }
 
