@@ -2,9 +2,12 @@
 // All routes that read or mutate proposals go through this module.
 //
 // Valid transitions:
-//   PENDING → ACCEPTED   (tutor accepts)
-//   PENDING → DECLINED   (tutor declines, reason required)
-//   PENDING → EXPIRED    (cron: TTL elapsed, no tutor response)
+//   PENDING → TUTOR_ACCEPTED   (tutor accepts, awaiting client approval)
+//   PENDING → DECLINED         (tutor declines, reason required)
+//   PENDING → EXPIRED          (cron: TTL elapsed, no tutor response)
+//   TUTOR_ACCEPTED → ACCEPTED  (coordinator confirms after client approves)
+//   TUTOR_ACCEPTED → CLIENT_DECLINED (coordinator rejects after client declines)
+//   ACCEPTED → FINISHED        (tutor marks job complete)
 //
 // Design decisions:
 //   - Caller passes the Supabase client (same pattern as lib/data/tutors.ts).
