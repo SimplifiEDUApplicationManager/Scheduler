@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { TuitionRequest, Subject } from '@/lib/types/domain';
+import type { TuitionRequest, Subject, Tuple } from '@/lib/types/domain';
 import { formatTimezoneLabel } from '@/lib/utils/timezone';
+import { TupleRow } from '@/components/features/tutors/TupleRow';
 
 const TIMEZONES = (typeof Intl !== 'undefined' && (Intl as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf)
   ? (Intl as { supportedValuesOf: (k: string) => string[] }).supportedValuesOf('timeZone')
@@ -29,6 +30,8 @@ export function NewRequestModal({ subjects, onClose, onCreate }: Props) {
   const [offeredRate,  setOfferedRate]  = useState(30);
   const [duration,     setDuration]     = useState(60);
   const [frequency,    setFrequency]    = useState(1);
+  const [tuples,       setTuples]       = useState<Tuple[]>([]);
+  const [availText,    setAvailText]    = useState('');
   const [submitting,   setSubmitting]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
 
@@ -52,6 +55,73 @@ export function NewRequestModal({ subjects, onClose, onCreate }: Props) {
     ? TIMEZONES.filter(tz => tz.toLowerCase().includes(tzSearch.toLowerCase()) || formatTimezoneLabel(tz).toLowerCase().includes(tzSearch.toLowerCase()))
     : TIMEZONES;
 
+  function parseAvailText() {
+    if (!availText.trim()) return;
+    const text = availText.toLowerCase();
+    const parsed: Tuple[] = [];
+
+    // Time range extraction: "4-8 PM", "5:00 PM - 11 PM", "after 5 PM"
+    const timeMatch = text.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*[-–to]+\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+    const afterMatch = !timeMatch && text.match(/after\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+
+    let startH = 16, endH = 20; // defaults
+    if (timeMatch) {
+      let s = parseInt(timeMatch[1]);
+      const sPm = timeMatch[3]?.toLowerCase();
+      let e = parseInt(timeMatch[4]);
+      const ePm = timeMatch[6]?.toLowerCase();
+      if (sPm === 'pm' && s < 12) s += 12;
+      if (sPm === 'am' && s === 12) s = 0;
+      if (ePm === 'pm' && e < 12) e += 12;
+      if (ePm === 'am' && e === 12) e = 0;
+      if (!sPm && !ePm && s < e && s < 12 && e <= 12) { /* ambiguous, assume PM */ s += 12; e += 12; }
+      if (!sPm && ePm === 'pm' && s < 12) s += 12; // "4-8 PM" → both PM
+      startH = s;
+      endH = e <= s ? e + 24 : e; // cross-midnight
+    } else if (afterMatch) {
+      let s = parseInt(afterMatch[1]);
+      const pm = afterMatch[3]?.toLowerCase();
+      if (pm === 'pm' && s < 12) s += 12;
+      startH = s;
+      endH = 23;
+    } else {
+      if (/morning/.test(text)) { startH = 8; endH = 12; }
+      else if (/afternoon/.test(text)) { startH = 13; endH = 18; }
+      else if (/evening/.test(text)) { startH = 18; endH = 23; }
+    }
+
+    // Day extraction
+    const dayMap: Record<string, number> = {
+      sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
+      sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
+    };
+    const days: number[] = [];
+
+    if (/weekday|mon\s*[-–]?\s*fri|m\s*[-–]\s*f/.test(text)) {
+      days.push(1, 2, 3, 4, 5);
+    } else if (/weekend/.test(text)) {
+      days.push(0, 6);
+    } else if (/every\s*day|all\s*week|any\s*day/.test(text)) {
+      days.push(0, 1, 2, 3, 4, 5, 6);
+    } else {
+      // Extract specific days
+      for (const [name, idx] of Object.entries(dayMap)) {
+        if (text.includes(name)) {
+          if (!days.includes(idx)) days.push(idx);
+        }
+      }
+    }
+
+    if (days.length === 0) days.push(1, 2, 3, 4, 5); // default to weekdays
+
+    for (const day of days) {
+      parsed.push({ day, start: startH, end: endH });
+    }
+
+    setTuples(prev => [...prev, ...parsed]);
+    setAvailText('');
+  }
+
   const canSubmit = studentName.trim() && subject.trim() && timezone && offeredRate > 0;
 
   async function handleSubmit() {
@@ -74,6 +144,7 @@ export function NewRequestModal({ subjects, onClose, onCreate }: Props) {
           end_date:      endDate || null,
           notes:         notes.trim() || null,
           offered_rate:  offeredRate,
+          requested_schedule: tuples,
           session_duration_minutes: duration,
           sessions_per_week: frequency,
         }),
@@ -88,7 +159,7 @@ export function NewRequestModal({ subjects, onClose, onCreate }: Props) {
         studentEmail: studentEmail.trim(),
         subject:      subject.trim(),
         subjectId:    subjects.find(s => s.name === subject.trim())?.id ?? '',
-        tuples:       [],
+        tuples:       tuples,
         tz:           timezone,
         startDate:    startDate || '—',
         notes:        notes.trim(),
@@ -210,6 +281,39 @@ export function NewRequestModal({ subjects, onClose, onCreate }: Props) {
               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={dateCls + (!endDate ? ' text-fg-muted' : '')} />
             </Field>
           </div>
+
+          {/* Student availability windows */}
+          <Field label="Student availability">
+            <div className="flex gap-2 mb-2">
+              <input
+                value={availText}
+                onChange={e => setAvailText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); parseAvailText(); } }}
+                placeholder='e.g. "weekday evenings" or "Mon/Wed 4-8 PM"'
+                className={inputCls}
+              />
+              <button type="button" onClick={parseAvailText}
+                className="shrink-0 h-9 px-3 rounded-lg border border-border-default bg-surface-1 text-[12px] font-semibold text-fg-2 hover:bg-surface-2 transition-colors">
+                Parse
+              </button>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {tuples.map((t, i) => (
+                <TupleRow key={i} tuple={t}
+                  onChange={updated => setTuples(prev => prev.map((x, j) => j === i ? updated : x))}
+                  onRemove={() => setTuples(prev => prev.filter((_, j) => j !== i))} />
+              ))}
+              {tuples.length < 7 && (
+                <button type="button" onClick={() => setTuples(prev => [...prev, { day: 1, start: 16, end: 20 }])}
+                  className="text-[11px] font-semibold text-brand-primary-ink hover:text-brand-primary-deep transition-colors self-start mt-1">
+                  + Add window
+                </button>
+              )}
+              {tuples.length === 0 && (
+                <p className="text-[11px] text-fg-muted">No windows set. Type availability above or add manually.</p>
+              )}
+            </div>
+          </Field>
 
           {/* Notes (optional) */}
           <Field label="Notes">
