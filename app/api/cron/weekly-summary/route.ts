@@ -120,7 +120,7 @@ export async function GET(req: Request) {
           .from('proposals')
           .select('*', { count: 'exact', head: true })
           .eq('tutor_id', tutor.id)
-          .eq('status', 'ACCEPTED'),
+          .in('status', ['ACCEPTED', 'TUTOR_ACCEPTED']),
         supabase
           .from('proposals')
           .select('*', { count: 'exact', head: true })
