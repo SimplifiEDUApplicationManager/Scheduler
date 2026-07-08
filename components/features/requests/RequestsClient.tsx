@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { TuitionRequest, Invitation, Tutor, Subject } from '@/lib/types/domain';
 import { RequestListItem } from './RequestListItem';
 import { RequestDetail } from './RequestDetail';
-import { ProposeModal } from '@/components/features/tutors/ProposeModal';
 import { NewRequestModal } from './NewRequestModal';
+import { toIsoDate } from '@/lib/utils/dates';
 
 interface Props {
   requests: TuitionRequest[];
@@ -33,6 +33,7 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
     setRequests(initialRequests);
   }, [initialRequests]);
   const [proposeFor, setProposeFor]   = useState<{ tutor: Tutor; request: TuitionRequest } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [toastMsg, setToastMsg]       = useState<string | null>(null);
   const [showNewRequest, setShowNewRequest] = useState(false);
 
@@ -44,9 +45,42 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
     setTimeout(() => setToastMsg(null), 3200);
   }
 
-  function handleProposeSend(tutorName: string) {
-    setProposeFor(null);
-    showToast(`Proposal sent to ${tutorName}`);
+  async function handleConfirmPropose() {
+    if (!proposeFor) return;
+    const { tutor, request: req } = proposeFor;
+    setConfirmBusy(true);
+    try {
+      const res = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tutor_id:           tutor.id,
+          student_name:       req.studentName,
+          student_email:      req.studentEmail,
+          subject:            req.subject,
+          requested_schedule: req.tuples,
+          timezone:           req.tz,
+          start_date:         toIsoDate(req.startDate),
+          notes:              req.notes || null,
+          asana_task_id:      req.asanaTaskId ?? null,
+          offered_rate:       req.offeredRate ?? null,
+          request_id:         req.id,
+          session_duration_minutes: req.sessionDurationMinutes ?? 60,
+          sessions_per_week:        req.sessionsPerWeek ?? 1,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        showToast(`Error: ${body.error ?? 'Failed to send'}`);
+        return;
+      }
+      // Remove the request from the list (it's now 'proposed')
+      setRequests(prev => prev.filter(r => r.id !== req.id));
+      showToast(`Proposal sent to ${tutor.name}`);
+    } finally {
+      setConfirmBusy(false);
+      setProposeFor(null);
+    }
   }
 
   function handleNewRequestCreated(newReq: TuitionRequest) {
@@ -127,15 +161,27 @@ export function RequestsClient({ requests: initialRequests, invitations, tutors,
         )}
       </main>
 
-      {/* ── Propose modal ────────────────────────────────────────────────── */}
+      {/* ── Confirm propose dialog ────────────────────────────────────────── */}
       {proposeFor && (
-        <ProposeModal
-          tutor={proposeFor.tutor}
-          request={proposeFor.request}
-          onClose={() => setProposeFor(null)}
-          onSend={handleProposeSend}
-          asanaTaskId={proposeFor.request.asanaTaskId}
-        />
+        <div onClick={() => setProposeFor(null)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div onClick={e => e.stopPropagation()} className="bg-surface-1 rounded-2xl w-full max-w-[400px] p-6 shadow-[0_16px_48px_rgba(22,32,51,0.20)]">
+            <h2 className="text-base font-semibold text-fg-1 mb-2">Send proposal?</h2>
+            <p className="text-[13px] text-fg-2 mb-4 leading-relaxed">
+              Send <strong>{proposeFor.request.studentName}</strong> · {proposeFor.request.subject} to <strong>{proposeFor.tutor.name}</strong>?
+              {((proposeFor.request.sessionsPerWeek ?? 1) > 1 || (proposeFor.request.sessionDurationMinutes ?? 60) !== 60)
+                ? ` (${proposeFor.request.sessionsPerWeek ?? 1}× ${proposeFor.request.sessionDurationMinutes ?? 60}m/week)`
+                : ''}
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setProposeFor(null)} disabled={confirmBusy}
+                className="h-9 px-4 rounded-lg text-[13px] font-semibold bg-surface-2 text-fg-2 hover:bg-surface-3 transition-colors">Cancel</button>
+              <button onClick={handleConfirmPropose} disabled={confirmBusy}
+                className="h-9 px-4 rounded-lg text-[13px] font-semibold bg-brand-ink text-white hover:bg-neutral-700 transition-colors disabled:opacity-50">
+                {confirmBusy ? 'Sending…' : 'Send proposal'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── New request modal ────────────────────────────────────────────── */}
