@@ -217,6 +217,11 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
                     >
                       {STATUS_LABEL[inv.status]}
                     </span>
+                    {inv.wasEdited && (
+                      <span className="text-[10px] font-bold px-2 py-px rounded-full whitespace-nowrap shrink-0 bg-blue-100 text-blue-700">
+                        Edited
+                      </span>
+                    )}
                   </div>
 
                   {/* Approve/Reject buttons for awaiting client */}
