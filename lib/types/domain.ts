@@ -210,6 +210,7 @@ export interface TutorProposal {
   testDates?: string;
   accommodations?: string;
   scheduleNotes?: string;
+  wasUpdated?: boolean;
 }
 
 // ── Coordinator management ──────────────────────────────────────────────────
