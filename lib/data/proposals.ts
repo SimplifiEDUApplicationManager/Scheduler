@@ -103,6 +103,7 @@ export async function getTutorProposals(
       testDates:        row.test_dates ?? undefined,
       accommodations:   row.accommodations ?? undefined,
       scheduleNotes:    row.schedule_notes ?? undefined,
+      wasUpdated:       row.status === 'PENDING' && row.resolved_at !== null,
     };
   });
 }

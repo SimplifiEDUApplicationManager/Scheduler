@@ -64,6 +64,11 @@ export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReas
               <span style={{ width: 6, height: 6, borderRadius: 999, background: meta.dot, flexShrink: 0 }} />
               {meta.label}
             </span>
+            {p.wasUpdated && displayStatus === 'pending' && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, background: '#DBEAFE', color: '#1E40AF', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', flexShrink: 0 }}>
+                Updated — please re-review
+              </span>
+            )}
             {needsAction && conflicts.length > 0 && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, background: '#FEF2F2', color: '#991B1B', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', flexShrink: 0 }}>
                 ⚠ {conflicts.length} conflict{conflicts.length === 1 ? '' : 's'}

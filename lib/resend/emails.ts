@@ -177,6 +177,31 @@ export async function sendPasswordResetEmail(
   });
 }
 
+// ── Proposal updated email ───────────────────────────────────────────────────
+
+export async function sendProposalUpdatedEmail(
+  recipientEmail: string,
+  recipientName: string,
+  studentName: string,
+  subject: string,
+  appUrl: string,
+): Promise<EmailResult> {
+  const content = `
+<h2 style="font-size:20px;font-weight:800;margin:0 0 16px;letter-spacing:-0.015em">Proposal updated</h2>
+<p style="font-size:14px;color:#52525B;margin:0 0 8px;line-height:1.6">Hi ${recipientName},</p>
+<p style="font-size:14px;color:#52525B;margin:0 0 24px;line-height:1.6">The proposal for <strong>${studentName}</strong> — ${subject} has been updated by your coordinator. Please review the changes and respond within 24 hours.</p>
+<p style="margin:0 0 28px">${ctaButton(`${appUrl}/tutor/proposals`, 'Review updated proposal')}</p>
+<p style="font-size:12px;color:#A1A1AA;margin:0;line-height:1.6">If you don't respond within 24 hours, this proposal will expire automatically.</p>
+`;
+
+  return send({
+    to: recipientEmail,
+    toName: recipientName,
+    subject: `Proposal updated — ${studentName} · ${subject}`,
+    html: brandedHtml(content),
+  });
+}
+
 // ── Proposal notification email ───────────────────────────────────────────────
 
 interface ProposalEmailData {
