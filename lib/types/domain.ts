@@ -149,6 +149,7 @@ export interface Invitation {
   sentBy: string;
   status: InvitationStatus;
   declineReason?: string;
+  wasEdited?: boolean;
 }
 
 // ── At-risk students ────────────────────────────────────────────────────────

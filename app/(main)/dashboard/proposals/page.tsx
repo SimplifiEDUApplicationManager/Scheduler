@@ -40,7 +40,7 @@ export default async function ProposalsPage() {
   const [{ data: rows }, tutors, { data: coordRow }] = await Promise.all([
     supabase
       .from('proposals')
-      .select('id, tutor_id, student_name, subject, status, decline_reason, created_at')
+      .select('id, tutor_id, student_name, subject, status, decline_reason, created_at, resolved_at')
       .eq('coordinator_id', user.id)
       .order('created_at', { ascending: false }),
     fetchAllTutors(supabase),
@@ -58,6 +58,7 @@ export default async function ProposalsPage() {
     sentBy:        coordName,
     status:        STATUS_MAP[row.status] ?? 'pending',
     declineReason: row.decline_reason ?? undefined,
+    wasEdited:     row.status === 'PENDING' && row.resolved_at !== null,
   }));
 
   return (
