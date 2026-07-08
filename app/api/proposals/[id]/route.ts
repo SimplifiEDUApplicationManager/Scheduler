@@ -5,6 +5,29 @@ import { sendProposalUpdatedEmail } from '@/lib/resend/emails';
 import { isValidRate } from '@/lib/utils/rate';
 
 /**
+ * GET /api/proposals/[id]
+ * Fetch a single proposal's full data for editing.
+ */
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireActiveRole(['COORDINATOR', 'SUPER_ADMIN']);
+  if (!auth.ok) return auth.response;
+
+  const { id } = await params;
+  const svc = createServiceClient();
+  const { data, error } = await svc
+    .from('proposals')
+    .select('student_name, student_email, subject, requested_schedule, timezone, start_date, notes, offered_rate, session_duration_minutes, sessions_per_week')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json(data);
+}
+
+/**
  * PATCH /api/proposals/[id]
  * Coordinator edits a PENDING or TUTOR_ACCEPTED proposal.
  * Resets status to PENDING, clears placements, resets expiry timer.

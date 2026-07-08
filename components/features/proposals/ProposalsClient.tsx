@@ -88,8 +88,28 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
   const [editTuples, setEditTuples] = useState<Tuple[]>([]);
   const [editBusy, setEditBusy] = useState(false);
 
-  function openEdit(inv: Invitation) {
+  async function openEdit(inv: Invitation) {
     setEditId(inv.id);
+    // Fetch the full proposal data from Supabase to populate all fields
+    try {
+      const res = await fetch(`/api/proposals/${inv.id}`);
+      if (res.ok) {
+        const data = await res.json() as Record<string, unknown>;
+        setEditFields({
+          student_name: data.student_name ?? inv.studentName,
+          student_email: data.student_email ?? '',
+          subject: data.subject ?? inv.subject,
+          timezone: data.timezone ?? 'America/New_York',
+          notes: data.notes ?? '',
+          offered_rate: data.offered_rate ?? 30,
+          session_duration_minutes: data.session_duration_minutes ?? 60,
+          sessions_per_week: data.sessions_per_week ?? 1,
+        });
+        const schedule = data.requested_schedule as Tuple[] | null;
+        setEditTuples(schedule ?? []);
+        return;
+      }
+    } catch { /* fall through to defaults */ }
     setEditFields({
       student_name: inv.studentName,
       student_email: '',
