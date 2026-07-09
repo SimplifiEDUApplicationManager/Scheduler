@@ -16,7 +16,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json() as Record<string, unknown>;
-  const updates: { name?: string; category?: string } = {};
+  const updates: { name?: string; category?: string; level?: string } = {};
 
   if (body.name !== undefined) {
     if (typeof body.name !== 'string') {
@@ -32,6 +32,17 @@ export async function PATCH(
     updates.category = (body.category as string).trim();
   }
 
+  if (body.level !== undefined) {
+    if (typeof body.level !== 'string') {
+      return NextResponse.json({ error: 'level must be a string', status: 400 }, { status: 400 });
+    }
+    const VALID_LEVELS = ['Middle School', 'High School', 'AP', 'IB', 'College'];
+    if (!VALID_LEVELS.includes(body.level as string)) {
+      return NextResponse.json({ error: `level must be one of: ${VALID_LEVELS.join(', ')}`, status: 400 }, { status: 400 });
+    }
+    updates.level = body.level as string;
+  }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update', status: 400 }, { status: 400 });
   }
@@ -40,7 +51,7 @@ export async function PATCH(
     .from('subjects')
     .update(updates)
     .eq('id', id)
-    .select('id, name, category')
+    .select('id, name, category, level')
     .single();
 
   if (error) {

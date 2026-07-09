@@ -44,7 +44,7 @@ export default async function TutorsPage() {
 
   const [tutors, { data: subjectRows, error: subjectsError }, { data: requestRows }, { data: coordRow }] = await Promise.all([
     fetchAllTutors(supabase),
-    supabase.from('subjects').select('id, name, category').order('name'),
+    supabase.from('subjects').select('id, name, category, level').order('name'),
     supabase.from('requests').select('*').eq('coordinator_id', user.id).eq('status', 'open').order('created_at', { ascending: false }),
     supabase.from('users').select('timezone').eq('id', user.id).single(),
   ]);
@@ -52,13 +52,17 @@ export default async function TutorsPage() {
   if (subjectsError) throw subjectsError;
 
   const subjects: Subject[] = (subjectRows ?? []).map(s => ({
-    id:   s.id,
-    name: s.name,
-    cat:  s.category,
+    id:    s.id,
+    name:  s.name,
+    cat:   s.category,
+    level: (s.level ?? 'High School') as Subject['level'],
   }));
 
   const subjectsByName = new Map(
-    (subjectRows ?? []).map(s => [s.name.toLowerCase(), s.id]),
+    (subjectRows ?? []).map(s => {
+      const displayName = s.level ? `${s.level} ${s.name}` : s.name;
+      return [displayName.toLowerCase(), s.id];
+    }),
   );
 
   const requests = (requestRows ?? []).map(r => rowToRequest(r, subjectsByName));

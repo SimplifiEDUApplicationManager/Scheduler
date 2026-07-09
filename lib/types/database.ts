@@ -241,18 +241,21 @@ export type Database = {
           category: string
           created_at: string
           id: string
+          level: string | null
           name: string
         }
         Insert: {
           category: string
           created_at?: string
           id?: string
+          level?: string | null
           name: string
         }
         Update: {
           category?: string
           created_at?: string
           id?: string
+          level?: string | null
           name?: string
         }
         Relationships: []

@@ -8,7 +8,7 @@
 
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/lib/types/database';
-import type { Tutor, TutorSubject, TutorSubjectChange, TutorAvailabilityRequest, SubjectConf, CoordConf, SubjectChangeType, SubjectChangeStatus, AvailabilityRequestType, AvailabilityRequestStatus } from '@/lib/types/domain';
+import type { Tutor, TutorSubject, TutorSubjectChange, TutorAvailabilityRequest, SubjectConf, CoordConf, SubjectLevel, SubjectChangeType, SubjectChangeStatus, AvailabilityRequestType, AvailabilityRequestStatus } from '@/lib/types/domain';
 import { fetchTutorEventsForCapacity } from '@/lib/nylas/events';
 import { computeWeeklyHours } from '@/lib/utils/capacity';
 
@@ -32,7 +32,7 @@ const SELECT_TUTOR = [
   'total_availability_hours',
   'availability',
   'scheduling_exceptions',
-  'tutor_subjects!tutor_subjects_tutor_id_fkey(id, subject_id, tutor_confidence, coordinator_confidence, qualification_note)',
+  'tutor_subjects!tutor_subjects_tutor_id_fkey(id, subject_id, tutor_confidence, coordinator_confidence, qualification_note, subjects!tutor_subjects_subject_id_fkey(name, level))',
 ].join(', ');
 
 function initials(name: string): string {
@@ -66,6 +66,7 @@ type RawTutorRow = {
     tutor_confidence: string;
     coordinator_confidence: string;
     qualification_note: string | null;
+    subjects: { name: string; level: string | null } | null;
   }[] | null;
 };
 
@@ -143,6 +144,8 @@ function rowToTutor(row: RawTutorRow, pendingChanges: RawChangeRow[], availabili
   const subjects: TutorSubject[] = (row.tutor_subjects ?? []).map(ts => ({
     id:                ts.subject_id,
     rowId:             ts.id,
+    subjectName:       ts.subjects?.name ?? undefined,
+    level:             (ts.subjects?.level as SubjectLevel) ?? undefined,
     conf:              ts.tutor_confidence as SubjectConf,
     coordConf:         ts.coordinator_confidence as CoordConf,
     qualificationNote: ts.qualification_note ?? undefined,

@@ -4,7 +4,7 @@ import { DEV_BYPASS } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { fetchAllTutors } from '@/lib/data/tutors';
 import { RequestsClient } from '@/components/features/requests/RequestsClient';
-import type { TuitionRequest, RequestSource, RequestStatus, Tuple } from '@/lib/types/domain';
+import type { TuitionRequest, RequestSource, RequestStatus, Tuple, Subject } from '@/lib/types/domain';
 import type { Database } from '@/lib/types/database';
 
 type RequestRow = Database['public']['Tables']['requests']['Row'];
@@ -78,12 +78,15 @@ export default async function RequestsPage() {
       .eq('status', 'open')
       .order('created_at', { ascending: false }),
     fetchAllTutors(supabase),
-    supabase.from('subjects').select('id, name'),
+    supabase.from('subjects').select('id, name, level'),
     supabase.from('users').select('timezone').eq('id', user.id).single(),
   ]);
 
   const subjectsByName = new Map(
-    (subjects ?? []).map(s => [s.name.toLowerCase(), s.id]),
+    (subjects ?? []).map(s => {
+      const displayName = s.level ? `${s.level} ${s.name}` : s.name;
+      return [displayName.toLowerCase(), s.id];
+    }),
   );
   const coordinatorTz = coordRow?.timezone ?? 'America/New_York';
   const requests = (rows ?? []).map(r => rowToRequest(r, subjectsByName));
@@ -94,7 +97,7 @@ export default async function RequestsPage() {
         requests={requests}
         invitations={[]}
         tutors={tutors}
-        subjects={(subjects ?? []).map(s => ({ id: s.id, name: s.name, cat: '' }))}
+        subjects={(subjects ?? []).map(s => ({ id: s.id, name: s.level ? `${s.level} ${s.name}` : s.name, cat: '', level: (s.level ?? 'High School') as Subject['level'] }))}
         coordinatorTz={coordinatorTz}
       />
     </Suspense>

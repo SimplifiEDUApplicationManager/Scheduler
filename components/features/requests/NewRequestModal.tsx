@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { TuitionRequest, Subject, Tuple } from '@/lib/types/domain';
+import { subjectDisplayName } from '@/lib/types/domain';
 import { formatTimezoneLabel } from '@/lib/utils/timezone';
 import { TupleRow } from '@/components/features/tutors/TupleRow';
 
@@ -49,7 +50,7 @@ export function NewRequestModal({ subjects, onClose, onCreate }: Props) {
   }, []);
 
   const filteredSubjects = subjectSearch
-    ? subjects.filter(s => s.name.toLowerCase().includes(subjectSearch.toLowerCase()))
+    ? subjects.filter(s => subjectDisplayName(s).toLowerCase().includes(subjectSearch.toLowerCase()))
     : subjects;
   const filteredTz = tzSearch
     ? TIMEZONES.filter(tz => tz.toLowerCase().includes(tzSearch.toLowerCase()) || formatTimezoneLabel(tz).toLowerCase().includes(tzSearch.toLowerCase()))
@@ -158,7 +159,7 @@ export function NewRequestModal({ subjects, onClose, onCreate }: Props) {
         studentName:  studentName.trim(),
         studentEmail: studentEmail.trim(),
         subject:      subject.trim(),
-        subjectId:    subjects.find(s => s.name === subject.trim())?.id ?? '',
+        subjectId:    subjects.find(s => subjectDisplayName(s) === subject.trim())?.id ?? '',
         tuples:       tuples,
         tz:           timezone,
         startDate:    startDate || '—',
@@ -205,8 +206,8 @@ export function NewRequestModal({ subjects, onClose, onCreate }: Props) {
               {subjectOpen && (
                 <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-surface-1 border border-border-default rounded-lg shadow-md max-h-48 overflow-y-auto">
                   {filteredSubjects.map(s => (
-                    <button key={s.id} type="button" onClick={() => { setSubject(s.name); setSubjectOpen(false); setSubjectSearch(''); }}
-                      className="w-full text-left px-3 py-2 text-[13px] hover:bg-surface-2 transition-colors text-fg-1">{s.name}</button>
+                    <button key={s.id} type="button" onClick={() => { setSubject(subjectDisplayName(s)); setSubjectOpen(false); setSubjectSearch(''); }}
+                      className="w-full text-left px-3 py-2 text-[13px] hover:bg-surface-2 transition-colors text-fg-1">{subjectDisplayName(s)}</button>
                   ))}
                   {filteredSubjects.length === 0 && subjectSearch && (
                     <button type="button" onClick={() => { setSubject(subjectSearch); setSubjectOpen(false); setSubjectSearch(''); }}

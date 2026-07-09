@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Subject, SubjectConf, TutorSubject } from '@/lib/types/domain';
+import { subjectDisplayName } from '@/lib/types/domain';
 
 interface Props {
   allSubjects: Subject[];
@@ -16,6 +17,7 @@ const CONF_OPTIONS: { value: SubjectConf; label: string; desc: string }[] = [
   { value: 'LOW',    label: 'Low',    desc: 'Can teach with a lot of preparation' },
 ];
 
+
 export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props) {
   const [query, setQuery]       = useState('');
   const [pickedId, setPickedId] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
 
   const available = allSubjects.filter(s =>
     !existing.includes(s.id) &&
-    (!query || s.name.toLowerCase().includes(query.toLowerCase())),
+    (!query || subjectDisplayName(s).toLowerCase().includes(query.toLowerCase())),
   );
   const picked = allSubjects.find(s => s.id === pickedId);
   const canAdd = !!picked && note.trim().length >= 10 && !!conf;
@@ -88,7 +90,7 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
                     </svg>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#18181B' }}>{s.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#18181B' }}>{subjectDisplayName(s)}</div>
                     <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 1 }}>{s.cat}</div>
                   </div>
                   <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="#A1A1AA" strokeWidth={1.5} strokeLinecap="round" style={{ transform: 'rotate(-90deg)' }} aria-hidden>
@@ -111,10 +113,10 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
               </button>
 
               <div style={{ fontSize: 11, color: '#A1A1AA', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{picked!.cat}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, margin: '2px 0 16px' }}>{picked!.name}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, margin: '2px 0 16px' }}>{subjectDisplayName(picked!)}</div>
 
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#18181B', marginBottom: 6 }}>
-                Describe your experience teaching {picked!.name}
+                Describe your experience teaching {subjectDisplayName(picked!)}
               </label>
               <p style={{ fontSize: 11, color: '#71717A', margin: '0 0 10px', lineHeight: 1.55 }}>
                 Be specific — scores, years of experience, or student outcomes all help.
@@ -167,7 +169,7 @@ export function AddSubjectModal({ allSubjects, existing, onClose, onAdd }: Props
                 disabled={!canAdd}
                 style={{ height: 34, padding: '0 16px', borderRadius: 7, border: 'none', background: canAdd ? '#18181B' : '#E4E4E7', color: canAdd ? '#fff' : '#A1A1AA', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: canAdd ? 'pointer' : 'default' }}
               >
-                Add {picked!.name}
+                Add {subjectDisplayName(picked!)}
               </button>
             </div>
           </>

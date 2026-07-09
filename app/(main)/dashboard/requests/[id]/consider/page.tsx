@@ -57,14 +57,17 @@ export default async function ConsiderRequestPage({ params }: Props) {
   const [{ data: row }, tutors, { data: subjects }, { data: coordRow }] = await Promise.all([
     supabase.from('requests').select('*').eq('id', id).eq('coordinator_id', user.id).single(),
     fetchAllTutors(supabase),
-    supabase.from('subjects').select('id, name'),
+    supabase.from('subjects').select('id, name, level'),
     supabase.from('users').select('timezone').eq('id', user.id).single(),
   ]);
 
   if (!row) notFound();
 
   const subjectsByName = new Map(
-    (subjects ?? []).map(s => [s.name.toLowerCase(), s.id]),
+    (subjects ?? []).map(s => {
+      const displayName = s.level ? `${s.level} ${s.name}` : s.name;
+      return [displayName.toLowerCase(), s.id];
+    }),
   );
   const coordinatorTz = coordRow?.timezone ?? 'America/New_York';
 

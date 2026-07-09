@@ -30,10 +30,18 @@ export type Availability = Record<number, [number, number][]>;
 
 // ── Subjects ────────────────────────────────────────────────────────────────
 
+export type SubjectLevel = 'Middle School' | 'High School' | 'AP' | 'IB' | 'College';
+
 export interface Subject {
   id: string;
   name: string;
   cat: string;
+  level: SubjectLevel;
+}
+
+/** Level-qualified display name, e.g. "AP Biology" or "College Calculus I". */
+export function subjectDisplayName(s: { name: string; level?: SubjectLevel | string | null }): string {
+  return s.level ? `${s.level} ${s.name}` : s.name;
 }
 
 /** A pending or recently-declined change request from a tutor for one of their subjects. */
@@ -53,6 +61,8 @@ export interface TutorSubjectChange {
 export interface TutorSubject {
   id: string;       // subject_id
   rowId?: string;   // tutor_subjects row id — present when fetched from DB
+  subjectName?: string;  // e.g. "Biology"
+  level?: SubjectLevel;  // e.g. "AP"
   conf: SubjectConf;
   coordConf?: CoordConf;
   qualificationNote?: string;

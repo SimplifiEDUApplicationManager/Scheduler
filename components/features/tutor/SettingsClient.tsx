@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } fro
 import { uploadTutorPhoto } from '@/lib/utils/uploadTutorPhoto';
 import { useSearchParams } from 'next/navigation';
 import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
+import { subjectDisplayName } from '@/lib/types/domain';
 import type { SchedulerSummary } from '@/lib/nylas/scheduler';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
@@ -148,7 +149,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   }
 
   async function handleAdd(ts: TutorSubject) {
-    const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
+    const name = (() => { const s = allSubjects.find(x => x.id === ts.id); return s ? subjectDisplayName(s) : 'Subject'; })();
     if (DEV_BYPASS) {
       setSubjects(prev => [...prev, {
         ...ts,
@@ -188,7 +189,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   }
 
   async function handleEdit(ts: TutorSubject, updated: Pick<TutorSubject, 'conf' | 'qualificationNote'>) {
-    const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
+    const name = (() => { const s = allSubjects.find(x => x.id === ts.id); return s ? subjectDisplayName(s) : 'Subject'; })();
     if (DEV_BYPASS) {
       setSubjects(prev => prev.map(x => x.id === ts.id ? {
         ...x,
@@ -555,7 +556,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                       <div style={{ padding: '12px 12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: '#18181B', textDecoration: isRemovePending ? 'line-through' : 'none' }}>{subject.name}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#18181B', textDecoration: isRemovePending ? 'line-through' : 'none' }}>{subjectDisplayName(subject)}</div>
                             <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 1 }}>{subject.cat}</div>
                           </div>
 

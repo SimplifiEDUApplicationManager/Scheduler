@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
+import { subjectDisplayName } from '@/lib/types/domain';
 import type { SubjectRow, TutorClaim, PendingChange } from '@/app/(main)/dashboard/subjects/page';
 
 interface Props {
@@ -70,6 +71,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
   const [showAddForm, setShowAddForm] = useState(false);
   const [addName, setAddName]         = useState('');
   const [addCategory, setAddCategory] = useState('');
+  const [addLevel, setAddLevel]       = useState('High School');
   const [addPending, setAddPending]   = useState(false);
 
   // Grading busy state: rowId → true
@@ -88,7 +90,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
   const filteredSubjects = useMemo(() => {
     return subjects.filter(s => {
       if (categoryFilter !== 'All' && s.category !== categoryFilter) return false;
-      if (search && !s.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search && !subjectDisplayName(s).toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
   }, [subjects, categoryFilter, search]);
@@ -193,13 +195,13 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
 
   async function handleAddSubject(e: React.FormEvent) {
     e.preventDefault();
-    if (!addName.trim() || !addCategory.trim()) return;
+    if (!addName.trim() || !addCategory.trim() || !addLevel) return;
     setAddPending(true);
 
     const res = await fetch('/api/subjects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: addName.trim(), category: addCategory.trim() }),
+      body: JSON.stringify({ name: addName.trim(), category: addCategory.trim(), level: addLevel }),
     });
 
     setAddPending(false);
@@ -209,7 +211,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
       return;
     }
 
-    const subject = await res.json() as { id: string; name: string; category: string };
+    const subject = await res.json() as { id: string; name: string; category: string; level: string };
     const newRow: SubjectRow = { ...subject, tutorCount: 0 };
     setSubjects(prev =>
       [...prev, newRow].sort((a, b) =>
@@ -218,9 +220,10 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
     );
     setAddName('');
     setAddCategory('');
+    setAddLevel('High School');
     setShowAddForm(false);
     setSelectedId(subject.id);
-    showToast(`${subject.name} added`);
+    showToast(`${subject.level} ${subject.name} added`);
   }
 
   // ── Delete subject ────────────────────────────────────────────────────────
@@ -287,6 +290,15 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
                 required
                 className="w-full h-8 px-2.5 text-xs border border-border-default rounded-lg text-fg-1 placeholder:text-fg-muted outline-none focus:border-border-strong bg-surface-1 font-[inherit]"
               />
+              <select
+                value={addLevel}
+                onChange={e => setAddLevel(e.target.value)}
+                className="w-full h-8 px-2.5 text-xs border border-border-default rounded-lg text-fg-1 outline-none focus:border-border-strong bg-surface-1 font-[inherit]"
+              >
+                {['Middle School', 'High School', 'AP', 'IB', 'College'].map(l => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
               <div className="flex gap-1.5">
                 <button
                   type="button"
@@ -356,7 +368,7 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className={['text-[13px] font-semibold leading-snug', isActive ? 'text-fg-on-brand' : 'text-fg-1'].join(' ')}>
-                    {s.name}
+                    {subjectDisplayName(s)}
                   </span>
                 </div>
                 <div className={['text-[11px] mt-0.5', isActive ? 'text-neutral-400' : 'text-fg-3'].join(' ')}>
@@ -460,14 +472,14 @@ export function CoordinatorSubjectsClient({ initialSubjects, claimsBySubject, pe
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-[28px] font-extrabold tracking-[-0.02em] text-fg-1 leading-tight">
-                    {selectedSubject.name}
+                    {subjectDisplayName(selectedSubject)}
                   </h2>
                   <p className="text-sm text-fg-3 mt-1">
                     {selectedSubject.tutorCount} {selectedSubject.tutorCount === 1 ? 'tutor claims' : 'tutors claim'} this subject
                   </p>
                 </div>
                 <button
-                  onClick={() => handleDeleteSubject(selectedSubject.id, selectedSubject.name)}
+                  onClick={() => handleDeleteSubject(selectedSubject.id, subjectDisplayName(selectedSubject))}
                   disabled={deletingSubject}
                   className="h-8 px-3 rounded-lg border border-border-default bg-surface-1 text-xs font-semibold text-fg-3 hover:border-danger hover:text-danger hover:bg-danger-bg transition-colors shrink-0 mt-1"
                   style={{ opacity: deletingSubject ? 0.5 : 1 }}

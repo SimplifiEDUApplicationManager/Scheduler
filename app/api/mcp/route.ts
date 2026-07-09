@@ -283,11 +283,11 @@ After calling this tool, for each task:
       if (!section) return errorContent(`No "New Tutoring Request" section found. Sections: ${sections.map(s => s.name).join(', ')}`);
 
       const tasks = await asanaGet(`/sections/${section.gid}/tasks?opt_fields=gid,name,notes,due_on,permalink_url&completed_since=now`) as { gid: string; name: string; notes: string; due_on: string | null; permalink_url: string }[];
-      const subjects = await appGet('/api/subjects', authKey) as { name: string }[];
+      const subjects = await appGet('/api/subjects', authKey) as { name: string; level: string | null }[];
 
       return textContent(JSON.stringify({
         task_count: tasks.length,
-        subjects: subjects.map(s => s.name),
+        subjects: subjects.map(s => s.level ? `${s.level} ${s.name}` : s.name),
         tasks: tasks.map(t => ({ gid: t.gid, name: t.name, notes: t.notes, due_on: t.due_on, permalink_url: t.permalink_url })),
       }, null, 2));
     }),
@@ -447,10 +447,10 @@ After calling this tool, for each task:
       const [changes, tutors, subjects] = await Promise.all([
         sbGet('tutor_subject_changes', 'status=eq.PENDING&select=id,tutor_id,subject_id,change_type,requested_confidence,requested_note&order=created_at'),
         sbGet('users', 'role=eq.TUTOR&select=id,name'),
-        sbGet('subjects', 'select=id,name'),
-      ]) as [Record<string, unknown>[], { id: string; name: string }[], { id: string; name: string }[]];
+        sbGet('subjects', 'select=id,name,level'),
+      ]) as [Record<string, unknown>[], { id: string; name: string }[], { id: string; name: string; level: string | null }[]];
       const tutorMap = new Map(tutors.map(t => [t.id, t.name]));
-      const subjectMap = new Map(subjects.map(s => [s.id, s.name]));
+      const subjectMap = new Map(subjects.map(s => [s.id, s.level ? `${s.level} ${s.name}` : s.name]));
       const result = changes.map(c => ({
         tutor: tutorMap.get(c.tutor_id as string) ?? c.tutor_id,
         subject: subjectMap.get(c.subject_id as string) ?? c.subject_id,
