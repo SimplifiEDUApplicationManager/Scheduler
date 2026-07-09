@@ -5,6 +5,14 @@ import type { Invitation, InvitationStatus, Tutor, TuitionRequest, Tuple } from 
 import { Avatar } from '@/components/ui/Avatar';
 import { TupleRow } from '@/components/features/tutors/TupleRow';
 
+const DAY_LABEL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function fmtHour(h: number): string {
+  const hr = h % 12 || 12;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  return `${hr}${ampm}`;
+}
+
 const STATUS_COLOR: Record<InvitationStatus, string> = {
   pending:         '#F59E0B',
   tutor_accepted:  '#8B5CF6',
@@ -223,6 +231,30 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
                       </span>
                     )}
                   </div>
+
+                  {/* Tutor's chosen schedule for awaiting-client proposals */}
+                  {inv.status === 'tutor_accepted' && inv.placements && inv.placements.length > 0 && (
+                    <div className="mt-2.5 px-3 py-2.5 bg-violet-50 border border-violet-200 rounded-lg">
+                      <div className="text-[10px] font-bold text-violet-600 uppercase tracking-wide mb-1.5">
+                        Tutor&apos;s chosen schedule
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {inv.placements.map((p, i) => {
+                          const endHour = p.start + ((inv.sessionDurationMinutes ?? 60) / 60);
+                          return (
+                            <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-violet-200 text-[11px] font-semibold text-fg-1">
+                              <span className="text-violet-600">{DAY_LABEL[p.day]}</span>
+                              {fmtHour(p.start)}–{fmtHour(endHour)}
+                              {inv.tz && <span className="text-fg-muted font-normal ml-0.5">({inv.tz.split('/').pop()?.replace('_', ' ')})</span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                      {inv.sessionsPerWeek && inv.sessionsPerWeek > 1 && (
+                        <div className="text-[10px] text-violet-600 mt-1">{inv.sessionsPerWeek}x/week · {inv.sessionDurationMinutes ?? 60}min sessions</div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Approve/Reject buttons for awaiting client */}
                   {inv.status === 'tutor_accepted' && (
