@@ -75,7 +75,8 @@ export default async function SubjectsPage() {
     supabase
       .from('tutor_subjects')
       .select('id, tutor_confidence, coordinator_confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio, photo_url)')
-      .order('created_at'),
+      .order('created_at')
+      .limit(5000),
     supabase
       .from('tutor_subject_changes')
       .select('id, tutor_id, subject_id, tutor_subject_id, change_type, requested_confidence, requested_note, status, created_at, users!tutor_subject_changes_tutor_id_fkey(name)')
