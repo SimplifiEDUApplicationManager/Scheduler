@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import { acceptProposal, transitionHttpStatus } from '@/lib/data/proposals';
 import { createServiceClient } from '@/lib/supabase/server';
+import { convertTupleTimezone } from '@/lib/utils/timezone';
 import type { Json } from '@/lib/types/database';
 
 /**
@@ -56,9 +57,37 @@ export async function POST(
   }
 
   // Save placements for later (coordinator approval creates the calendar events).
+  // Placements arrive in the tutor's timezone (they picked slots on their local calendar).
+  // Convert back to the student/proposal timezone so placements + proposal.timezone are consistent.
   if (placements && placements.length > 0) {
     const svc = createServiceClient();
-    await svc.from('proposals').update({ placements: placements as unknown as Json }).eq('id', id);
+    const { data: proposalRow } = await svc
+      .from('proposals')
+      .select('timezone, session_duration_minutes')
+      .eq('id', id)
+      .single();
+    const { data: tutorRow } = await svc
+      .from('users')
+      .select('timezone')
+      .eq('id', tutorId)
+      .single();
+    const proposalTz = proposalRow?.timezone;
+    const tutorTz = tutorRow?.timezone;
+    const durationHrs = (proposalRow?.session_duration_minutes ?? 60) / 60;
+
+    let normalised = placements;
+    if (tutorTz && proposalTz && tutorTz !== proposalTz) {
+      normalised = placements.map(pl => {
+        if (!pl) return pl;
+        const converted = convertTupleTimezone(
+          { day: pl.day, start: pl.start, end: pl.start + durationHrs },
+          tutorTz,
+          proposalTz,
+        );
+        return { day: converted.day, start: converted.start };
+      });
+    }
+    await svc.from('proposals').update({ placements: normalised as unknown as Json }).eq('id', id);
   }
 
   return NextResponse.json({ id });

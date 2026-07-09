@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { fetchAllTutors } from '@/lib/data/tutors';
 import { ProposalsClient } from '@/components/features/proposals/ProposalsClient';
 import type { Invitation, InvitationStatus } from '@/lib/types/domain';
+import { convertTupleTimezone } from '@/lib/utils/timezone';
 
 function fmtRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -44,26 +45,45 @@ export default async function ProposalsPage() {
       .eq('coordinator_id', user.id)
       .order('created_at', { ascending: false }),
     fetchAllTutors(supabase),
-    supabase.from('users').select('name').eq('id', user.id).single(),
+    supabase.from('users').select('name, timezone').eq('id', user.id).single(),
   ]);
 
   const coordName = coordRow?.name ?? 'Coordinator';
+  const coordTz = coordRow?.timezone ?? 'America/New_York';
 
-  const invitations: Invitation[] = (rows ?? []).map(row => ({
-    id:            row.id,
-    tutorId:       row.tutor_id ?? '',
-    studentName:   row.student_name,
-    subject:       row.subject,
-    sentAt:        fmtRelative(row.created_at),
-    sentBy:        coordName,
-    status:        STATUS_MAP[row.status] ?? 'pending',
-    declineReason: row.decline_reason ?? undefined,
-    wasEdited:     row.status === 'PENDING' && row.resolved_at !== null,
-    placements:    row.placements as Invitation['placements'] ?? undefined,
-    sessionDurationMinutes: row.session_duration_minutes ?? undefined,
-    sessionsPerWeek: row.sessions_per_week ?? undefined,
-    tz:            row.timezone ?? undefined,
-  }));
+  const invitations: Invitation[] = (rows ?? []).map(row => {
+    const rawPlacements = row.placements as { day: number; start: number }[] | null;
+    const proposalTz = row.timezone ?? 'America/New_York';
+    const durationHrs = (row.session_duration_minutes ?? 60) / 60;
+
+    // Convert placements from the student/proposal timezone to the coordinator's timezone
+    const placements = rawPlacements && coordTz !== proposalTz
+      ? rawPlacements.map(pl => {
+          const converted = convertTupleTimezone(
+            { day: pl.day, start: pl.start, end: pl.start + durationHrs },
+            proposalTz,
+            coordTz,
+          );
+          return { day: converted.day, start: converted.start };
+        })
+      : rawPlacements ?? undefined;
+
+    return {
+      id:            row.id,
+      tutorId:       row.tutor_id ?? '',
+      studentName:   row.student_name,
+      subject:       row.subject,
+      sentAt:        fmtRelative(row.created_at),
+      sentBy:        coordName,
+      status:        STATUS_MAP[row.status] ?? 'pending',
+      declineReason: row.decline_reason ?? undefined,
+      wasEdited:     row.status === 'PENDING' && row.resolved_at !== null,
+      placements,
+      sessionDurationMinutes: row.session_duration_minutes ?? undefined,
+      sessionsPerWeek: row.sessions_per_week ?? undefined,
+      tz:            coordTz,
+    };
+  });
 
   return (
     <ProposalsClient
