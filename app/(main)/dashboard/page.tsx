@@ -49,7 +49,7 @@ export default async function DashboardPage() {
   const [{ data: reviewRows }, { data: availRows }, { data: resolvedProposals }, { data: openRequestRows }, { count: onboardingCount }, realTutors, { count: createdToday }, { count: matchedToday }, { count: pendingProposalCount }, { count: activeJobCount }, { count: acceptedToday }, { count: finishedToday }, { count: awaitingClientCount }] = await Promise.all([
     supabase
       .from('tutor_subject_changes')
-      .select('id, subjects!tutor_subject_changes_subject_id_fkey(name), users!tutor_subject_changes_tutor_id_fkey(name)')
+      .select('id, subjects!tutor_subject_changes_subject_id_fkey(name, level), users!tutor_subject_changes_tutor_id_fkey(name)')
       .eq('status', 'PENDING')
       .order('created_at'),
     supabase
@@ -167,7 +167,8 @@ export default async function DashboardPage() {
 
   const pendingReviewItems: PendingReviewItem[] = (reviewRows ?? []).map(r => {
     const tutorName  = (r.users as { name: string } | null)?.name ?? 'Unknown';
-    const subjectName = (r.subjects as { name: string } | null)?.name ?? '';
+    const subjectData = r.subjects as { name: string; level: string | null } | null;
+    const subjectName = subjectData ? (subjectData.level ? `${subjectData.level} ${subjectData.name}` : subjectData.name) : '';
     return { tutorName, tutorInitials: initials(tutorName), subjectName };
   });
   const openRequests = openRequestRows ?? [];

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Subject, Tuple } from '@/lib/types/domain';
+import { subjectDisplayName } from '@/lib/types/domain';
 import { DEFAULT_CONF, type FilterState } from '@/lib/utils/tutors';
 import { TupleRow } from './TupleRow';
 
@@ -111,10 +112,10 @@ export function FilterPanel({ filters, subjects, onChange }: FilterPanelProps) {
                 key={id}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-ink text-fg-on-brand text-[10px] font-semibold"
               >
-                {s?.name ?? id}
+                {s ? subjectDisplayName(s) : id}
                 <button
                   onClick={() => set('subjects', filters.subjects.filter(x => x !== id))}
-                  aria-label={`Remove ${s?.name}`}
+                  aria-label={`Remove ${s ? subjectDisplayName(s) : ''}`}
                   className="flex items-center opacity-70 hover:opacity-100 transition-opacity"
                 >
                   <svg width={10} height={10} viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
@@ -137,7 +138,7 @@ export function FilterPanel({ filters, subjects, onChange }: FilterPanelProps) {
                 />
               </div>
               {unselectedSubjects
-                .filter(s => !subjectSearch || s.name.toLowerCase().includes(subjectSearch.toLowerCase()))
+                .filter(s => !subjectSearch || subjectDisplayName(s).toLowerCase().includes(subjectSearch.toLowerCase()))
                 .slice(0, 12)
                 .map(s => (
                 <button
@@ -145,7 +146,7 @@ export function FilterPanel({ filters, subjects, onChange }: FilterPanelProps) {
                   onClick={() => { set('subjects', [...filters.subjects, s.id]); setSubjectSearch(''); }}
                   className="px-2 py-0.5 rounded-full bg-surface-3 text-fg-2 text-[10px] font-medium hover:bg-neutral-200 transition-colors"
                 >
-                  + {s.name}
+                  + {subjectDisplayName(s)}
                 </button>
               ))}
             </>

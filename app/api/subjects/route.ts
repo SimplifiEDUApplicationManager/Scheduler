@@ -13,7 +13,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('subjects')
-    .select('id, name, category')
+    .select('id, name, category, level')
     .order('category')
     .order('name');
 
@@ -35,25 +35,30 @@ export async function POST(req: NextRequest) {
   const { supabase } = auth;
 
   const body = await req.json() as Record<string, unknown>;
-  const { name, category } = body;
+  const { name, category, level } = body;
 
-  if (!name || !category) {
-    return NextResponse.json({ error: 'Missing required fields: name, category', status: 400 }, { status: 400 });
+  if (!name || !category || !level) {
+    return NextResponse.json({ error: 'Missing required fields: name, category, level', status: 400 }, { status: 400 });
   }
 
-  if (typeof name !== 'string' || typeof category !== 'string') {
-    return NextResponse.json({ error: 'name and category must be strings', status: 400 }, { status: 400 });
+  if (typeof name !== 'string' || typeof category !== 'string' || typeof level !== 'string') {
+    return NextResponse.json({ error: 'name, category, and level must be strings', status: 400 }, { status: 400 });
+  }
+
+  const VALID_LEVELS = ['Middle School', 'High School', 'AP', 'IB', 'College'];
+  if (!VALID_LEVELS.includes(level)) {
+    return NextResponse.json({ error: `level must be one of: ${VALID_LEVELS.join(', ')}`, status: 400 }, { status: 400 });
   }
 
   const { data, error } = await supabase
     .from('subjects')
-    .insert({ name: name.trim(), category: category.trim() })
-    .select('id, name, category')
+    .insert({ name: name.trim(), category: category.trim(), level })
+    .select('id, name, category, level')
     .single();
 
   if (error) {
     if (error.code === '23505') {
-      return NextResponse.json({ error: 'A subject with that name already exists', status: 409 }, { status: 409 });
+      return NextResponse.json({ error: 'A subject with that name and level already exists', status: 409 }, { status: 409 });
     }
     return NextResponse.json({ error: error.message, status: 500 }, { status: 500 });
   }

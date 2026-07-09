@@ -14,6 +14,7 @@ export interface SubjectRow {
   id: string;
   name: string;
   category: string;
+  level: string;
   tutorCount: number;
 }
 
@@ -68,7 +69,7 @@ export default async function SubjectsPage() {
   ] = await Promise.all([
     supabase
       .from('subjects')
-      .select('id, name, category')
+      .select('id, name, category, level')
       .order('category')
       .order('name'),
     supabase
@@ -86,10 +87,10 @@ export default async function SubjectsPage() {
   if (claimsError)   throw claimsError;
   if (changesError)  throw changesError;
 
-  // Build a map of subject id → subject name for enriching change rows
+  // Build a map of subject id → display name for enriching change rows
   const subjectNameById: Record<string, string> = {};
   for (const s of subjectRows ?? []) {
-    subjectNameById[s.id] = s.name;
+    subjectNameById[s.id] = s.level ? `${s.level} ${s.name}` : s.name;
   }
 
   // Build a map of tutor_subject id → current tutor_confidence for enriching EDIT changes
@@ -141,6 +142,7 @@ export default async function SubjectsPage() {
     id:         s.id,
     name:       s.name,
     category:   s.category,
+    level:      s.level ?? '',
     tutorCount: claimsBySubject[s.id]?.length ?? 0,
   }));
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Tutor, Subject, TutorSubject, SubjectConf } from '@/lib/types/domain';
+import { subjectDisplayName } from '@/lib/types/domain';
 import { DEV_BYPASS } from '@/lib/env';
 import { AddSubjectModal } from './AddSubjectModal';
 import { EditSubjectModal } from './EditSubjectModal';
@@ -33,7 +34,7 @@ function SubjectCard({ ts, subject, onEdit, onRemove }: {
         {/* Header row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', color: '#18181B' }}>{subject.name}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', color: '#18181B' }}>{subjectDisplayName(subject)}</div>
             <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 2 }}>{subject.cat}</div>
           </div>
           {/* Confidence badge */}
@@ -66,7 +67,7 @@ export function SubjectsClient({ me, allSubjects }: Props) {
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2400); }
 
   async function handleAdd(ts: TutorSubject) {
-    const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
+    const name = (() => { const s = allSubjects.find(x => x.id === ts.id); return s ? subjectDisplayName(s) : 'Subject'; })();
     if (DEV_BYPASS) {
       setMySubjects(prev => [...prev, { ...ts, rowId: `dev-${ts.id}`, coordConf: 'UNPROVEN' }]);
       setAddOpen(false);
@@ -116,7 +117,7 @@ export function SubjectsClient({ me, allSubjects }: Props) {
 
 
   async function handleEdit(ts: TutorSubject, updated: Pick<TutorSubject, 'conf' | 'qualificationNote'>) {
-    const name = allSubjects.find(s => s.id === ts.id)?.name ?? 'Subject';
+    const name = (() => { const s = allSubjects.find(x => x.id === ts.id); return s ? subjectDisplayName(s) : 'Subject'; })();
     if (DEV_BYPASS) {
       setMySubjects(prev => prev.map(x => x.id === ts.id ? { ...x, conf: updated.conf, qualificationNote: updated.qualificationNote } : x));
       setEditingTs(null);

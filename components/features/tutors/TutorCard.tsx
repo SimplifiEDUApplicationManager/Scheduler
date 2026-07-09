@@ -1,4 +1,5 @@
 import type { Tutor, Subject, Tuple } from '@/lib/types/domain';
+import { subjectDisplayName } from '@/lib/types/domain';
 import type { CalendarStatus } from '@/app/api/nylas/free-busy/route';
 import { overlapHours } from '@/lib/utils/tutors';
 import { Avatar } from '@/components/ui/Avatar';
@@ -124,7 +125,7 @@ export function TutorCard({
                   'text-[10px] px-1.5 py-px rounded font-medium',
                   selected ? 'bg-neutral-700 text-neutral-300' : 'bg-surface-3 text-fg-2',
                 )}>
-                  {subjects.find(s => s.id === subjectMatch.id)?.name}
+                  {(() => { const s = subjects.find(x => x.id === subjectMatch.id); return s ? subjectDisplayName(s) : ''; })()}
                 </span>
                 <Badge variant={subjectMatch.conf} size="xs">{subjectMatch.conf}</Badge>
               </>
@@ -138,7 +139,7 @@ export function TutorCard({
                       selected ? 'bg-neutral-700 text-neutral-300' : 'bg-surface-3 text-fg-2',
                     )}
                   >
-                    {subjects.find(s => s.id === ts.id)?.name}
+                    {(() => { const s = subjects.find(x => x.id === ts.id); return s ? subjectDisplayName(s) : ''; })()}
                   </span>
                 ))}
                 {tutor.subjects.length > 3 && (

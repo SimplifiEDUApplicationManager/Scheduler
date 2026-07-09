@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Tutor, Subject } from '@/lib/types/domain';
+import { subjectDisplayName } from '@/lib/types/domain';
 import { Badge } from '@/components/ui/Badge';
 import { DrawerCard } from './DrawerCard';
 
@@ -95,7 +96,7 @@ export function TutorProfileOverview({ tutor, subjects, contextPersonality, onSa
                 key={s.id}
                 className="flex items-center justify-between px-3 py-2 bg-neutral-50 rounded-lg"
               >
-                <span className="text-[12px] font-semibold text-fg-1">{subj?.name ?? s.id}</span>
+                <span className="text-[12px] font-semibold text-fg-1">{subj ? subjectDisplayName(subj) : s.id}</span>
                 <Badge variant={s.conf} size="xs">{s.conf}</Badge>
               </div>
             );
