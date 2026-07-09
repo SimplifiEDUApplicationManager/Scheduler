@@ -160,6 +160,11 @@ export interface Invitation {
   status: InvitationStatus;
   declineReason?: string;
   wasEdited?: boolean;
+  /** Tutor's chosen session placements (set when tutor accepts). */
+  placements?: { day: number; start: number }[];
+  sessionDurationMinutes?: number;
+  sessionsPerWeek?: number;
+  tz?: string;
 }
 
 // ── At-risk students ────────────────────────────────────────────────────────
