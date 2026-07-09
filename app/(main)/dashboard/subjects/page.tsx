@@ -62,6 +62,28 @@ export default async function SubjectsPage() {
 
   const supabase = await createClient();
 
+  // Supabase caps queries at 1000 rows. Paginate tutor_subjects to get all rows.
+  async function fetchAllClaims() {
+    const PAGE = 1000;
+    const all: typeof firstPage = [];
+    const { data: firstPage, error } = await supabase
+      .from('tutor_subjects')
+      .select('id, tutor_confidence, coordinator_confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio, photo_url)')
+      .order('created_at')
+      .range(0, PAGE - 1);
+    if (error) return { data: null, error };
+    all.push(...(firstPage ?? []));
+    if ((firstPage ?? []).length === PAGE) {
+      const { data: secondPage } = await supabase
+        .from('tutor_subjects')
+        .select('id, tutor_confidence, coordinator_confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio, photo_url)')
+        .order('created_at')
+        .range(PAGE, PAGE * 2 - 1);
+      all.push(...(secondPage ?? []));
+    }
+    return { data: all, error: null };
+  }
+
   const [
     { data: subjectRows,   error: subjectsError  },
     { data: claimRows,     error: claimsError    },
@@ -72,11 +94,7 @@ export default async function SubjectsPage() {
       .select('id, name, category, level')
       .order('category')
       .order('name'),
-    supabase
-      .from('tutor_subjects')
-      .select('id, tutor_confidence, coordinator_confidence, qualification_note, graded_by, subject_id, tutor_id, users!tutor_subjects_tutor_id_fkey(name, bio, photo_url)')
-      .order('created_at')
-      .limit(5000),
+    fetchAllClaims(),
     supabase
       .from('tutor_subject_changes')
       .select('id, tutor_id, subject_id, tutor_subject_id, change_type, requested_confidence, requested_note, status, created_at, users!tutor_subject_changes_tutor_id_fkey(name)')
