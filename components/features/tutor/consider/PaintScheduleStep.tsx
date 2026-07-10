@@ -186,6 +186,7 @@ export function PaintScheduleStep({ p, events, onBack, onConfirm, onDecline }: P
         <button onClick={onDecline} style={{ height: 40, padding: '0 18px', borderRadius: 10, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Decline</button>
         <button onClick={onBack} style={{ height: 40, padding: '0 16px', borderRadius: 10, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Back</button>
         <button
+          data-tour="confirm-schedule-btn"
           disabled={!validation.valid}
           onClick={() => onConfirm(painted)}
           style={{ height: 40, padding: '0 22px', borderRadius: 10, border: 'none', background: validation.valid ? '#18181B' : '#E4E4E7', color: validation.valid ? '#fff' : '#A1A1AA', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: validation.valid ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: 8 }}
