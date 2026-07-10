@@ -158,6 +158,9 @@ export function PaintWeek({ proposal, events, tuples, painted, onPaintChange, st
     next.sort((a, b) => a.day - b.day || a.start - b.start);
 
     onPaintChange(next);
+    if (paintMode === 'add' && next.length > 0) {
+      window.dispatchEvent(new CustomEvent('sim:demo-placed'));
+    }
     setPainting(false);
     setPaintPreview(null);
     paintDay.current = null;
