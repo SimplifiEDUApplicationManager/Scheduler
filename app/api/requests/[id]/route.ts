@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
+import { createServiceClient } from '@/lib/supabase/server';
 import type { Json, Database } from '@/lib/types/database';
 
 /**
@@ -16,7 +17,11 @@ export async function DELETE(
 
   const { id } = await params;
 
-  let query = supabase.from('requests').delete().eq('id', id);
+  // Use service client to unlink proposals before deleting (avoids FK constraint)
+  const svc = createServiceClient();
+  await svc.from('proposals').update({ request_id: null }).eq('request_id', id);
+
+  let query = svc.from('requests').delete().eq('id', id);
   // Coordinators can only delete their own; super admins can delete any
   if (auth.role !== 'SUPER_ADMIN') {
     query = query.eq('coordinator_id', user.id);
