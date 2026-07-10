@@ -16,12 +16,12 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const { data, error } = await supabase
-    .from('requests')
-    .delete()
-    .eq('id', id)
-    .eq('coordinator_id', user.id)
-    .select('id');
+  let query = supabase.from('requests').delete().eq('id', id);
+  // Coordinators can only delete their own; super admins can delete any
+  if (auth.role !== 'SUPER_ADMIN') {
+    query = query.eq('coordinator_id', user.id);
+  }
+  const { data, error } = await query.select('id');
 
   if (error) {
     return NextResponse.json({ error: error.message, status: 500 }, { status: 500 });
@@ -66,11 +66,11 @@ export async function PATCH(
     return NextResponse.json({ error: 'No valid fields to update', status: 400 }, { status: 400 });
   }
 
-  const { error } = await supabase
-    .from('requests')
-    .update(patch)
-    .eq('id', id)
-    .eq('coordinator_id', user.id);
+  let updateQuery = supabase.from('requests').update(patch).eq('id', id);
+  if (auth.role !== 'SUPER_ADMIN') {
+    updateQuery = updateQuery.eq('coordinator_id', user.id);
+  }
+  const { error } = await updateQuery;
 
   if (error) {
     return NextResponse.json({ error: error.message, status: 500 }, { status: 500 });
