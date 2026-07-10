@@ -2,15 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { createTutoringEvent, tupleToUnix } from '@/lib/nylas/events';
+import { convertTupleTimezone } from '@/lib/utils/timezone';
 import { listAsanaSections, moveTaskToSection } from '@/lib/asana/client';
+import type { Json } from '@/lib/types/database';
 
 /**
  * POST /api/proposals/[id]/coordinator-approve
- * Coordinator approves after client confirms the tutor.
- * Creates calendar events and matches the request.
+ * Coordinator schedules sessions and approves the proposal.
+ *
+ * Body: { placements: { day: number; start: number }[] }
+ * Placements arrive in the coordinator's timezone and are converted to
+ * the proposal timezone before saving + creating calendar events.
  */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireActiveRole(['COORDINATOR', 'SUPER_ADMIN']);
@@ -21,7 +26,7 @@ export async function POST(
 
   const { data: proposal } = await svc
     .from('proposals')
-    .select('status, tutor_id, student_name, student_email, subject, requested_schedule, timezone, start_date, session_duration_minutes, placements, request_id, asana_task_id, coordinator_id')
+    .select('status, tutor_id, student_name, student_email, subject, timezone, start_date, session_duration_minutes, request_id, asana_task_id, coordinator_id')
     .eq('id', id)
     .single();
 
@@ -30,11 +35,44 @@ export async function POST(
     return NextResponse.json({ error: 'Proposal is not awaiting client approval' }, { status: 422 });
   }
 
-  // Move to ACCEPTED
-  const { error } = await svc.from('proposals').update({ status: 'ACCEPTED' }).eq('id', id);
+  // Parse placements from request body
+  let bodyPlacements: { day: number; start: number }[] = [];
+  try {
+    const body = await req.json() as { placements?: { day: number; start: number }[] };
+    bodyPlacements = body.placements ?? [];
+  } catch {
+    // No body — no placements
+  }
+
+  if (bodyPlacements.length === 0) {
+    return NextResponse.json({ error: 'No session placements provided' }, { status: 422 });
+  }
+
+  // Convert placements from coordinator's TZ to proposal TZ
+  const { data: coordRow } = await svc.from('users').select('timezone').eq('id', auth.user.id).single();
+  const coordTz = coordRow?.timezone ?? 'America/New_York';
+  const proposalTz = proposal.timezone;
+  const durationHrs = (proposal.session_duration_minutes ?? 60) / 60;
+
+  const normalisedPlacements = coordTz !== proposalTz
+    ? bodyPlacements.map(pl => {
+        const converted = convertTupleTimezone(
+          { day: pl.day, start: pl.start, end: pl.start + durationHrs },
+          coordTz,
+          proposalTz,
+        );
+        return { day: converted.day, start: converted.start };
+      })
+    : bodyPlacements;
+
+  // Move to ACCEPTED and save placements
+  const { error } = await svc.from('proposals').update({
+    status: 'ACCEPTED',
+    placements: normalisedPlacements as unknown as Json,
+  }).eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Create calendar events (same logic as the old accept flow)
+  // Create calendar events
   if (proposal.tutor_id) {
     const { data: tutor } = await svc
       .from('users')
@@ -43,21 +81,11 @@ export async function POST(
       .single();
 
     if (tutor?.nylas_grant_id) {
-      const schedule = (proposal.requested_schedule ?? []) as { day: number; start: number; end: number }[];
-      const durationHrs = (proposal.session_duration_minutes ?? 60) / 60;
-      const savedPlacements = proposal.placements
-        ? (proposal.placements as unknown as ({ day: number; start: number } | null)[])
-        : null;
-      const effectivePlacements = (savedPlacements && savedPlacements.length > 0)
-        ? savedPlacements
-        : schedule.length > 0 ? [{ day: schedule[0].day, start: schedule[0].start }] : [];
-
       let firstEventId: string | null = null;
-      for (const pl of effectivePlacements) {
-        if (!pl) continue;
+      for (const pl of normalisedPlacements) {
         const { startUnix, endUnix } = tupleToUnix(
           pl.day, pl.start, pl.start + durationHrs,
-          proposal.timezone, proposal.start_date,
+          proposalTz, proposal.start_date,
         );
         const eventId = await createTutoringEvent(tutor.nylas_grant_id, {
           studentName: proposal.student_name, studentEmail: proposal.student_email,

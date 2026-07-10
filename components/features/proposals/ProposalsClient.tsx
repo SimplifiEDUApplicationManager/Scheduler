@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { Invitation, InvitationStatus, Tutor, TuitionRequest, Tuple } from '@/lib/types/domain';
+import type { Invitation, InvitationStatus, Tutor, TuitionRequest, Tuple, TutorProposal } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { TupleRow } from '@/components/features/tutors/TupleRow';
+import { ScheduleStep } from '@/components/features/tutor/consider/ScheduleStep';
 
 const DAY_LABEL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -72,13 +73,26 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
     expired:         invitations.filter(i => i.status === 'expired').length,
   };
 
-  async function handleCoordinatorApprove(id: string) {
-    setBusyId(id);
-    const res = await fetch(`/api/proposals/${id}/coordinator-approve`, { method: 'POST' });
+  // ── Scheduler modal state ──────────────────────────────────────────────
+  const [schedulingInv, setSchedulingInv] = useState<Invitation | null>(null);
+
+  function openScheduler(inv: Invitation) {
+    setSchedulingInv(inv);
+  }
+
+  async function handleScheduleConfirm(placements: ({ day: number; start: number } | null)[]) {
+    if (!schedulingInv) return;
+    setBusyId(schedulingInv.id);
+    const res = await fetch(`/api/proposals/${schedulingInv.id}/coordinator-approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ placements: placements.filter(Boolean) }),
+    });
     if (res.ok) {
-      setInvitations(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'accepted' as InvitationStatus } : inv));
+      setInvitations(prev => prev.map(inv => inv.id === schedulingInv.id ? { ...inv, status: 'accepted' as InvitationStatus } : inv));
     }
     setBusyId(null);
+    setSchedulingInv(null);
   }
 
   async function handleCoordinatorReject(id: string) {
@@ -232,39 +246,35 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
                     )}
                   </div>
 
-                  {/* Tutor's chosen schedule for awaiting-client proposals */}
-                  {inv.status === 'tutor_accepted' && inv.placements && inv.placements.length > 0 && (
+                  {/* Tutor's availability for awaiting-client proposals */}
+                  {inv.status === 'tutor_accepted' && inv.tutorAvailability && inv.tutorAvailability.length > 0 && (
                     <div className="mt-2.5 px-3 py-2.5 bg-violet-50 border border-violet-200 rounded-lg">
                       <div className="text-[10px] font-bold text-violet-600 uppercase tracking-wide mb-1.5">
-                        Tutor&apos;s chosen schedule
+                        Tutor&apos;s availability
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {inv.placements.map((p, i) => {
-                          const endHour = p.start + ((inv.sessionDurationMinutes ?? 60) / 60);
-                          return (
-                            <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-violet-200 text-[11px] font-semibold text-fg-1">
-                              <span className="text-violet-600">{DAY_LABEL[p.day]}</span>
-                              {fmtHour(p.start)}–{fmtHour(endHour)}
-                              {inv.tz && <span className="text-fg-muted font-normal ml-0.5">({inv.tz.split('/').pop()?.replace('_', ' ')})</span>}
-                            </span>
-                          );
-                        })}
+                        {inv.tutorAvailability.map((r, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-violet-200 text-[11px] font-semibold text-fg-1">
+                            <span className="text-violet-600">{DAY_LABEL[r.day]}</span>
+                            {fmtHour(r.start)}–{fmtHour(r.end)}
+                          </span>
+                        ))}
                       </div>
-                      {inv.sessionsPerWeek && inv.sessionsPerWeek > 1 && (
-                        <div className="text-[10px] text-violet-600 mt-1">{inv.sessionsPerWeek}x/week · {inv.sessionDurationMinutes ?? 60}min sessions</div>
-                      )}
+                      <div className="text-[10px] text-violet-600 mt-1">
+                        {inv.sessionsPerWeek ?? 1}x/week · {inv.sessionDurationMinutes ?? 60}min sessions
+                      </div>
                     </div>
                   )}
 
-                  {/* Approve/Reject buttons for awaiting client */}
+                  {/* Schedule / Reject buttons for awaiting client */}
                   {inv.status === 'tutor_accepted' && (
                     <div className="mt-2.5 flex gap-2">
                       <button
-                        onClick={() => handleCoordinatorApprove(inv.id)}
+                        onClick={() => openScheduler(inv)}
                         disabled={busyId === inv.id}
                         className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
                       >
-                        {busyId === inv.id ? 'Approving\u2026' : 'Client approved'}
+                        Schedule sessions
                       </button>
                       <button
                         onClick={() => handleCoordinatorReject(inv.id)}
@@ -316,6 +326,49 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
           </div>
         )}
       </div>
+      {/* ── Scheduling modal (full-screen) ─────────────────────────────── */}
+      {schedulingInv && schedulingInv.tutorAvailability && (
+        <div style={{ position: 'fixed', inset: 0, background: '#FAFAFA', zIndex: 80, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ height: 56, background: '#fff', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', padding: '0 20px', gap: 14, flexShrink: 0 }}>
+            <button
+              onClick={() => setSchedulingInv(null)}
+              style={{ height: 30, padding: '0 10px 0 8px', borderRadius: 7, border: '1px solid #E4E4E7', background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#52525B', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            >
+              <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden><path d="M8 2.5L4.5 6.5L8 10.5" /></svg>
+              Back to proposals
+            </button>
+            <div style={{ height: 18, width: 1, background: '#E4E4E7' }} />
+            <div style={{ fontSize: 13, color: '#18181B', fontWeight: 600 }}>
+              Schedule sessions for {schedulingInv.studentName} · {schedulingInv.subject}
+            </div>
+          </div>
+          <ScheduleStep
+            p={{
+              id: schedulingInv.id,
+              studentName: schedulingInv.studentName,
+              studentEmail: '',
+              subject: schedulingInv.subject,
+              tuples: schedulingInv.tutorAvailability,
+              startDate: '',
+              hoursPerWeek: 0,
+              notes: '',
+              coordinator: '',
+              sentAt: '',
+              status: 'tutor_accepted',
+              tz: schedulingInv.tz ?? 'America/New_York',
+              sessionDurationMinutes: schedulingInv.sessionDurationMinutes ?? 60,
+              sessionsPerWeek: schedulingInv.sessionsPerWeek ?? 1,
+            }}
+            events={[]}
+            onBack={() => setSchedulingInv(null)}
+            onConfirm={handleScheduleConfirm}
+            onDecline={() => {
+              handleCoordinatorReject(schedulingInv.id);
+              setSchedulingInv(null);
+            }}
+          />
+        </div>
+      )}
       {/* ── Edit modal ──────────────────────────────────────────────────── */}
       {editId && (
         <div onClick={() => setEditId(null)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">

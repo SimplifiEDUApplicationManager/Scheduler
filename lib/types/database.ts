@@ -56,6 +56,7 @@ export type Database = {
           placements: Json | null
           request_id: string | null
           requested_schedule: Json
+          tutor_availability: Json | null
           resolved_at: string | null
           schedule_notes: string | null
           session_duration_minutes: number
@@ -88,6 +89,7 @@ export type Database = {
           placements?: Json | null
           request_id?: string | null
           requested_schedule?: Json
+          tutor_availability?: Json | null
           resolved_at?: string | null
           schedule_notes?: string | null
           session_duration_minutes?: number
@@ -120,6 +122,7 @@ export type Database = {
           placements?: Json | null
           request_id?: string | null
           requested_schedule?: Json
+          tutor_availability?: Json | null
           resolved_at?: string | null
           schedule_notes?: string | null
           session_duration_minutes?: number

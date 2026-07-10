@@ -5,16 +5,23 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { convertTupleTimezone } from '@/lib/utils/timezone';
 import type { Json } from '@/lib/types/database';
 
+type TutorAvailRange = { day: number; start: number; end: number };
+
 /**
  * POST /api/proposals/[id]/accept
  * Tutor accepts a pending proposal.
  *
- * Sets status to TUTOR_ACCEPTED and saves the tutor's chosen placements.
- * Calendar events and request matching happen later when the coordinator
- * approves via POST /api/proposals/[id]/coordinator-approve.
+ * Body: { tutor_availability: { day, start, end }[] }
+ * The tutor's painted availability ranges (in their local timezone).
+ *
+ * Validates:
+ *  - Each range >= session duration
+ *  - Number of valid ranges >= sessions per week
+ *  - Valid ranges on >= sessionsPerWeek distinct days
+ *
+ * Converts ranges from tutor TZ to proposal TZ, saves as tutor_availability.
+ * Status → TUTOR_ACCEPTED. Calendar events created later by coordinator.
  */
-type Placement = { day: number; start: number } | null;
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -24,16 +31,15 @@ export async function POST(
 
   const { id } = await params;
 
-  let placements: Placement[] | undefined;
+  let tutorAvailability: TutorAvailRange[] | undefined;
   try {
-    const body = await req.json() as { placements?: Placement[] };
-    placements = body.placements;
+    const body = await req.json() as { tutor_availability?: TutorAvailRange[] };
+    tutorAvailability = body.tutor_availability;
   } catch {
-    // No body — proceed without placements; will use proposed times from DB.
+    // No body
   }
 
-  // For TUTOR the caller IS the tutor. For SUPER_ADMIN look up the proposal's
-  // tutor_id so ownership checks use the right user.
+  // For TUTOR the caller IS the tutor. For SUPER_ADMIN look up the proposal's tutor_id.
   let tutorId = auth.user.id;
   if (auth.role === 'SUPER_ADMIN') {
     const { data: proposal } = await auth.supabase
@@ -47,6 +53,40 @@ export async function POST(
     tutorId = proposal.tutor_id;
   }
 
+  const svc = createServiceClient();
+  const { data: proposalRow } = await svc
+    .from('proposals')
+    .select('timezone, session_duration_minutes, sessions_per_week')
+    .eq('id', id)
+    .single();
+
+  if (!proposalRow) {
+    return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
+  }
+
+  const sessionDurationMin = proposalRow.session_duration_minutes ?? 60;
+  const sessionsPerWeek = proposalRow.sessions_per_week ?? 1;
+  const durationHrs = sessionDurationMin / 60;
+
+  // Validate tutor_availability if provided
+  if (tutorAvailability && tutorAvailability.length > 0) {
+    const validBlocks = tutorAvailability.filter(r => (r.end - r.start) >= durationHrs);
+    const distinctDays = new Set(validBlocks.map(b => b.day)).size;
+
+    if (validBlocks.length < sessionsPerWeek) {
+      return NextResponse.json({
+        error: `Need at least ${sessionsPerWeek} availability block(s) that can fit a ${sessionDurationMin}min session — only ${validBlocks.length} provided`,
+      }, { status: 422 });
+    }
+
+    if (distinctDays < sessionsPerWeek) {
+      return NextResponse.json({
+        error: `Need availability on at least ${sessionsPerWeek} distinct day(s) — only ${distinctDays} provided`,
+      }, { status: 422 });
+    }
+  }
+
+  // Accept the proposal (status → TUTOR_ACCEPTED)
   const result = await acceptProposal(id, tutorId, auth.supabase);
 
   if (!result.ok) {
@@ -56,38 +96,32 @@ export async function POST(
     );
   }
 
-  // Save placements for later (coordinator approval creates the calendar events).
-  // Placements arrive in the tutor's timezone (they picked slots on their local calendar).
-  // Convert back to the student/proposal timezone so placements + proposal.timezone are consistent.
-  if (placements && placements.length > 0) {
-    const svc = createServiceClient();
-    const { data: proposalRow } = await svc
-      .from('proposals')
-      .select('timezone, session_duration_minutes')
-      .eq('id', id)
-      .single();
+  // Save tutor_availability, converting from tutor's TZ to proposal TZ
+  if (tutorAvailability && tutorAvailability.length > 0) {
     const { data: tutorRow } = await svc
       .from('users')
       .select('timezone')
       .eq('id', tutorId)
       .single();
-    const proposalTz = proposalRow?.timezone;
-    const tutorTz = tutorRow?.timezone;
-    const durationHrs = (proposalRow?.session_duration_minutes ?? 60) / 60;
 
-    let normalised = placements;
+    const proposalTz = proposalRow.timezone;
+    const tutorTz = tutorRow?.timezone;
+
+    let normalised: TutorAvailRange[] = tutorAvailability;
     if (tutorTz && proposalTz && tutorTz !== proposalTz) {
-      normalised = placements.map(pl => {
-        if (!pl) return pl;
+      normalised = tutorAvailability.map(range => {
         const converted = convertTupleTimezone(
-          { day: pl.day, start: pl.start, end: pl.start + durationHrs },
+          { day: range.day, start: range.start, end: range.end },
           tutorTz,
           proposalTz,
         );
-        return { day: converted.day, start: converted.start };
+        return { day: converted.day, start: converted.start, end: converted.end };
       });
     }
-    await svc.from('proposals').update({ placements: normalised as unknown as Json }).eq('id', id);
+
+    await svc.from('proposals').update({
+      tutor_availability: normalised as unknown as Json,
+    }).eq('id', id);
   }
 
   return NextResponse.json({ id });
