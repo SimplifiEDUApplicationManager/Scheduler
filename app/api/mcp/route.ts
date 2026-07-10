@@ -69,6 +69,33 @@ async function sbInsert(table: string, row: Record<string, unknown>): Promise<vo
   if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
 }
 
+async function sbPatch(table: string, qs: string, data: Record<string, unknown>): Promise<void> {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}?${qs}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SB_SVC_KEY,
+      Authorization: `Bearer ${SB_SVC_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify(data),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
+}
+
+async function sbDelete(table: string, qs: string): Promise<void> {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}?${qs}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: SB_SVC_KEY,
+      Authorization: `Bearer ${SB_SVC_KEY}`,
+    },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
+}
+
 function textContent(text: string) {
   return { content: [{ type: 'text', text }] };
 }
@@ -539,6 +566,193 @@ After calling this tool, for each task:
         return textContent(`Client declined — ${prop.student_name} · ${prop.subject}. Request reopened for reassignment.`);
       } catch (err) {
         return errorContent(`Failed to reject: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }),
+
+  tool('approve_subject', 'Approve a pending tutor subject change request (ADD, EDIT, or REMOVE). Use pending_subjects first to see what needs approval.',
+    {
+      tutor_name:  z.string().describe('Tutor name to match the pending request'),
+      subject_name: z.string().optional().describe('Subject name to disambiguate if tutor has multiple pending requests'),
+    },
+    async ({ tutor_name, subject_name }) => {
+      const [changes, tutors, subjects] = await Promise.all([
+        sbGet('tutor_subject_changes', 'status=eq.PENDING&select=id,tutor_id,subject_id,change_type,requested_confidence,requested_note,tutor_subject_id'),
+        sbGet('users', 'role=eq.TUTOR&select=id,name'),
+        sbGet('subjects', 'select=id,name,level'),
+      ]) as [Record<string, unknown>[], { id: string; name: string }[], { id: string; name: string; level: string | null }[]];
+
+      const tutorMap = new Map(tutors.map(t => [t.id, t.name]));
+      const subjectMap = new Map(subjects.map(s => [s.id, s.level ? `${s.level} ${s.name}` : s.name]));
+
+      // Find matching change
+      const matches = changes.filter(c => {
+        const tName = tutorMap.get(c.tutor_id as string) ?? '';
+        if (!tName.toLowerCase().includes(tutor_name.toLowerCase())) return false;
+        if (subject_name) {
+          const sName = subjectMap.get(c.subject_id as string) ?? '';
+          if (!sName.toLowerCase().includes(subject_name.toLowerCase())) return false;
+        }
+        return true;
+      });
+
+      if (matches.length === 0) return errorContent(`No pending subject request found for "${tutor_name}"${subject_name ? ` / "${subject_name}"` : ''}.`);
+      if (matches.length > 1 && !subject_name) {
+        const list = matches.map(c => `${tutorMap.get(c.tutor_id as string)} — ${subjectMap.get(c.subject_id as string)} (${c.change_type})`).join('\n');
+        return errorContent(`Multiple pending requests found. Specify subject_name:\n${list}`);
+      }
+
+      const change = matches[0];
+      const changeType = change.change_type as string;
+      const tName = tutorMap.get(change.tutor_id as string) ?? 'Unknown';
+      const sName = subjectMap.get(change.subject_id as string) ?? 'Unknown';
+
+      try {
+        if (changeType === 'ADD') {
+          await sbInsert('tutor_subjects', {
+            tutor_id: change.tutor_id,
+            subject_id: change.subject_id,
+            tutor_confidence: change.requested_confidence ?? 'MEDIUM',
+            coordinator_confidence: 'UNPROVEN',
+            qualification_note: change.requested_note,
+          });
+        } else if (changeType === 'EDIT' && change.tutor_subject_id) {
+          await sbPatch(`tutor_subjects`, `id=eq.${change.tutor_subject_id}`, {
+            tutor_confidence: change.requested_confidence ?? 'MEDIUM',
+            qualification_note: change.requested_note,
+            coordinator_confidence: 'UNPROVEN',
+            graded_by: null,
+          });
+        } else if (changeType === 'REMOVE' && change.tutor_subject_id) {
+          await sbDelete('tutor_subjects', `id=eq.${change.tutor_subject_id}`);
+        }
+
+        await sbPatch('tutor_subject_changes', `id=eq.${change.id}`, {
+          status: 'APPROVED',
+          reviewed_at: new Date().toISOString(),
+        });
+
+        return textContent(`Approved ${tName}'s ${changeType} request for ${sName}.`);
+      } catch (err) {
+        return errorContent(`Failed to approve: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }),
+
+  tool('decline_subject', 'Decline a pending tutor subject change request. Use pending_subjects first to see what needs review.',
+    {
+      tutor_name:     z.string().describe('Tutor name to match the pending request'),
+      subject_name:   z.string().optional().describe('Subject name to disambiguate'),
+      decline_reason: z.string().describe('Reason for declining'),
+    },
+    async ({ tutor_name, subject_name, decline_reason }) => {
+      const [changes, tutors, subjects] = await Promise.all([
+        sbGet('tutor_subject_changes', 'status=eq.PENDING&select=id,tutor_id,subject_id,change_type'),
+        sbGet('users', 'role=eq.TUTOR&select=id,name'),
+        sbGet('subjects', 'select=id,name,level'),
+      ]) as [Record<string, unknown>[], { id: string; name: string }[], { id: string; name: string; level: string | null }[]];
+
+      const tutorMap = new Map(tutors.map(t => [t.id, t.name]));
+      const subjectMap = new Map(subjects.map(s => [s.id, s.level ? `${s.level} ${s.name}` : s.name]));
+
+      const matches = changes.filter(c => {
+        const tName = tutorMap.get(c.tutor_id as string) ?? '';
+        if (!tName.toLowerCase().includes(tutor_name.toLowerCase())) return false;
+        if (subject_name) {
+          const sName = subjectMap.get(c.subject_id as string) ?? '';
+          if (!sName.toLowerCase().includes(subject_name.toLowerCase())) return false;
+        }
+        return true;
+      });
+
+      if (matches.length === 0) return errorContent(`No pending subject request found for "${tutor_name}".`);
+      const change = matches[0];
+      const tName = tutorMap.get(change.tutor_id as string) ?? 'Unknown';
+      const sName = subjectMap.get(change.subject_id as string) ?? 'Unknown';
+
+      try {
+        await sbPatch('tutor_subject_changes', `id=eq.${change.id}`, {
+          status: 'DECLINED',
+          decline_reason,
+          reviewed_at: new Date().toISOString(),
+        });
+        return textContent(`Declined ${tName}'s ${change.change_type} request for ${sName}. Reason: "${decline_reason}"`);
+      } catch (err) {
+        return errorContent(`Failed to decline: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }),
+
+  tool('approve_availability', 'Approve a tutor\'s pending availability change request (PAUSE, LOW_MAX_HOURS, LOW_AVAILABILITY_WINDOWS). Use availability_requests first to see pending requests.',
+    {
+      tutor_name: z.string().describe('Tutor name to match the pending request'),
+    },
+    async ({ tutor_name }) => {
+      const [reqs, tutors] = await Promise.all([
+        sbGet('tutor_availability_requests', 'status=eq.PENDING&select=id,tutor_id,request_type,reason,details'),
+        sbGet('users', 'role=eq.TUTOR&select=id,name'),
+      ]) as [Record<string, unknown>[], { id: string; name: string }[]];
+
+      const tutorMap = new Map(tutors.map(t => [t.id, t.name]));
+      const match = reqs.find(r => {
+        const name = tutorMap.get(r.tutor_id as string) ?? '';
+        return name.toLowerCase().includes(tutor_name.toLowerCase());
+      });
+
+      if (!match) return errorContent(`No pending availability request found for "${tutor_name}".`);
+      const tName = tutorMap.get(match.tutor_id as string) ?? 'Unknown';
+      const reqType = match.request_type as string;
+
+      try {
+        await sbPatch('tutor_availability_requests', `id=eq.${match.id}`, {
+          status: 'APPROVED',
+          reviewed_at: new Date().toISOString(),
+        });
+
+        // Apply the change based on type
+        if (reqType === 'PAUSE') {
+          await sbPatch('users', `id=eq.${match.tutor_id}`, { is_paused: true });
+        } else if (reqType === 'LOW_MAX_HOURS') {
+          const details = match.details as Record<string, unknown> | null;
+          const requestedHours = details?.requestedHours;
+          if (requestedHours != null) {
+            await sbPatch('users', `id=eq.${match.tutor_id}`, { max_weekly_hours: requestedHours });
+          }
+        }
+
+        const action = reqType === 'PAUSE' ? 'Tutor is now paused.' : reqType === 'LOW_MAX_HOURS' ? `Max hours updated.` : 'Request approved.';
+        return textContent(`Approved ${tName}'s ${reqType} request. ${action}`);
+      } catch (err) {
+        return errorContent(`Failed to approve: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }),
+
+  tool('decline_availability', 'Decline a tutor\'s pending availability change request. Use availability_requests first to see pending requests.',
+    {
+      tutor_name:     z.string().describe('Tutor name to match the pending request'),
+      decline_reason: z.string().describe('Reason for declining'),
+    },
+    async ({ tutor_name, decline_reason }) => {
+      const [reqs, tutors] = await Promise.all([
+        sbGet('tutor_availability_requests', 'status=eq.PENDING&select=id,tutor_id,request_type'),
+        sbGet('users', 'role=eq.TUTOR&select=id,name'),
+      ]) as [Record<string, unknown>[], { id: string; name: string }[]];
+
+      const tutorMap = new Map(tutors.map(t => [t.id, t.name]));
+      const match = reqs.find(r => {
+        const name = tutorMap.get(r.tutor_id as string) ?? '';
+        return name.toLowerCase().includes(tutor_name.toLowerCase());
+      });
+
+      if (!match) return errorContent(`No pending availability request found for "${tutor_name}".`);
+      const tName = tutorMap.get(match.tutor_id as string) ?? 'Unknown';
+
+      try {
+        await sbPatch('tutor_availability_requests', `id=eq.${match.id}`, {
+          status: 'DECLINED',
+          decline_reason,
+          reviewed_at: new Date().toISOString(),
+        });
+        return textContent(`Declined ${tName}'s ${match.request_type} request. Reason: "${decline_reason}"`);
+      } catch (err) {
+        return errorContent(`Failed to decline: ${err instanceof Error ? err.message : String(err)}`);
       }
     }),
 
