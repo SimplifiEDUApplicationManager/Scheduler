@@ -160,8 +160,10 @@ export interface Invitation {
   status: InvitationStatus;
   declineReason?: string;
   wasEdited?: boolean;
-  /** Tutor's chosen session placements (set when tutor accepts). */
+  /** Tutor's chosen session placements (set when coordinator schedules). */
   placements?: { day: number; start: number }[];
+  /** Tutor's painted availability ranges (set when tutor accepts). */
+  tutorAvailability?: Tuple[];
   sessionDurationMinutes?: number;
   sessionsPerWeek?: number;
   tz?: string;
@@ -227,6 +229,8 @@ export interface TutorProposal {
   accommodations?: string;
   scheduleNotes?: string;
   wasUpdated?: boolean;
+  /** Tutor's painted availability ranges within the student's windows (set on TUTOR_ACCEPTED). */
+  tutorAvailability?: Tuple[];
 }
 
 // ── Coordinator management ──────────────────────────────────────────────────

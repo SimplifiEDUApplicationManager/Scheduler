@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Tutor, TutorEvent, TutorProposal } from '@/lib/types/domain';
+import type { Tutor, TutorEvent, TutorProposal, Tuple } from '@/lib/types/domain';
 import { ConsiderModal } from './consider/ConsiderModal';
 import { DeclineModal } from './DeclineModal';
 import { ProposalRow, type DisplayStatus } from './ProposalRow';
@@ -103,7 +103,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     }
   }
 
-  async function handleAccept(placements: ({ day: number; start: number } | null)[]) {
+  async function handleAccept(availability: Tuple[]) {
     const p = proposals.find(prop => prop.id === consideringId);
     if (!p) return;
     setBusyAction(`accept-${p.id}`);
@@ -127,7 +127,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     const res = await fetch(`/api/proposals/${p.id}/accept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ placements }),
+      body: JSON.stringify({ tutor_availability: availability }),
     });
     if (!res.ok) {
       const body = await res.json() as { error?: string };

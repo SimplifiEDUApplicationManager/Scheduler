@@ -4,18 +4,17 @@ import { useState, useEffect } from 'react';
 import type { TutorProposal, TutorEvent, Tutor, Tuple, SubjectConf } from '@/lib/types/domain';
 import { SUBJECTS } from '@/lib/data/mock';
 import { ReviewStep } from './ReviewStep';
-import { ScheduleStep } from './ScheduleStep';
+import { PaintScheduleStep } from './PaintScheduleStep';
 
 interface ConflictEntry { tp: Tuple; clashes: TutorEvent[] }
 type Step = 'review' | 'schedule';
-type Placement = { day: number; start: number } | null;
 
 interface Props {
   proposal: TutorProposal;
   me: Tutor;
   events: TutorEvent[];
   onClose: () => void;
-  onAccept: (placements: Placement[]) => void;
+  onAccept: (availability: Tuple[]) => void;
   onDecline: () => void;
 }
 
@@ -78,7 +77,7 @@ export function ConsiderModal({ proposal: p, me, events, onClose, onAccept, onDe
           onContinue={() => { setStep('schedule'); window.dispatchEvent(new CustomEvent('sim:demo-schedule')); }}
         />
       ) : (
-        <ScheduleStep
+        <PaintScheduleStep
           p={p} events={events}
           onBack={() => setStep('review')}
           onConfirm={onAccept}
