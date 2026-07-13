@@ -174,7 +174,7 @@ export async function fetchTutorEvents(
 
   return allEvents
     .map(ev => toTutorEvent(ev, tz))
-    .filter((ev): ev is TutorEvent => ev !== null && ev.kind === 'session');
+    .filter((ev): ev is TutorEvent => ev !== null);
 }
 
 // ── Capacity event fetch ──────────────────────────────────────────────────────
