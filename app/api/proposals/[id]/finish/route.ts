@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
-import { endRecurringEvent } from '@/lib/nylas/events';
+import { deleteTutoringEvent } from '@/lib/nylas/events';
 
 /**
  * POST /api/proposals/[id]/finish
@@ -45,8 +45,9 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // End the recurring event — keeps past sessions on the calendar but stops
-  // future occurrences from being generated.
+  // Delete the calendar event entirely — removes all future occurrences
+  // so the sessions stop appearing on the tutor's calendar and counting
+  // toward their capacity.
   if (proposal.nylas_event_id && proposal.tutor_id) {
     const { data: tutor } = await svc
       .from('users')
@@ -55,8 +56,8 @@ export async function POST(
       .single();
 
     if (tutor?.nylas_grant_id) {
-      endRecurringEvent(tutor.nylas_grant_id, proposal.nylas_event_id, tutor.email ?? undefined).catch(err => {
-        console.error('[proposals/finish] end recurring event threw:', err);
+      deleteTutoringEvent(tutor.nylas_grant_id, proposal.nylas_event_id, tutor.email ?? undefined).catch(err => {
+        console.error('[proposals/finish] delete event threw:', err);
       });
     }
   }
