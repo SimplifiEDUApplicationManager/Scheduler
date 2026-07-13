@@ -41,7 +41,7 @@ export default async function ProposalsPage() {
   const [{ data: rows }, tutors, { data: coordRow }] = await Promise.all([
     supabase
       .from('proposals')
-      .select('id, tutor_id, student_name, subject, status, decline_reason, created_at, resolved_at, placements, tutor_availability, session_duration_minutes, sessions_per_week, timezone')
+      .select('id, tutor_id, student_name, subject, status, decline_reason, created_at, resolved_at, placements, tutor_availability, requested_schedule, session_duration_minutes, sessions_per_week, timezone')
       .eq('coordinator_id', user.id)
       .order('created_at', { ascending: false }),
     fetchAllTutors(supabase),
@@ -54,6 +54,9 @@ export default async function ProposalsPage() {
   const invitations: Invitation[] = (rows ?? []).map(row => {
     const rawPlacements = row.placements as { day: number; start: number }[] | null;
     const rawTutorAvail = row.tutor_availability as { day: number; start: number; end: number }[] | null;
+    // Fall back to requested_schedule for old-flow proposals without tutor_availability
+    const rawSchedule = row.requested_schedule as { day: number; start: number; end: number }[] | null;
+    const effectiveTutorAvail = rawTutorAvail ?? rawSchedule;
     const proposalTz = row.timezone ?? 'America/New_York';
     const durationHrs = (row.session_duration_minutes ?? 60) / 60;
 
@@ -70,13 +73,13 @@ export default async function ProposalsPage() {
       : rawPlacements ?? undefined;
 
     // Convert tutor availability ranges from proposal TZ to coordinator TZ
-    const tutorAvailability = rawTutorAvail && coordTz !== proposalTz
-      ? rawTutorAvail.map(r => convertTupleTimezone(
+    const tutorAvailability = effectiveTutorAvail && coordTz !== proposalTz
+      ? effectiveTutorAvail.map(r => convertTupleTimezone(
           { day: r.day, start: r.start, end: r.end },
           proposalTz,
           coordTz,
         ))
-      : rawTutorAvail ?? undefined;
+      : effectiveTutorAvail ?? undefined;
 
     return {
       id:            row.id,
