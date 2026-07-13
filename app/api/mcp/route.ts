@@ -531,31 +531,17 @@ After calling this tool, for each task:
       return textContent(JSON.stringify({ count: result.length, proposals: result }, null, 2));
     }),
 
-  tool('approve_client', 'Approve a proposal after the client confirmed the tutor. Creates calendar events and matches the request. Use awaiting_client first to get the proposal ID.',
+  tool('approve_client', 'This action must be done in the web app. After the client approves the tutor, go to the Proposals page and click "Schedule sessions" to place sessions on the calendar.',
     {
-      student_name: z.string().describe('Student name to identify the proposal'),
-      tutor_name:   z.string().optional().describe('Tutor name (optional, helps disambiguate)'),
+      student_name: z.string().describe('Student name'),
     },
-    async ({ student_name, tutor_name }, authKey) => {
-      // Find the matching TUTOR_ACCEPTED proposal
+    async ({ student_name }) => {
+      // Find the matching TUTOR_ACCEPTED proposal to confirm it exists
       const props = await sbGet('proposals', `status=eq.TUTOR_ACCEPTED&student_name=ilike.*${encodeURIComponent(student_name)}*&select=id,tutor_id,student_name,subject`) as Record<string, unknown>[];
       if (!props.length) return errorContent(`No awaiting proposal found for student "${student_name}".`);
-      let prop = props[0];
-      if (props.length > 1 && tutor_name) {
-        const tutors = await sbGet('users', `name=ilike.*${encodeURIComponent(tutor_name)}*&role=eq.TUTOR&select=id,name`) as { id: string; name: string }[];
-        if (tutors.length > 0) {
-          const match = props.find(p => p.tutor_id === tutors[0].id);
-          if (match) prop = match;
-        }
-      }
-      try {
-        await appPost(`/api/proposals/${prop.id}/coordinator-approve`, {}, authKey);
-        const tutors = await sbGet('users', `id=eq.${prop.tutor_id}&select=name`) as { name: string }[];
-        const tutorName = tutors[0]?.name ?? 'tutor';
-        return textContent(`Approved — ${prop.student_name} · ${prop.subject} → ${tutorName}. Calendar events created and request matched.`);
-      } catch (err) {
-        return errorContent(`Failed to approve: ${err instanceof Error ? err.message : String(err)}`);
-      }
+      const tutors = await sbGet('users', `id=eq.${props[0].tutor_id}&select=name`) as { name: string }[];
+      const tutorName = tutors[0]?.name ?? 'tutor';
+      return textContent(`Found proposal: ${props[0].student_name} · ${props[0].subject} → ${tutorName}.\n\nTo approve, go to the Proposals page in the web app and click "Schedule sessions". The coordinator must place the session times on the calendar before the proposal can be approved.`);
     }),
 
   tool('reject_client', 'Reject a proposal after the client declined the tutor. Reopens the request for reassignment. Use awaiting_client first to get the proposal details.',
