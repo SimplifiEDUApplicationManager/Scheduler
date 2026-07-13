@@ -146,16 +146,18 @@ const TOOLS: Tool[] = [
       // Return all fields needed for send_proposal — do not strip student_email or requested_schedule
       const summary = filtered.map(r => ({
         id:                 r.id,
-        student_name:       r.student_name,
-        student_email:      r.student_email ?? null,
-        subject:            r.subject ?? null,
-        status:             r.status,
-        timezone:           r.timezone ?? null,
-        start_date:         r.start_date ?? null,
-        offered_rate:       r.offered_rate ?? null,
-        requested_schedule: r.requested_schedule ?? [],
-        asana_task_id:      r.asana_task_id ?? null,
-        notes:              r.notes ?? null,
+        student_name:            r.student_name,
+        student_email:           r.student_email ?? null,
+        subject:                 r.subject ?? null,
+        status:                  r.status,
+        timezone:                r.timezone ?? null,
+        start_date:              r.start_date ?? null,
+        offered_rate:            r.offered_rate ?? null,
+        requested_schedule:      r.requested_schedule ?? [],
+        session_duration_minutes: r.session_duration_minutes ?? 60,
+        sessions_per_week:       r.sessions_per_week ?? 1,
+        asana_task_id:           r.asana_task_id ?? null,
+        notes:                   r.notes ?? null,
       }));
       return textContent(JSON.stringify({ count: summary.length, requests: summary }, null, 2));
     }),
@@ -183,9 +185,11 @@ const TOOLS: Tool[] = [
       start_date:    z.string().optional().describe('YYYY-MM-DD'),
       notes:         z.string().optional(),
       offered_rate:  z.number().optional(),
+      session_duration_minutes: z.number().optional().describe('Length of each session in minutes (default 60)'),
+      sessions_per_week:       z.number().optional().describe('Number of sessions per week (default 1)'),
     },
     async ({ tutor_email, request_id, student_name, student_email, subject, schedule, timezone,
-             start_date, notes, offered_rate }, authKey) => {
+             start_date, notes, offered_rate, session_duration_minutes, sessions_per_week }, authKey) => {
       // Look up tutor
       const tutors = await sbGet(
         'users',
@@ -197,21 +201,23 @@ const TOOLS: Tool[] = [
       if (request_id) {
         const reqs = await sbGet(
           'requests',
-          `id=eq.${request_id}&select=student_name,student_email,subject,requested_schedule,timezone,start_date,notes,offered_rate,asana_task_id&limit=1`,
+          `id=eq.${request_id}&select=student_name,student_email,subject,requested_schedule,timezone,start_date,notes,offered_rate,session_duration_minutes,sessions_per_week,asana_task_id&limit=1`,
         ) as Record<string, unknown>[];
         if (!reqs.length) return errorContent(`Request ${request_id} not found.`);
         const req = reqs[0];
         await appPost('/api/proposals', {
-          tutor_id:           tutors[0].id,
-          student_name:       req.student_name,
-          student_email:      req.student_email,
-          subject:            req.subject,
-          requested_schedule: req.requested_schedule,
-          timezone:           req.timezone,
-          start_date:         req.start_date,
-          notes:              req.notes,
-          offered_rate:       req.offered_rate,
-          asana_task_id:      req.asana_task_id,
+          tutor_id:                tutors[0].id,
+          student_name:            req.student_name,
+          student_email:           req.student_email,
+          subject:                 req.subject,
+          requested_schedule:      req.requested_schedule,
+          timezone:                req.timezone,
+          start_date:              req.start_date,
+          notes:                   req.notes,
+          offered_rate:            req.offered_rate,
+          session_duration_minutes: req.session_duration_minutes ?? 60,
+          sessions_per_week:       req.sessions_per_week ?? 1,
+          asana_task_id:           req.asana_task_id,
         }, authKey);
         return textContent(`Proposal sent to ${tutors[0].name} (${tutor_email}) — ${req.student_name}, ${req.subject}.`);
       }
@@ -223,6 +229,8 @@ const TOOLS: Tool[] = [
       await appPost('/api/proposals', {
         tutor_id: tutors[0].id, student_name, student_email, subject,
         requested_schedule: schedule, timezone, start_date, notes, offered_rate,
+        session_duration_minutes: session_duration_minutes ?? 60,
+        sessions_per_week: sessions_per_week ?? 1,
       }, authKey);
       return textContent(`Proposal sent to ${tutors[0].name} (${tutor_email}) — ${student_name}, ${subject}.`);
     }),
@@ -239,14 +247,19 @@ const TOOLS: Tool[] = [
       start_date:   z.string().optional().describe('YYYY-MM-DD'),
       notes:        z.string().optional(),
       offered_rate: z.number().optional(),
+      session_duration_minutes: z.number().optional().describe('Length of each session in minutes (default 60)'),
+      sessions_per_week:       z.number().optional().describe('Number of sessions per week (default 1)'),
       asana_task_id:  z.string().optional().describe('{gid}::{subject_slug} for idempotent upsert'),
       asana_task_url: z.string().optional(),
     },
     async ({ student_name, student_email, subject, schedule, timezone,
-             start_date, notes, offered_rate, asana_task_id, asana_task_url }, authKey) => {
+             start_date, notes, offered_rate, session_duration_minutes, sessions_per_week, asana_task_id, asana_task_url }, authKey) => {
       const result = await appPost('/api/requests', {
         student_name, student_email, subject, requested_schedule: schedule,
-        timezone, start_date, notes, offered_rate, asana_task_id, asana_task_url,
+        timezone, start_date, notes, offered_rate,
+        session_duration_minutes: session_duration_minutes ?? 60,
+        sessions_per_week: sessions_per_week ?? 1,
+        asana_task_id, asana_task_url,
       }, authKey) as { id: string };
       return textContent(`Request created for ${student_name}${subject ? ` — ${subject}` : ''}. (id: ${result.id})`);
     }),
