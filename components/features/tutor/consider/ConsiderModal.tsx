@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { TutorProposal, TutorEvent, Tutor, Tuple, SubjectConf } from '@/lib/types/domain';
-import { SUBJECTS } from '@/lib/data/mock';
+import { subjectDisplayName } from '@/lib/types/domain';
 import { ReviewStep } from './ReviewStep';
 import { PaintScheduleStep } from './PaintScheduleStep';
 
@@ -27,10 +27,14 @@ export function ConsiderModal({ proposal: p, me, events, onClose, onAccept, onDe
   }));
   const anyConflict = conflicts.some(c => c.clashes.length > 0);
 
-  const subjectMeta = SUBJECTS.find(s => s.name.toLowerCase() === (p.subject || '').toLowerCase());
-  const subjectConf: SubjectConf | null = subjectMeta
-    ? (me.subjects.find(s => s.id === subjectMeta.id)?.conf ?? null)
-    : null;
+  // Match the proposal's subject against the tutor's actual subject list
+  const proposalSubject = (p.subject || '').toLowerCase();
+  const matchedSubject = me.subjects.find(s => {
+    const display = s.subjectName && s.level ? subjectDisplayName({ name: s.subjectName, level: s.level }) : '';
+    return display.toLowerCase() === proposalSubject
+      || (s.subjectName ?? '').toLowerCase() === proposalSubject;
+  });
+  const subjectConf: SubjectConf | null = matchedSubject?.conf ?? null;
 
   const sessionHours = ((p?.sessionDurationMinutes ?? 60) / 60) * (p?.sessionsPerWeek ?? 1);
   const newTotal = me.hoursCurrent + sessionHours;
