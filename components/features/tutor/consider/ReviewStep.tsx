@@ -21,6 +21,7 @@ interface Props {
   activeStudents: number;
   onDecline: () => void;
   onContinue: () => void;
+  readOnly?: boolean;
 }
 
 function fmtH(h: number): string {
@@ -29,7 +30,7 @@ function fmtH(h: number): string {
   return mn === 0 ? `${h12}${suf}` : `${h12}:${String(mn).padStart(2, '0')}${suf}`;
 }
 
-export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf, overCap, newTotal, activeStudents, onDecline, onContinue }: Props) {
+export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf, overCap, newTotal, activeStudents, onDecline, onContinue, readOnly }: Props) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const capPct = Math.min(100, Math.round((me.hoursCurrent / me.hoursMax) * 100));
@@ -242,16 +243,18 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
           </div>
 
           {/* Action buttons — at the bottom of content so tutors read the full proposal */}
-          <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ flex: 1, fontSize: 12, color: '#71717A' }}>
-              {overCap ? "You're at or over your weekly cap — accept only if you're sure." : 'Next: drag proposed times onto your calendar to schedule them.'}
+          {!readOnly && (
+            <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, fontSize: 12, color: '#71717A' }}>
+                {overCap ? "You're at or over your weekly cap — accept only if you're sure." : 'Next: mark your availability within the student\'s windows.'}
+              </div>
+              <button onClick={onDecline} style={{ height: 40, padding: '0 18px', borderRadius: 10, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Decline</button>
+              <button data-tour="accept-schedule-btn" onClick={() => { setShowConfirm(true); window.dispatchEvent(new CustomEvent('sim:demo-confirm')); }} style={{ height: 40, padding: '0 22px', borderRadius: 10, border: 'none', background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                Accept &amp; schedule
+                <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" aria-hidden><path d="M2.5 6.5h8M7 3l3 3.5-3 3.5" /></svg>
+              </button>
             </div>
-            <button onClick={onDecline} style={{ height: 40, padding: '0 18px', borderRadius: 10, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Decline</button>
-            <button data-tour="accept-schedule-btn" onClick={() => { setShowConfirm(true); window.dispatchEvent(new CustomEvent('sim:demo-confirm')); }} style={{ height: 40, padding: '0 22px', borderRadius: 10, border: 'none', background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              Accept &amp; schedule
-              <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" aria-hidden><path d="M2.5 6.5h8M7 3l3 3.5-3 3.5" /></svg>
-            </button>
-          </div>
+          )}
         </div>
       </div>
 

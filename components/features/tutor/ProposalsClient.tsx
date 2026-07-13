@@ -95,7 +95,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
 
   function openDetail(id: string) {
     const p = proposals.find(prop => prop.id === id);
-    if (!p || p.status === 'accepted' || p.status === 'declined') return;
+    if (!p) return;
     setReviewed(r => { const n = new Set(r); n.add(id); return n; });
     setConsideringId(id);
     if (id === 'demo-proposal') {

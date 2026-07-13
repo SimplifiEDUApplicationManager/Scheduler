@@ -43,12 +43,12 @@ export function ProposalRow({ proposal: p, displayStatus, conflicts, declineReas
 
   return (
     <div
-      onClick={needsAction ? onOpen : undefined}
-      role={needsAction ? 'button' : undefined}
-      tabIndex={needsAction ? 0 : undefined}
-      style={{ textAlign: 'left', background: '#fff', border: `1px solid ${borderColor}`, borderRadius: 12, padding: 0, cursor: needsAction ? 'pointer' : 'default', fontFamily: 'inherit', color: '#18181B', overflow: 'hidden', display: 'block', width: '100%', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
-      onMouseEnter={e => { if (!needsAction) return; e.currentTarget.style.borderColor = '#18181B'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(22,32,51,0.08)'; }}
-      onMouseLeave={e => { if (!needsAction) return; e.currentTarget.style.borderColor = borderColor; e.currentTarget.style.boxShadow = 'none'; }}
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      style={{ textAlign: 'left', background: '#fff', border: `1px solid ${borderColor}`, borderRadius: 12, padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: '#18181B', overflow: 'hidden', display: 'block', width: '100%', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = '#18181B'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(22,32,51,0.08)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = borderColor; e.currentTarget.style.boxShadow = 'none'; }}
     >
       <div style={{ display: 'grid', gridTemplateColumns: '44px minmax(0,1fr) auto', gap: 16, padding: '16px 18px', alignItems: 'flex-start' }}>
         {/* Avatar */}
