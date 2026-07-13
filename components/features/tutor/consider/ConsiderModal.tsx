@@ -75,6 +75,7 @@ export function ConsiderModal({ proposal: p, me, events, onClose, onAccept, onDe
           activeStudents={activeStudents}
           onDecline={onDecline}
           onContinue={() => { setStep('schedule'); window.dispatchEvent(new CustomEvent('sim:demo-schedule')); }}
+          readOnly={p.status !== 'pending'}
         />
       ) : (
         <PaintScheduleStep
