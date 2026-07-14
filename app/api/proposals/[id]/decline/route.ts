@@ -55,7 +55,8 @@ export async function POST(
     const { data: tutorInfo } = await svc.from('users').select('name').eq('id', auth.user.id).single();
     const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
     if (coord && tutorInfo && appUrl) {
-      sendTutorDeclinedEmail(coord.email, coord.name, tutorInfo.name, fullProposal.student_name, fullProposal.subject, reason, appUrl).catch(() => {});
+      const emailResult = await sendTutorDeclinedEmail(coord.email, coord.name, tutorInfo.name, fullProposal.student_name, fullProposal.subject, reason, appUrl);
+      if (!emailResult.ok) console.error('[decline] email failed:', emailResult.error);
     }
   }
 

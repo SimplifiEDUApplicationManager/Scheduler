@@ -46,7 +46,8 @@ export async function POST(
     const { data: tutor } = await svc.from('users').select('email, name').eq('id', proposal.tutor_id).single();
     const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
     if (tutor && appUrl) {
-      sendClientDeclinedEmail(tutor.email, tutor.name, proposal.student_name, proposal.subject, appUrl).catch(() => {});
+      const emailResult = await sendClientDeclinedEmail(tutor.email, tutor.name, proposal.student_name, proposal.subject, appUrl);
+      if (!emailResult.ok) console.error('[coordinator-reject] email failed:', emailResult.error);
     }
   }
 
