@@ -56,15 +56,17 @@ export async function POST(
       .single();
 
     if (tutor?.nylas_grant_id) {
-      deleteRecurringTutoringEvent(
-        tutor.nylas_grant_id,
-        proposal.nylas_event_id,
-        proposal.student_name,
-        proposal.subject,
-        tutor.email ?? undefined,
-      ).catch(err => {
+      try {
+        await deleteRecurringTutoringEvent(
+          tutor.nylas_grant_id,
+          proposal.nylas_event_id,
+          proposal.student_name,
+          proposal.subject,
+          tutor.email ?? undefined,
+        );
+      } catch (err) {
         console.error('[proposals/finish] delete events threw:', err);
-      });
+      }
     }
   }
 
