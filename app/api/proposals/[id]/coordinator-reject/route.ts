@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
+import { sendClientDeclinedEmail } from '@/lib/resend/emails';
 
 /**
  * POST /api/proposals/[id]/coordinator-reject
@@ -19,7 +20,7 @@ export async function POST(
 
   const { data: proposal } = await svc
     .from('proposals')
-    .select('status, request_id')
+    .select('status, request_id, tutor_id, student_name, subject')
     .eq('id', id)
     .single();
 
@@ -38,6 +39,15 @@ export async function POST(
     await svc.from('requests')
       .update({ status: 'open', matched_proposal_id: null })
       .eq('id', proposal.request_id);
+  }
+
+  // Notify the tutor that the client declined
+  if (proposal.tutor_id) {
+    const { data: tutor } = await svc.from('users').select('email, name').eq('id', proposal.tutor_id).single();
+    const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
+    if (tutor && appUrl) {
+      sendClientDeclinedEmail(tutor.email, tutor.name, proposal.student_name, proposal.subject, appUrl).catch(() => {});
+    }
   }
 
   return NextResponse.json({ id });

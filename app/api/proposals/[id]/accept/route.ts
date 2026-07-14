@@ -3,6 +3,7 @@ import { requireActiveRole } from '@/lib/auth';
 import { acceptProposal, transitionHttpStatus } from '@/lib/data/proposals';
 import { createServiceClient } from '@/lib/supabase/server';
 import { convertTupleTimezone } from '@/lib/utils/timezone';
+import { sendTutorAcceptedEmail } from '@/lib/resend/emails';
 import type { Json } from '@/lib/types/database';
 
 type TutorAvailRange = { day: number; start: number; end: number };
@@ -122,6 +123,21 @@ export async function POST(
     await svc.from('proposals').update({
       tutor_availability: normalised as unknown as Json,
     }).eq('id', id);
+  }
+
+  // Notify the coordinator that the tutor accepted
+  const { data: fullProposal } = await svc
+    .from('proposals')
+    .select('student_name, subject, coordinator_id')
+    .eq('id', id)
+    .single();
+  if (fullProposal?.coordinator_id) {
+    const { data: coord } = await svc.from('users').select('email, name').eq('id', fullProposal.coordinator_id).single();
+    const { data: tutorInfo } = await svc.from('users').select('name').eq('id', tutorId).single();
+    const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
+    if (coord && tutorInfo && appUrl) {
+      sendTutorAcceptedEmail(coord.email, coord.name, tutorInfo.name, fullProposal.student_name, fullProposal.subject, appUrl).catch(() => {});
+    }
   }
 
   return NextResponse.json({ id });

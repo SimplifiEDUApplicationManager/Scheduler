@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import { declineProposal, transitionHttpStatus } from '@/lib/data/proposals';
 import { createServiceClient } from '@/lib/supabase/server';
+import { sendTutorDeclinedEmail } from '@/lib/resend/emails';
 
 /**
  * POST /api/proposals/[id]/decline
@@ -41,6 +42,21 @@ export async function POST(
       .from('requests')
       .update({ status: 'open', matched_proposal_id: null })
       .eq('id', proposal.request_id);
+  }
+
+  // Notify the coordinator that the tutor declined
+  const { data: fullProposal } = await svc
+    .from('proposals')
+    .select('student_name, subject, coordinator_id')
+    .eq('id', id)
+    .single();
+  if (fullProposal?.coordinator_id) {
+    const { data: coord } = await svc.from('users').select('email, name').eq('id', fullProposal.coordinator_id).single();
+    const { data: tutorInfo } = await svc.from('users').select('name').eq('id', auth.user.id).single();
+    const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
+    if (coord && tutorInfo && appUrl) {
+      sendTutorDeclinedEmail(coord.email, coord.name, tutorInfo.name, fullProposal.student_name, fullProposal.subject, reason, appUrl).catch(() => {});
+    }
   }
 
   return NextResponse.json({ id });

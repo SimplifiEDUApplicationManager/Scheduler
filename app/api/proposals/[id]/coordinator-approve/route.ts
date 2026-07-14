@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { createTutoringEvent, tupleToUnix } from '@/lib/nylas/events';
 import { convertTupleTimezone } from '@/lib/utils/timezone';
 import { listAsanaSections, moveTaskToSection } from '@/lib/asana/client';
+import { sendClientApprovedEmail } from '@/lib/resend/emails';
 import type { Json } from '@/lib/types/database';
 
 /**
@@ -123,6 +124,15 @@ export async function POST(
       }
     } catch (err) {
       console.error('[coordinator-approve] Asana move failed:', err);
+    }
+  }
+
+  // Notify the tutor that the client approved and sessions are scheduled
+  if (proposal.tutor_id) {
+    const { data: tutor } = await svc.from('users').select('email, name').eq('id', proposal.tutor_id).single();
+    const appUrl = (process.env.SIMPLIFI_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
+    if (tutor && appUrl) {
+      sendClientApprovedEmail(tutor.email, tutor.name, proposal.student_name, proposal.subject, appUrl).catch(() => {});
     }
   }
 

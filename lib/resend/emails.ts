@@ -260,6 +260,110 @@ export async function sendProposalEmail(
   });
 }
 
+// ── Tutor accepted / declined → notify coordinator ──────────────────────────
+
+export async function sendTutorAcceptedEmail(
+  coordinatorEmail: string,
+  coordinatorName: string,
+  tutorName: string,
+  studentName: string,
+  subject: string,
+  appUrl: string,
+): Promise<EmailResult> {
+  const content = `
+<h2 style="font-size:20px;font-weight:800;margin:0 0 16px;letter-spacing:-0.015em">Tutor accepted</h2>
+<p style="font-size:14px;color:#52525B;margin:0 0 8px;line-height:1.6">Hi ${coordinatorName},</p>
+<p style="font-size:14px;color:#52525B;margin:0 0 24px;line-height:1.6"><strong>${tutorName}</strong> accepted the proposal for <strong>${studentName}</strong> — ${subject} and submitted their availability. Review their times and share the tutor's profile with the family.</p>
+<p style="margin:0 0 28px">${ctaButton(`${appUrl}/dashboard/proposals`, 'View proposals')}</p>
+<p style="font-size:12px;color:#A1A1AA;margin:0;line-height:1.6">Once the family approves, click "Schedule sessions" to finalize the match.</p>
+`;
+
+  return send({
+    to: coordinatorEmail,
+    toName: coordinatorName,
+    subject: `${tutorName} accepted — ${studentName} · ${subject}`,
+    html: brandedHtml(content),
+  });
+}
+
+export async function sendTutorDeclinedEmail(
+  coordinatorEmail: string,
+  coordinatorName: string,
+  tutorName: string,
+  studentName: string,
+  subject: string,
+  declineReason: string | undefined,
+  appUrl: string,
+): Promise<EmailResult> {
+  const reasonBlock = declineReason
+    ? `<div style="margin:16px 0;padding:12px 16px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;font-size:13px;color:#991B1B;line-height:1.5"><strong>Reason:</strong> &ldquo;${declineReason}&rdquo;</div>`
+    : '';
+
+  const content = `
+<h2 style="font-size:20px;font-weight:800;margin:0 0 16px;letter-spacing:-0.015em">Tutor declined</h2>
+<p style="font-size:14px;color:#52525B;margin:0 0 8px;line-height:1.6">Hi ${coordinatorName},</p>
+<p style="font-size:14px;color:#52525B;margin:0 0 4px;line-height:1.6"><strong>${tutorName}</strong> declined the proposal for <strong>${studentName}</strong> — ${subject}.</p>
+${reasonBlock}
+<p style="font-size:14px;color:#52525B;margin:16px 0 24px;line-height:1.6">The request is available for reassignment.</p>
+<p style="margin:0 0 28px">${ctaButton(`${appUrl}/dashboard/requests`, 'View requests')}</p>
+`;
+
+  return send({
+    to: coordinatorEmail,
+    toName: coordinatorName,
+    subject: `${tutorName} declined — ${studentName} · ${subject}`,
+    html: brandedHtml(content),
+  });
+}
+
+// ── Coordinator approved / rejected → notify tutor ──────────────────────────
+
+export async function sendClientApprovedEmail(
+  tutorEmail: string,
+  tutorName: string,
+  studentName: string,
+  subject: string,
+  appUrl: string,
+): Promise<EmailResult> {
+  const content = `
+<h2 style="font-size:20px;font-weight:800;margin:0 0 16px;letter-spacing:-0.015em">You&rsquo;re matched!</h2>
+<p style="font-size:14px;color:#52525B;margin:0 0 8px;line-height:1.6">Hi ${tutorName},</p>
+<p style="font-size:14px;color:#52525B;margin:0 0 24px;line-height:1.6">Great news — the family approved <strong>${studentName}</strong> for ${subject}. Your sessions have been scheduled and added to your calendar.</p>
+<p style="margin:0 0 28px">${ctaButton(`${appUrl}/tutor/calendar`, 'View your calendar')}</p>
+<p style="font-size:12px;color:#A1A1AA;margin:0;line-height:1.6">Check your calendar for the session times. Reach out to your coordinator if you have any questions.</p>
+`;
+
+  return send({
+    to: tutorEmail,
+    toName: tutorName,
+    subject: `You're matched — ${studentName} · ${subject}`,
+    html: brandedHtml(content),
+  });
+}
+
+export async function sendClientDeclinedEmail(
+  tutorEmail: string,
+  tutorName: string,
+  studentName: string,
+  subject: string,
+  appUrl: string,
+): Promise<EmailResult> {
+  const content = `
+<h2 style="font-size:20px;font-weight:800;margin:0 0 16px;letter-spacing:-0.015em">Client update</h2>
+<p style="font-size:14px;color:#52525B;margin:0 0 8px;line-height:1.6">Hi ${tutorName},</p>
+<p style="font-size:14px;color:#52525B;margin:0 0 24px;line-height:1.6">Unfortunately, the family for <strong>${studentName}</strong> — ${subject} has decided to go in a different direction. This doesn't reflect on you — scheduling preferences and family circumstances vary.</p>
+<p style="font-size:14px;color:#52525B;margin:0 0 24px;line-height:1.6">You'll receive new proposals as matches come in.</p>
+<p style="margin:0 0 28px">${ctaButton(`${appUrl}/tutor/proposals`, 'View proposals')}</p>
+`;
+
+  return send({
+    to: tutorEmail,
+    toName: tutorName,
+    subject: `Client update — ${studentName} · ${subject}`,
+    html: brandedHtml(content),
+  });
+}
+
 // ── Weekly summary email ──────────────────────────────────────────────────────
 
 export interface WeeklySession {
