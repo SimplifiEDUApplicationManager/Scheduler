@@ -369,6 +369,45 @@ export async function deleteTutoringEvent(
   return false;
 }
 
+/**
+ * Delete a recurring tutoring event AND all its spawned instances.
+ * Google Calendar generates individual instances of recurring events, each
+ * with its own ID. Deleting the parent alone leaves those instances behind.
+ *
+ * Strategy: delete the parent event, then search for any remaining events
+ * whose title matches the student/subject pattern and delete those too.
+ */
+export async function deleteRecurringTutoringEvent(
+  grantId: string,
+  parentEventId: string,
+  studentName: string,
+  subject: string,
+  calendarId?: string,
+): Promise<void> {
+  const calId = calendarId ?? (await fetchCalendarIds(grantId))[0] ?? 'primary';
+
+  // 1. Delete the parent event (best-effort)
+  await deleteTutoringEvent(grantId, parentEventId, calId);
+
+  // 2. Search for remaining instances by title match
+  const titlePrefix = `[Tutoring] ${studentName}`;
+  const now = Math.floor(Date.now() / 1000);
+  const farFuture = now + 365 * 24 * 60 * 60;
+  const searchPath = `${grantPath(grantId, 'events')}?calendar_id=${encodeURIComponent(calId)}&start=${now}&end=${farFuture}&limit=200`;
+
+  const listResult = await nylasList<NylasEvent>(searchPath);
+  if (!listResult.ok) return;
+
+  const matchingEvents = listResult.data.filter(ev =>
+    (ev.title ?? '').startsWith(titlePrefix),
+  );
+
+  for (const ev of matchingEvents) {
+    const delPath = `${grantPath(grantId, 'events')}/${ev.id}?calendar_id=${encodeURIComponent(calId)}`;
+    await nylasDelete(delPath);
+  }
+}
+
 // ── Week range helper ─────────────────────────────────────────────────────────
 
 /**
