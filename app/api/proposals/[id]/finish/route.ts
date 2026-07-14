@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { deleteRecurringTutoringEvent } from '@/lib/nylas/events';
@@ -6,7 +7,7 @@ import { deleteRecurringTutoringEvent } from '@/lib/nylas/events';
 /**
  * POST /api/proposals/[id]/finish
  * Tutor marks an accepted proposal as finished (engagement complete).
- * Also removes the recurring calendar event (best-effort).
+ * Also removes the recurring calendar events in the background.
  */
 export async function POST(
   _req: NextRequest,
@@ -45,29 +46,37 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Delete the calendar event and all its spawned recurring instances
-  // so sessions stop appearing on the tutor's calendar and counting
-  // toward their capacity.
+  // Delete calendar events in the background using next/server after()
+  // so the response returns immediately and the UI updates without waiting
+  // for potentially slow Nylas API calls.
   if (proposal.nylas_event_id && proposal.tutor_id) {
-    const { data: tutor } = await svc
-      .from('users')
-      .select('nylas_grant_id, email')
-      .eq('id', proposal.tutor_id)
-      .single();
+    const tutorId = proposal.tutor_id;
+    const eventId = proposal.nylas_event_id;
+    const studentName = proposal.student_name;
+    const subject = proposal.subject;
 
-    if (tutor?.nylas_grant_id) {
-      try {
-        await deleteRecurringTutoringEvent(
-          tutor.nylas_grant_id,
-          proposal.nylas_event_id,
-          proposal.student_name,
-          proposal.subject,
-          tutor.email ?? undefined,
-        );
-      } catch (err) {
-        console.error('[proposals/finish] delete events threw:', err);
+    after(async () => {
+      const bgSvc = createServiceClient();
+      const { data: tutor } = await bgSvc
+        .from('users')
+        .select('nylas_grant_id, email')
+        .eq('id', tutorId)
+        .single();
+
+      if (tutor?.nylas_grant_id) {
+        try {
+          await deleteRecurringTutoringEvent(
+            tutor.nylas_grant_id,
+            eventId,
+            studentName,
+            subject,
+            tutor.email ?? undefined,
+          );
+        } catch (err) {
+          console.error('[proposals/finish] delete events threw:', err);
+        }
       }
-    }
+    });
   }
 
   return NextResponse.json({ id });
