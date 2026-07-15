@@ -69,7 +69,10 @@ export function PaintWeek({ proposal, events, tuples, painted, onPaintChange, st
   const hours = Array.from({ length: endHr - startHr + 1 }, (_, i) => startHr + i);
   const colHeight = hours.length * ROW_H;
   const weekDays = getWeekDays(weekOffset);
-  const colDays = COL_TO_DAY.map(dow => weekDays.find(d => d.dayIdx === dow)!);
+  const nextWeekDays = getWeekDays(weekOffset + 1);
+  const colDays = COL_TO_DAY.map(dow =>
+    dow === 0 ? nextWeekDays.find(d => d.dayIdx === 0)! : weekDays.find(d => d.dayIdx === dow)!,
+  );
 
   // Compute paintable windows (student availability minus tutor events)
   const paintableWindows = subtractEvents(tuples, events);

@@ -49,7 +49,11 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
   );
   const colHeight = hours.length * ROW_H;
   const weekDays = getWeekDays(weekOffset);
-  const colDays = COL_TO_DAY.map(dow => weekDays.find(d => d.dayIdx === dow)!);
+  const nextWeekDays = getWeekDays(weekOffset + 1);
+  // Mon–Sat from this week, Sunday from next week (end-of-week Sunday, not start-of-week)
+  const colDays = COL_TO_DAY.map(dow =>
+    dow === 0 ? nextWeekDays.find(d => d.dayIdx === 0)! : weekDays.find(d => d.dayIdx === dow)!,
+  );
   const color = tupleColors[0];
 
   return (
