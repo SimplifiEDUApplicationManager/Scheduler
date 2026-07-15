@@ -164,6 +164,8 @@ export interface Invitation {
   placements?: { day: number; start: number }[];
   /** Tutor's painted availability ranges (set when tutor accepts). */
   tutorAvailability?: Tuple[];
+  /** The week the tutor chose to start (YYYY-MM-DD of the Sunday). */
+  tutorStartDate?: string;
   sessionDurationMinutes?: number;
   sessionsPerWeek?: number;
   tz?: string;
@@ -231,6 +233,8 @@ export interface TutorProposal {
   wasUpdated?: boolean;
   /** Tutor's painted availability ranges within the student's windows (set on TUTOR_ACCEPTED). */
   tutorAvailability?: Tuple[];
+  /** The week the tutor chose to start (YYYY-MM-DD). */
+  tutorStartDate?: string;
 }
 
 // ── Coordinator management ──────────────────────────────────────────────────

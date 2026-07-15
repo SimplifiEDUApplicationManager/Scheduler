@@ -62,12 +62,13 @@ interface Props {
   onPaintChange: (ranges: Tuple[]) => void;
   startHr: number;
   endHr: number;
+  weekOffset?: number;
 }
 
-export function PaintWeek({ proposal, events, tuples, painted, onPaintChange, startHr, endHr }: Props) {
+export function PaintWeek({ proposal, events, tuples, painted, onPaintChange, startHr, endHr, weekOffset = 0 }: Props) {
   const hours = Array.from({ length: endHr - startHr + 1 }, (_, i) => startHr + i);
   const colHeight = hours.length * ROW_H;
-  const weekDays = getWeekDays(0);
+  const weekDays = getWeekDays(weekOffset);
   const colDays = COL_TO_DAY.map(dow => weekDays.find(d => d.dayIdx === dow)!);
 
   // Compute paintable windows (student availability minus tutor events)

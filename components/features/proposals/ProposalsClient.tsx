@@ -262,6 +262,7 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
                       </div>
                       <div className="text-[10px] text-violet-600 mt-1">
                         {inv.sessionsPerWeek ?? 1}x/week · {inv.sessionDurationMinutes ?? 60}min sessions
+                        {inv.tutorStartDate && ` · starting week of ${new Date(inv.tutorStartDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                       </div>
                     </div>
                   )}
@@ -349,7 +350,7 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
               studentEmail: '',
               subject: schedulingInv.subject,
               tuples: schedulingInv.tutorAvailability,
-              startDate: '',
+              startDate: schedulingInv.tutorStartDate ?? '',
               hoursPerWeek: 0,
               notes: '',
               coordinator: '',
@@ -366,6 +367,15 @@ export function ProposalsClient({ invitations: initialInvitations, tutors, reque
               handleCoordinatorReject(schedulingInv.id);
               setSchedulingInv(null);
             }}
+            weekOffset={(() => {
+              if (!schedulingInv.tutorStartDate) return 0;
+              const start = new Date(schedulingInv.tutorStartDate + 'T12:00:00');
+              const now = new Date();
+              const currentSunday = new Date(now);
+              currentSunday.setDate(now.getDate() - now.getDay());
+              currentSunday.setHours(0, 0, 0, 0);
+              return Math.round((start.getTime() - currentSunday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+            })()}
           />
         </div>
       )}

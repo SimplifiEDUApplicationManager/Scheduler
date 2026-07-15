@@ -57,6 +57,7 @@ export type Database = {
           request_id: string | null
           requested_schedule: Json
           tutor_availability: Json | null
+          tutor_start_date: string | null
           resolved_at: string | null
           schedule_notes: string | null
           session_duration_minutes: number
@@ -90,6 +91,7 @@ export type Database = {
           request_id?: string | null
           requested_schedule?: Json
           tutor_availability?: Json | null
+          tutor_start_date?: string | null
           resolved_at?: string | null
           schedule_notes?: string | null
           session_duration_minutes?: number
@@ -123,6 +125,7 @@ export type Database = {
           request_id?: string | null
           requested_schedule?: Json
           tutor_availability?: Json | null
+          tutor_start_date?: string | null
           resolved_at?: string | null
           schedule_notes?: string | null
           session_duration_minutes?: number

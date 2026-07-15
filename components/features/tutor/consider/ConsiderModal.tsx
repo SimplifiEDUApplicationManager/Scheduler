@@ -14,7 +14,7 @@ interface Props {
   me: Tutor;
   events: TutorEvent[];
   onClose: () => void;
-  onAccept: (availability: Tuple[]) => void;
+  onAccept: (availability: Tuple[], startDate: string) => void;
   onDecline: () => void;
 }
 

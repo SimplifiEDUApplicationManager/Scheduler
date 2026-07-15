@@ -33,9 +33,11 @@ export async function POST(
   const { id } = await params;
 
   let tutorAvailability: TutorAvailRange[] | undefined;
+  let tutorStartDate: string | undefined;
   try {
-    const body = await req.json() as { tutor_availability?: TutorAvailRange[] };
+    const body = await req.json() as { tutor_availability?: TutorAvailRange[]; tutor_start_date?: string };
     tutorAvailability = body.tutor_availability;
+    tutorStartDate = body.tutor_start_date;
   } catch {
     // No body
   }
@@ -122,7 +124,11 @@ export async function POST(
 
     await svc.from('proposals').update({
       tutor_availability: normalised as unknown as Json,
+      ...(tutorStartDate ? { tutor_start_date: tutorStartDate } : {}),
     }).eq('id', id);
+  } else if (tutorStartDate) {
+    // Save start date even without availability ranges
+    await svc.from('proposals').update({ tutor_start_date: tutorStartDate }).eq('id', id);
   }
 
   // Notify the coordinator that the tutor accepted
