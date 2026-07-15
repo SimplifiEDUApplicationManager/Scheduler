@@ -27,7 +27,7 @@ export async function POST(
 
   const { data: proposal } = await svc
     .from('proposals')
-    .select('status, tutor_id, student_name, student_email, subject, timezone, start_date, session_duration_minutes, request_id, asana_task_id, coordinator_id')
+    .select('status, tutor_id, student_name, student_email, subject, timezone, start_date, tutor_start_date, session_duration_minutes, request_id, asana_task_id, coordinator_id')
     .eq('id', id)
     .single();
 
@@ -84,9 +84,11 @@ export async function POST(
     if (tutor?.nylas_grant_id) {
       let firstEventId: string | null = null;
       for (const pl of normalisedPlacements) {
+        // Use tutor's chosen start date if available, otherwise fall back to proposal start_date
+        const effectiveStartDate = proposal.tutor_start_date ?? proposal.start_date;
         const { startUnix, endUnix } = tupleToUnix(
           pl.day, pl.start, pl.start + durationHrs,
-          proposalTz, proposal.start_date,
+          proposalTz, effectiveStartDate,
         );
         const eventId = await createTutoringEvent(tutor.nylas_grant_id, {
           studentName: proposal.student_name, studentEmail: proposal.student_email,
