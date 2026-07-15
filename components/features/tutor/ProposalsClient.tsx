@@ -103,7 +103,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     }
   }
 
-  async function handleAccept(availability: Tuple[]) {
+  async function handleAccept(availability: Tuple[], startDate: string) {
     const p = proposals.find(prop => prop.id === consideringId);
     if (!p) return;
     setBusyAction(`accept-${p.id}`);
@@ -127,7 +127,7 @@ export function ProposalsClient({ me, initialEvents, initialProposals }: Props) 
     const res = await fetch(`/api/proposals/${p.id}/accept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tutor_availability: availability }),
+      body: JSON.stringify({ tutor_availability: availability, tutor_start_date: startDate }),
     });
     if (!res.ok) {
       const body = await res.json() as { error?: string };

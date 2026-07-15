@@ -41,7 +41,7 @@ export default async function ProposalsPage() {
   const [{ data: rows }, tutors, { data: coordRow }] = await Promise.all([
     supabase
       .from('proposals')
-      .select('id, tutor_id, student_name, subject, status, decline_reason, created_at, resolved_at, placements, tutor_availability, requested_schedule, session_duration_minutes, sessions_per_week, timezone')
+      .select('id, tutor_id, student_name, subject, status, decline_reason, created_at, resolved_at, placements, tutor_availability, tutor_start_date, requested_schedule, session_duration_minutes, sessions_per_week, timezone')
       .eq('coordinator_id', user.id)
       .order('created_at', { ascending: false }),
     fetchAllTutors(supabase),
@@ -93,6 +93,7 @@ export default async function ProposalsPage() {
       wasEdited:     row.status === 'PENDING' && row.resolved_at !== null,
       placements,
       tutorAvailability,
+      tutorStartDate: row.tutor_start_date ?? undefined,
       sessionDurationMinutes: row.session_duration_minutes ?? undefined,
       sessionsPerWeek: row.sessions_per_week ?? undefined,
       tz:            coordTz,

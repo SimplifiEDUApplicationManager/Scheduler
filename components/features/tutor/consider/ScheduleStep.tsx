@@ -17,6 +17,7 @@ interface Props {
   onBack: () => void;
   onConfirm: (placements: Placement[]) => void;
   onDecline: () => void;
+  weekOffset?: number;
 }
 
 function fmtH(h: number): string {
@@ -25,7 +26,7 @@ function fmtH(h: number): string {
   return mn === 0 ? `${h12}${suf}` : `${h12}:${String(mn).padStart(2, '0')}${suf}`;
 }
 
-export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props) {
+export function ScheduleStep({ p, events, onBack, onConfirm, onDecline, weekOffset = 0 }: Props) {
   const sessionsNeeded = p.sessionsPerWeek ?? 1;
   const durationHrs = (p.sessionDurationMinutes ?? 60) / 60;
   const durationMin = p.sessionDurationMinutes ?? 60;
@@ -212,6 +213,7 @@ export function ScheduleStep({ p, events, onBack, onConfirm, onDecline }: Props)
             onCandidateClick={placeAt}
             onCandidateHover={on => { if (!pinned) setFocused(on); }}
             tupleColors={TUPLE_COLORS}
+            weekOffset={weekOffset}
           />
         </div>
       </div>

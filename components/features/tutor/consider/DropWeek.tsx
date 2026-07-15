@@ -30,6 +30,7 @@ interface Props {
   onCandidateClick: (idx: number, day: number, start: number) => void;
   onCandidateHover: (on: boolean) => void;
   tupleColors: TupleColor[];
+  weekOffset?: number;
 }
 
 function fmtH(h: number): string {
@@ -39,7 +40,7 @@ function fmtH(h: number): string {
   return mn === 0 ? `${h12}${suf}` : `${h12}:${String(mn).padStart(2, '0')}${suf}`;
 }
 
-export function DropWeek({ events, proposal, placements, tuples, overSlot, setOverSlot, dragging, canDrop, onDrop, startHr, endHr, candidateWindows, focused, onCandidateClick, onCandidateHover, tupleColors }: Props) {
+export function DropWeek({ events, proposal, placements, tuples, overSlot, setOverSlot, dragging, canDrop, onDrop, startHr, endHr, candidateWindows, focused, onCandidateClick, onCandidateHover, tupleColors, weekOffset = 0 }: Props) {
   const hours = Array.from({ length: endHr - startHr + 1 }, (_, i) => startHr + i);
   // 15-minute-aligned drop slots
   const slotSteps = Array.from(
@@ -47,7 +48,7 @@ export function DropWeek({ events, proposal, placements, tuples, overSlot, setOv
     (_, i) => +(startHr + i / SLOTS_PER_HOUR).toFixed(4),
   );
   const colHeight = hours.length * ROW_H;
-  const weekDays = getWeekDays(0);
+  const weekDays = getWeekDays(weekOffset);
   const colDays = COL_TO_DAY.map(dow => weekDays.find(d => d.dayIdx === dow)!);
   const color = tupleColors[0];
 
