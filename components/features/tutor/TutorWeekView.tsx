@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef, useCallback } from 'react';
 import type { TutorEvent, TutorProposal } from '@/lib/types/domain';
 import { fmtRange, getWeekDays } from '@/lib/utils/tutors';
 import { cn } from '@/lib/utils/cn';
@@ -8,12 +9,42 @@ const ROW_H = 40;
 const START_H = 0;
 const END_H = 24;
 const HOURS = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i);
+const LONG_PRESS_MS = 500;
+
+/** Parse hex color (#RRGGBB or #RGB) to [r, g, b]. */
+function parseHex(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  return [parseInt(full.slice(0, 2), 16), parseInt(full.slice(2, 4), 16), parseInt(full.slice(4, 6), 16)];
+}
+
+/** Linearly blend two hex colors by progress (0→1). */
+function blendColor(from: string, to: string, progress: number): string {
+  const [r1, g1, b1] = parseHex(from);
+  const [r2, g2, b2] = parseHex(to);
+  const r = Math.round(r1 + (r2 - r1) * progress);
+  const g = Math.round(g1 + (g2 - g1) * progress);
+  const b = Math.round(b1 + (b2 - b1) * progress);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+const TEAL  = { bg: '#E8F4F1', border: '#3F9C8B', text: '#1F5349' };
+const GRAY  = { bg: '#F5F5F5', border: '#A1A1AA', text: '#52525B' };
 
 function eventBg(e: TutorEvent) {
   if (e.status === 'cancelled') return { bg: '#FAFAFA', border: '#D4D4D8', text: '#A1A1AA' };
-  if (e.kind === 'other')       return { bg: '#F5F5F5', border: '#A1A1AA', text: '#52525B' };
+  if (e.kind === 'other')       return GRAY;
   if (e.status === 'completed') return { bg: '#F4F4F5', border: '#A1A1AA', text: '#52525B' };
-  return { bg: '#E8F4F1', border: '#3F9C8B', text: '#1F5349' };
+  return TEAL;
+}
+
+/** Pin icon (SVG) shown on toggleable teal events. */
+function PinIcon() {
+  return (
+    <svg width={10} height={10} viewBox="0 0 16 16" fill="currentColor" style={{ opacity: 0.6, flexShrink: 0 }}>
+      <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1-.707.708l-.565-.565-2.122 2.121a.5.5 0 0 1-.354.147H9.828l-2.828 2.828v1.414a.5.5 0 0 1-.854.354l-4.242-4.243a.5.5 0 0 1 .354-.853h1.414l2.829-2.829V3.757a.5.5 0 0 1 .146-.354l2.122-2.121-.566-.566a.5.5 0 0 1 .147-.707z" />
+    </svg>
+  );
 }
 
 interface Props {
@@ -21,9 +52,59 @@ interface Props {
   proposal: TutorProposal | null;
   weekOffset: number;
   onOpenSession: (id: string) => void;
+  onTogglePin?: (event: TutorEvent) => void;
 }
 
-export function TutorWeekView({ events, proposal, weekOffset, onOpenSession }: Props) {
+export function TutorWeekView({ events, proposal, weekOffset, onOpenSession, onTogglePin }: Props) {
+  // Long-press state: which event is being held and its progress (0→1)
+  const [pressState, setPressState] = useState<{ id: string; progress: number } | null>(null);
+  const pressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pressStartRef = useRef<number>(0);
+  const pressFiredRef = useRef(false);
+  const clickBlockRef = useRef(false);
+
+  const stopPress = useCallback(() => {
+    if (pressTimerRef.current) {
+      clearInterval(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+    if (!pressFiredRef.current) {
+      setPressState(null);
+    }
+    pressFiredRef.current = false;
+    // Unblock clicks after a short delay so the mouseup click doesn't fire
+    setTimeout(() => { clickBlockRef.current = false; }, 50);
+  }, []);
+
+  const startPress = useCallback((e: TutorEvent) => {
+    if (e.pinSource === 'app' || e.status === 'cancelled') return;
+    pressFiredRef.current = false;
+    pressStartRef.current = Date.now();
+    clickBlockRef.current = true;
+    setPressState({ id: e.id, progress: 0 });
+
+    pressTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - pressStartRef.current;
+      const progress = Math.min(elapsed / LONG_PRESS_MS, 1);
+      setPressState({ id: e.id, progress });
+
+      if (progress >= 1) {
+        pressFiredRef.current = true;
+        if (pressTimerRef.current) {
+          clearInterval(pressTimerRef.current);
+          pressTimerRef.current = null;
+        }
+        // Brief scale pulse then clear
+        setTimeout(() => setPressState(null), 200);
+        onTogglePin?.(e);
+      }
+    }, 16);
+  }, [onTogglePin]);
+
+  const handleClick = useCallback((e: TutorEvent) => {
+    if (clickBlockRef.current) return;
+    onOpenSession(e.id);
+  }, [onOpenSession]);
   const weekDays = getWeekDays(weekOffset);
 
   return (
@@ -78,11 +159,33 @@ export function TutorWeekView({ events, proposal, weekOffset, onOpenSession }: P
 
               {/* Existing events */}
               {dayEvents.map(e => {
-                const { bg, border, text } = eventBg(e);
+                const colors = eventBg(e);
+                const isToggleable = e.pinSource !== 'app' && e.status !== 'cancelled';
+                const isPinned = e.pinSource === 'auto' || e.pinSource === 'manual';
+                const press = pressState?.id === e.id ? pressState : null;
+                const completed = press && press.progress >= 1;
+
+                // During long-press, interpolate background from current → target color
+                const targetColors = e.kind === 'session' ? GRAY : TEAL;
+                let bg = colors.bg;
+                let border = colors.border;
+                let text = colors.text;
+                if (press && isToggleable) {
+                  const p = press.progress;
+                  bg = p < 1 ? blendColor(colors.bg, targetColors.bg, p) : targetColors.bg;
+                  border = p < 1 ? blendColor(colors.border, targetColors.border, p) : targetColors.border;
+                  text = p < 1 ? blendColor(colors.text, targetColors.text, p) : targetColors.text;
+                }
+
                 return (
                   <div
                     key={e.id}
-                    onClick={() => onOpenSession(e.id)}
+                    onClick={() => handleClick(e)}
+                    onMouseDown={() => startPress(e)}
+                    onMouseUp={stopPress}
+                    onMouseLeave={stopPress}
+                    onTouchStart={() => startPress(e)}
+                    onTouchEnd={stopPress}
                     style={{
                       position: 'absolute',
                       top: (e.start - START_H) * ROW_H + 1,
@@ -94,12 +197,17 @@ export function TutorWeekView({ events, proposal, weekOffset, onOpenSession }: P
                       borderRadius: 4,
                       padding: '3px 5px',
                       overflow: 'hidden',
-                      cursor: 'pointer',
+                      cursor: isToggleable ? 'grab' : 'pointer',
                       textDecoration: e.status === 'cancelled' ? 'line-through' : 'none',
                       opacity: e.status === 'cancelled' ? 0.7 : 1,
+                      transform: completed ? 'scale(1.03)' : 'scale(1)',
+                      transition: completed ? 'transform 0.15s ease-out' : 'none',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
                     }}
                   >
-                    <div style={{ fontSize: 11, fontWeight: 600, color: text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      {isPinned && !press && <PinIcon />}
                       {e.title}
                     </div>
                     {(e.end - e.start) * ROW_H >= 28 && (

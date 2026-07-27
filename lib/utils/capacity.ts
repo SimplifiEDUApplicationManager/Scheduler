@@ -25,7 +25,18 @@ export interface CapacityInfo {
   status: CapacityStatus;
 }
 
+// ── Override shape for capacity ───────────────────────────────────────────
+
+export interface CapacityOverride {
+  nylas_event_id: string;
+  master_event_id: string | null;
+  counted: boolean;
+}
+
 // ── Session detection ──────────────────────────────────────────────────────
+
+/** Word-boundary match for "tutor" or "tutoring" (case-insensitive). */
+const TUTOR_WORD_RE = /\btutor(?:ing)?\b/i;
 
 /**
  * Returns true if the event should count toward the tutor's weekly hours.
@@ -37,6 +48,30 @@ export interface CapacityInfo {
 export function isTutoringSession(event: NylasEventForCapacity): boolean {
   if (event.metadata?.simplifi_created === 'true') return true;
   if (/\[tutoring\]/i.test(event.title)) return true;
+  return false;
+}
+
+/**
+ * Determines whether an event counts toward capacity, considering overrides
+ * and auto-detection. Priority: manual override > auto-detection > app-created > default.
+ */
+export function countsForCapacity(
+  event: NylasEventForCapacity & { id?: string; master_event_id?: string | null },
+  overrides: CapacityOverride[],
+): boolean {
+  // Check manual override (exact event ID or master event ID for recurring)
+  const override = overrides.find(o =>
+    (event.id && o.nylas_event_id === event.id) ||
+    (o.master_event_id && event.master_event_id && o.master_event_id === event.master_event_id),
+  );
+  if (override) return override.counted;
+
+  // App-created events always count
+  if (isTutoringSession(event)) return true;
+
+  // Auto-detect by title word boundary
+  if (TUTOR_WORD_RE.test(event.title)) return true;
+
   return false;
 }
 
@@ -66,17 +101,26 @@ export function weekBounds(referenceMs: number = Date.now()): { start: number; e
  *
  * An event is included when it IS a tutoring session AND its start_time falls
  * within [weekStart, weekEnd]. Duration is computed as end_time − start_time.
+ *
+ * When `overrides` is provided, uses the full override-aware classification
+ * (manual override > auto-detection > app-created). Without overrides, falls
+ * back to legacy isTutoringSession for backward compatibility.
  */
 export function computeWeeklyHours(
-  events: NylasEventForCapacity[],
+  events: (NylasEventForCapacity & { id?: string; master_event_id?: string | null })[],
   referenceMs: number = Date.now(),
+  overrides?: CapacityOverride[],
 ): number {
   const { start, end } = weekBounds(referenceMs);
   const startSec = start / 1000;
   const endSec   = end   / 1000;
 
+  const shouldCount = overrides
+    ? (e: NylasEventForCapacity & { id?: string; master_event_id?: string | null }) => countsForCapacity(e, overrides)
+    : (e: NylasEventForCapacity) => isTutoringSession(e);
+
   const total = events
-    .filter(e => isTutoringSession(e) && e.start_time >= startSec && e.start_time <= endSec)
+    .filter(e => shouldCount(e) && e.start_time >= startSec && e.start_time <= endSec)
     .reduce((sum, e) => sum + Math.max(0, e.end_time - e.start_time), 0);
 
   return Math.round((total / 3600) * 100) / 100;

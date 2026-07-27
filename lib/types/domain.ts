@@ -186,6 +186,15 @@ export interface AtRiskStudent {
 export type TutorEventKind   = 'session' | 'other';
 export type TutorEventStatus = 'upcoming' | 'completed' | 'cancelled';
 
+/**
+ * How the event was classified as a tutoring session:
+ * - 'app'    — created through the proposal/booking flow (locked, not toggleable)
+ * - 'auto'   — title contains "tutor"/"tutoring" (toggleable)
+ * - 'manual' — tutor long-pressed to pin it (toggleable)
+ * - null     — not a tutoring session (toggleable → can be pinned)
+ */
+export type TutorEventPinSource = 'app' | 'auto' | 'manual' | null;
+
 export interface TutorEvent {
   id: string;
   day: number;             // 0=Sun … 6=Sat (recurring day-of-week)
@@ -198,6 +207,17 @@ export interface TutorEvent {
   studentInitials?: string;
   subject?: string;
   recurring?: boolean;
+  /** How the event was classified. Null = not a tutoring session. */
+  pinSource?: TutorEventPinSource;
+  /** Nylas master event ID for recurring events (used for series-level overrides). */
+  masterEventId?: string;
+}
+
+/** A manual override stored in the event_overrides table. */
+export interface EventOverride {
+  nylas_event_id: string;
+  master_event_id: string | null;
+  counted: boolean;
 }
 
 export type TutorProposalStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'finished' | 'tutor_accepted' | 'client_declined';

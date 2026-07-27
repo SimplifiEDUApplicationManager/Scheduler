@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Tutor, TutorEvent, TutorProposal, TutorEventKind, TutorEventStatus } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
@@ -149,6 +149,52 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
     showToast({ type: 'cancel', name: target.studentName ?? target.title, undo: () => { setEvents(snapshot); setToast(null); } });
   }
 
+  // ── Pin toggle (long-press) ─────────────────────────────────────────────
+  const handleTogglePin = useCallback(async (event: TutorEvent) => {
+    // Determine the new state: if currently a session, unpin it; if not, pin it
+    const wasCounted = event.kind === 'session';
+    const newCounted = !wasCounted;
+    const newKind: TutorEventKind = newCounted ? 'session' : 'other';
+    const newPinSource = newCounted ? 'manual' as const : null;
+
+    // Optimistic update — toggle all instances if recurring (same masterEventId)
+    const snapshot = events;
+    setEvents(es => es.map(e => {
+      const isTarget = e.id === event.id ||
+        (event.masterEventId && e.masterEventId === event.masterEventId);
+      return isTarget ? { ...e, kind: newKind, pinSource: newPinSource } : e;
+    }));
+
+    // Recalculate capacity from the updated events
+    const updatedEvents = events.map(e => {
+      const isTarget = e.id === event.id ||
+        (event.masterEventId && e.masterEventId === event.masterEventId);
+      return isTarget ? { ...e, kind: newKind } : e;
+    });
+    me.hoursCurrent = Math.round(
+      updatedEvents
+        .filter(e => e.kind === 'session' && e.status !== 'cancelled')
+        .reduce((sum, e) => sum + Math.max(0, e.end - e.start), 0)
+      * 100) / 100;
+
+    // Persist to server
+    const res = await fetch('/api/event-overrides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nylas_event_id: event.masterEventId ?? event.id,
+        master_event_id: event.masterEventId ?? null,
+        counted: newCounted,
+      }),
+    });
+
+    if (!res.ok) {
+      // Rollback on failure
+      setEvents(snapshot);
+      showToast({ type: 'error', name: 'Failed to save pin change' });
+    }
+  }, [events, me]);
+
   const calLabel = calView === 'week' ? getWeekLabel(weekOffset) : getMonthLabel(monthOffset);
 
   return (
@@ -286,8 +332,8 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
         </div>
 
         {calView === 'week'
-          ? <TutorWeekView events={displayEvents} proposal={tourActive ? null : (activeProposal?.status === 'pending' ? activeProposal : null)} weekOffset={weekOffset} onOpenSession={tourActive ? () => {} : setOpenId} />
-          : <TutorMonthView events={displayEvents} proposal={tourActive ? null : (activeProposal?.status === 'pending' ? activeProposal : null)} monthOffset={monthOffset} onOpenSession={setOpenId} />
+          ? <TutorWeekView events={displayEvents} proposal={tourActive ? null : (activeProposal?.status === 'pending' ? activeProposal : null)} weekOffset={weekOffset} onOpenSession={tourActive ? () => {} : setOpenId} onTogglePin={tourActive ? undefined : handleTogglePin} />
+          : <TutorMonthView events={displayEvents} proposal={tourActive ? null : (activeProposal?.status === 'pending' ? activeProposal : null)} monthOffset={monthOffset} onOpenSession={setOpenId} onTogglePin={handleTogglePin} />
         }
       </main>
 
