@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { fetchTutorEvents, weekRange } from '@/lib/nylas/events';
+import type { EventOverride } from '@/lib/types/domain';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
@@ -14,26 +15,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid weekOffset' }, { status: 400 });
   }
 
-  // Fetch the tutor's grant_id and timezone from DB.
-  const { data: row, error } = await supabase
-    .from('users')
-    .select('nylas_grant_id, timezone')
-    .eq('id', user.id)
-    .single();
+  // Fetch user row and overrides in parallel.
+  const [userResult, overridesResult] = await Promise.all([
+    supabase.from('users').select('nylas_grant_id, timezone').eq('id', user.id).single(),
+    supabase.from('event_overrides').select('nylas_event_id, master_event_id, counted').eq('user_id', user.id),
+  ]);
 
+  const { data: row, error } = userResult;
   if (error || !row) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
   if (!row.nylas_grant_id) {
-    // Calendar not connected yet — return empty array rather than an error
-    // so the UI degrades gracefully.
     return NextResponse.json([]);
   }
 
+  const overrides: EventOverride[] = (overridesResult.data ?? []).map(o => ({
+    nylas_event_id: o.nylas_event_id,
+    master_event_id: o.master_event_id,
+    counted: o.counted,
+  }));
+
   const tz = row.timezone ?? 'UTC';
   const { startUnix, endUnix } = weekRange(weekOffset);
-  const events = await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, tz);
+  const events = await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, tz, overrides);
 
   return NextResponse.json(events);
 }

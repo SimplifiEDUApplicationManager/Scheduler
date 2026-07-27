@@ -62,12 +62,22 @@ export default async function TutorCalendarPage() {
     availabilityRequests:   [],
   };
 
-  // Fetch this week's events from Nylas for the initial server render.
-  // If the calendar isn't connected yet, initialEvents is empty and the
-  // client will show the empty calendar state.
+  // Fetch this week's events and overrides from Nylas for the initial server render.
   const { startUnix, endUnix } = weekRange(0);
+
+  const { data: overrideRows } = await supabase
+    .from('event_overrides')
+    .select('nylas_event_id, master_event_id, counted')
+    .eq('user_id', row.id);
+
+  const overrides = (overrideRows ?? []).map(o => ({
+    nylas_event_id: o.nylas_event_id,
+    master_event_id: o.master_event_id,
+    counted: o.counted,
+  }));
+
   const initialEvents = row.nylas_grant_id
-    ? await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, me.tz)
+    ? await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, me.tz, overrides)
     : [];
 
   // Compute current weekly hours from the already-fetched events (no extra API call).

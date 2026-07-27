@@ -39,6 +39,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_overrides: {
+        Row: {
+          id: string
+          user_id: string
+          nylas_event_id: string
+          master_event_id: string | null
+          counted: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          nylas_event_id: string
+          master_event_id?: string | null
+          counted?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          nylas_event_id?: string
+          master_event_id?: string | null
+          counted?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_overrides_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           accommodations: string | null

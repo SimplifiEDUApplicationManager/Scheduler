@@ -3,7 +3,7 @@
 // Server-side only.
 
 import { nylasList, nylasPost, nylasPut, nylasDelete, grantPath } from './client';
-import type { TutorEvent, TutorEventKind, TutorEventStatus } from '@/lib/types/domain';
+import type { TutorEvent, TutorEventKind, TutorEventStatus, TutorEventPinSource, EventOverride } from '@/lib/types/domain';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 // ── Nylas v3 event shape (subset we care about) ───────────────────────────────
@@ -23,6 +23,7 @@ interface NylasEvent {
   recurrence?: string[] | null;
   description?: string | null;
   metadata?: Record<string, string> | null;
+  master_event_id?: string | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -40,10 +41,58 @@ function nylasStatusToEvent(
   return 'upcoming';
 }
 
-function isTutoringSession(ev: NylasEvent): boolean {
-  // Primary marker: metadata set at creation time by the platform.
-  // Fallback: [Tutoring] title prefix for events created before metadata was added.
+/** Returns true if the event was created by the platform (app-scheduled). */
+function isAppCreated(ev: NylasEvent): boolean {
   return ev.metadata?.simplifi_created === 'true' || (ev.title ?? '').startsWith('[Tutoring]');
+}
+
+/** Word-boundary match for "tutor" or "tutoring" in the title (case-insensitive). */
+const TUTOR_WORD_RE = /\btutor(?:ing)?\b/i;
+
+/** Returns true if the title contains "tutor" or "tutoring" as a standalone word. */
+function titleMatchesTutoring(title: string): boolean {
+  return TUTOR_WORD_RE.test(title);
+}
+
+/**
+ * Legacy function kept for backward compatibility with capacity.ts imports.
+ * For the full override-aware classification, use classifyEvent instead.
+ */
+function isTutoringSession(ev: NylasEvent): boolean {
+  return isAppCreated(ev);
+}
+
+/**
+ * Classify an event considering overrides and auto-detection.
+ * Priority: manual override > auto-detection > app-created > default (not counted).
+ */
+function classifyEvent(
+  ev: NylasEvent,
+  overrides: EventOverride[],
+): { kind: TutorEventKind; pinSource: TutorEventPinSource } {
+  // Check for a manual override — by exact event ID or by master event ID (recurring series)
+  const override = overrides.find(o =>
+    o.nylas_event_id === ev.id ||
+    (o.master_event_id && o.master_event_id === ev.master_event_id),
+  );
+
+  if (override) {
+    return override.counted
+      ? { kind: 'session', pinSource: 'manual' }
+      : { kind: 'other',   pinSource: null };
+  }
+
+  // App-created events are locked sessions
+  if (isAppCreated(ev)) {
+    return { kind: 'session', pinSource: 'app' };
+  }
+
+  // Auto-detect by title
+  if (titleMatchesTutoring(ev.title ?? '')) {
+    return { kind: 'session', pinSource: 'auto' };
+  }
+
+  return { kind: 'other', pinSource: null };
 }
 
 // ── Mapper ────────────────────────────────────────────────────────────────────
@@ -52,7 +101,11 @@ function isTutoringSession(ev: NylasEvent): boolean {
  * Map a single Nylas event to a TutorEvent using the tutor's IANA timezone.
  * Returns null for all-day or dateless events (they don't fit the hour-grid).
  */
-function toTutorEvent(ev: NylasEvent, tz: string): TutorEvent | null {
+function toTutorEvent(
+  ev: NylasEvent,
+  tz: string,
+  overrides: EventOverride[] = [],
+): TutorEvent | null {
   const when = ev.when;
   if (when.object !== 'timespan') return null; // skip all-day / instant events
 
@@ -61,8 +114,7 @@ function toTutorEvent(ev: NylasEvent, tz: string): TutorEvent | null {
   const zonedStart = toZonedTime(startMs, tz);
   const zonedEnd   = toZonedTime(endMs,   tz);
 
-  const kind: TutorEventKind =
-    isTutoringSession(ev) ? 'session' : 'other';
+  const { kind, pinSource } = classifyEvent(ev, overrides);
   const status: TutorEventStatus =
     nylasStatusToEvent(ev.status, startMs);
 
@@ -76,7 +128,9 @@ function toTutorEvent(ev: NylasEvent, tz: string): TutorEvent | null {
     title,
     kind,
     status,
+    pinSource,
     recurring: Array.isArray(ev.recurrence) && ev.recurrence.length > 0,
+    masterEventId: ev.master_event_id ?? undefined,
   };
 }
 
@@ -153,6 +207,7 @@ export async function fetchTutorEvents(
   startUnix: number,
   endUnix: number,
   tz: string,
+  overrides: EventOverride[] = [],
 ): Promise<TutorEvent[]> {
   const calendarIds = await fetchCalendarIds(grantId);
 
@@ -173,7 +228,7 @@ export async function fetchTutorEvents(
   }
 
   return allEvents
-    .map(ev => toTutorEvent(ev, tz))
+    .map(ev => toTutorEvent(ev, tz, overrides))
     .filter((ev): ev is TutorEvent => ev !== null);
 }
 
