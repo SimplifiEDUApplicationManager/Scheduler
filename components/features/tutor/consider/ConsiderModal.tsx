@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { TutorProposal, TutorEvent, Tutor, Tuple, SubjectConf } from '@/lib/types/domain';
+import type { TutorProposal, TutorEvent, Tutor, Tuple, SubjectConf, OnAcceptProposal } from '@/lib/types/domain';
 import { subjectDisplayName } from '@/lib/types/domain';
 import { ReviewStep } from './ReviewStep';
 import { PaintScheduleStep } from './PaintScheduleStep';
@@ -14,7 +14,7 @@ interface Props {
   me: Tutor;
   events: TutorEvent[];
   onClose: () => void;
-  onAccept: (availability: Tuple[], startDate: string) => void;
+  onAccept: OnAcceptProposal;
   onDecline: () => void;
 }
 
