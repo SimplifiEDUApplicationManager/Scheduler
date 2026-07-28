@@ -99,14 +99,14 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
   }
 
 
-  async function handleAcceptWithPlacements(placements: ({ day: number; start: number } | null)[]) {
+  async function handleAcceptWithPlacements(availability: { day: number; start: number; end: number }[], startDate: string) {
     const p = proposals.find(prop => prop.id === consideringId);
     if (!p) return;
 
     const res = await fetch(`/api/proposals/${p.id}/accept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ placements }),
+      body: JSON.stringify({ tutor_availability: availability, tutor_start_date: startDate }),
     });
     if (!res.ok) {
       const body = await res.json() as { error?: string };
