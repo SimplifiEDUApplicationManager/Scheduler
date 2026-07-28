@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Tutor, TutorEvent, TutorProposal, TutorEventKind, TutorEventStatus } from '@/lib/types/domain';
+import type { Tutor, TutorEvent, TutorProposal, TutorEventKind, TutorEventStatus, OnAcceptProposal } from '@/lib/types/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { CapacityBar } from '@/components/ui/CapacityBar';
 import { ProposalCard } from './ProposalCard';
@@ -99,7 +99,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
   }
 
 
-  async function handleAcceptWithPlacements(availability: { day: number; start: number; end: number }[], startDate: string) {
+  const handleAcceptWithPlacements: OnAcceptProposal = async (availability, startDate) => {
     const p = proposals.find(prop => prop.id === consideringId);
     if (!p) return;
 
@@ -118,7 +118,7 @@ export function TutorCalendarClient({ me, initialEvents, initialProposals, respo
     setProposals(ps => ps.map(prop => prop.id === consideringId ? { ...prop, status: 'tutor_accepted' } : prop));
     setConsideringId(null);
     showToast({ type: 'accept', name: p.studentName });
-  }
+  };
 
   async function handleDecline(id: string, reason: string) {
     const name = proposals.find(p => p.id === id)?.studentName ?? '';

@@ -181,6 +181,15 @@ export interface AtRiskStudent {
   severity: AtRiskSeverity;
 }
 
+// ── Proposal accept callback ────────────────────────────────────────────────
+
+/**
+ * Shared callback type for the tutor accepting a proposal.
+ * Used in ConsiderModal (producer) and TutorCalendarClient (consumer)
+ * so any signature change forces both sides to update.
+ */
+export type OnAcceptProposal = (availability: Tuple[], startDate: string) => void;
+
 // ── Tutor calendar ──────────────────────────────────────────────────────────
 
 export type TutorEventKind   = 'session' | 'other';
