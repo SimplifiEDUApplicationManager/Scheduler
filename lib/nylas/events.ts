@@ -111,6 +111,7 @@ function toTutorEvent(
 
   const startMs = when.start_time * 1000;
   const endMs   = when.end_time   * 1000;
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null;
   const zonedStart = toZonedTime(startMs, tz);
   const zonedEnd   = toZonedTime(endMs,   tz);
 
