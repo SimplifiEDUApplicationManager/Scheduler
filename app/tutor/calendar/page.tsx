@@ -76,8 +76,8 @@ export default async function TutorCalendarPage() {
     counted: o.counted,
   }));
 
-  const initialEvents = row.nylas_grant_id
-    ? await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, me.tz, overrides)
+  let initialEvents = row.nylas_grant_id
+    ? await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, me.tz, overrides).catch(() => [])
     : [];
 
   // Compute current weekly hours from the already-fetched events (no extra API call).
