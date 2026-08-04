@@ -230,7 +230,9 @@ export function DanielleTour() {
       }
     }
 
-    const alreadySeen = localStorage.getItem('sim_intro_seen') === '1';
+    const alreadySeen = localStorage.getItem('sim_intro_seen') === '1'
+      || document.cookie.split('; ').some(c => c === 'sim_tour_done=1');
+    if (alreadySeen) localStorage.setItem('sim_intro_seen', '1');
     setSeen(alreadySeen);
     if (!alreadySeen) {
       setOpen(true);
