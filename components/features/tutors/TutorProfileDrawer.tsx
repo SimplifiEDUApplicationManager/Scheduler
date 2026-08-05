@@ -18,10 +18,12 @@ interface Props {
   invitations: Invitation[];
   onClose: () => void;
   onPropose: () => void;
+  onStatusChange?: (tutorId: string, newStatus: 'active' | 'disabled') => void;
 }
 
-export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPropose }: Props) {
+export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPropose, onStatusChange }: Props) {
   const [tab, setTab] = useState<Tab>('overview');
+  const [statusBusy, setStatusBusy] = useState(false);
   const roster = useMemo(() => fakeRoster(tutor, subjects), [tutor, subjects]);
 
   // Coordinator-managed personality notes fetched from tutor_context
@@ -128,6 +130,34 @@ export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPr
           >
             View calendar
           </button>
+          <div className="flex-1" />
+          {onStatusChange && (
+            <button
+              disabled={statusBusy}
+              onClick={async () => {
+                const newStatus = tutor.status === 'disabled' ? 'ACTIVE' : 'DISABLED';
+                const verb = newStatus === 'DISABLED' ? 'deactivate' : 'reactivate';
+                if (!confirm(`Are you sure you want to ${verb} ${tutor.name}?`)) return;
+                setStatusBusy(true);
+                const res = await fetch(`/api/tutors/${tutor.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: newStatus }),
+                });
+                setStatusBusy(false);
+                if (res.ok) {
+                  onStatusChange(tutor.id, newStatus === 'DISABLED' ? 'disabled' : 'active');
+                }
+              }}
+              className={`h-8 px-3 rounded-lg border text-[12px] font-semibold flex items-center transition-colors ${
+                tutor.status === 'disabled'
+                  ? 'border-green-200 text-green-700 hover:bg-green-50'
+                  : 'border-red-200 text-red-600 hover:bg-red-50'
+              }`}
+            >
+              {statusBusy ? '...' : tutor.status === 'disabled' ? 'Reactivate' : 'Deactivate'}
+            </button>
+          )}
         </div>
 
         {/* Tab bar */}
