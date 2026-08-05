@@ -2,28 +2,20 @@ import { NextResponse } from 'next/server';
 import { requireActiveRole } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
 
-// PATCH — toggle tutor status (ACTIVE ↔ DISABLED).
-export async function PATCH(
-  request: Request,
+// DELETE — permanently remove a tutor and all their related data.
+export async function DELETE(
+  _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireActiveRole(['SUPER_ADMIN', 'COORDINATOR']);
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  const body = await request.json();
-  const { status } = body as { status: string };
-
-  if (!['ACTIVE', 'DISABLED'].includes(status)) {
-    return NextResponse.json({ error: 'status must be ACTIVE or DISABLED' }, { status: 400 });
-  }
-
   const supabase = createServiceClient();
 
-  // Verify the target is actually a tutor
   const { data: target } = await supabase
     .from('users')
-    .select('role')
+    .select('name, role')
     .eq('id', id)
     .single();
 
@@ -31,17 +23,22 @@ export async function PATCH(
     return NextResponse.json({ error: 'Tutor not found' }, { status: 404 });
   }
 
-  const { data: updated, error } = await supabase
-    .from('users')
-    .update({ status: status as 'ACTIVE' | 'DISABLED' })
-    .eq('id', id)
-    .select('name')
-    .single();
+  await supabase.from('event_overrides').delete().eq('user_id', id);
+  await supabase.from('tutor_subject_changes').delete().eq('tutor_id', id);
+  await supabase.from('tutor_subjects').delete().eq('tutor_id', id);
+  await supabase.from('tutor_context').delete().eq('tutor_id', id);
+  await supabase.from('tutor_availability_requests').delete().eq('tutor_id', id);
+  await supabase.from('proposals').delete().eq('tutor_id', id);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  const { error: rowError } = await supabase.from('users').delete().eq('id', id);
+  if (rowError) {
+    return NextResponse.json({ error: rowError.message }, { status: 500 });
   }
 
-  const verb = status === 'ACTIVE' ? 'reactivated' : 'deactivated';
-  return NextResponse.json({ message: `${updated?.name ?? 'Tutor'} ${verb}` });
+  const { error: authError } = await supabase.auth.admin.deleteUser(id);
+  if (authError) {
+    return NextResponse.json({ error: authError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ message: `${target.name} has been removed` });
 }

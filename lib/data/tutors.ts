@@ -18,7 +18,6 @@ const SELECT_TUTOR = [
   'id',
   'name',
   'email',
-  'status',
   'timezone',
   'bio',
   'max_weekly_hours',
@@ -47,7 +46,6 @@ type RawTutorRow = {
   id: string;
   name: string;
   email: string;
-  status: string;
   timezone: string | null;
   bio: string | null;
   max_weekly_hours: number;
@@ -173,7 +171,7 @@ function rowToTutor(row: RawTutorRow, pendingChanges: RawChangeRow[], availabili
     tz:                     row.timezone ?? 'America/New_York',
     bio:                    row.bio ?? '',
     personality:            '',
-    status:                 row.status === 'DISABLED' ? 'disabled' : 'active',
+    status:                 'active',
     subjects,
     availability:           toAvailability(row.availability),
     hoursCurrent:           0,
@@ -248,22 +246,14 @@ export async function fetchTutor(
   return tutor;
 }
 
-/** Fetch all tutors, ordered by name, with current weekly hours from Nylas.
- *  By default only ACTIVE tutors are returned. Pass includeDisabled to also fetch DISABLED. */
-export async function fetchAllTutors(supabase: SupabaseInstance, includeDisabled = false): Promise<Tutor[]> {
-  let query = supabase
+/** Fetch all active tutors, ordered by name, with current weekly hours from Nylas. */
+export async function fetchAllTutors(supabase: SupabaseInstance): Promise<Tutor[]> {
+  const { data, error } = await supabase
     .from('users')
     .select(SELECT_TUTOR)
     .eq('role', 'TUTOR')
+    .eq('status', 'ACTIVE')
     .order('name');
-
-  if (!includeDisabled) {
-    query = query.eq('status', 'ACTIVE');
-  } else {
-    query = query.in('status', ['ACTIVE', 'DISABLED']);
-  }
-
-  const { data, error } = await query;
 
   if (error) throw error;
   const rows = (data ?? []) as unknown as RawTutorRow[];
