@@ -30,7 +30,9 @@ interface TutorsClientProps {
   coordinatorTz?: string;
 }
 
-export function TutorsClient({ tutors, requests, subjects, invitations }: TutorsClientProps) {
+export function TutorsClient({ tutors: initialTutors, requests, subjects, invitations }: TutorsClientProps) {
+  const [tutors, setTutors] = useState(initialTutors);
+  const [showDisabled, setShowDisabled] = useState(false);
   const router     = useRouter();
   const pathname   = usePathname();
   const rawParams  = useSearchParams();
@@ -99,7 +101,11 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
     setFilters({ ...filters, reqId: null, subjects: [], tuples: [] });
   }
 
-  const filtered = useMemo(() => filterTutors(tutors, filters), [tutors, filters]);
+  const visibleTutors = useMemo(
+    () => showDisabled ? tutors : tutors.filter(t => t.status !== 'disabled'),
+    [tutors, showDisabled],
+  );
+  const filtered = useMemo(() => filterTutors(visibleTutors, filters), [visibleTutors, filters]);
 
   // Stable key representing the current set of filtered tutor IDs.
   // Changes only when the actual set of IDs changes, not on every render —
@@ -246,8 +252,19 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="px-4 pt-2.5 pb-1.5 flex items-center justify-between">
             <span className="text-[10px] font-bold text-fg-muted uppercase tracking-[0.06em]">
-              Matching · {filtered.length} of {tutors.length}
+              Matching · {filtered.length} of {visibleTutors.length}
             </span>
+            {tutors.some(t => t.status === 'disabled') && (
+              <label className="flex items-center gap-1.5 text-[10px] text-fg-muted cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showDisabled}
+                  onChange={e => setShowDisabled(e.target.checked)}
+                  className="accent-brand-teal-600"
+                />
+                Show deactivated
+              </label>
+            )}
             <button
               onClick={() => setFilters({ q: '', subjects: [], conf: ['HIGH', 'MEDIUM'], tuples: [], reqId: null })}
               className="text-[11px] text-fg-3 hover:text-fg-1 transition-colors"
@@ -378,6 +395,10 @@ export function TutorsClient({ tutors, requests, subjects, invitations }: Tutors
           invitations={invitations}
           onClose={() => setProfileTutor(null)}
           onPropose={() => { setProfileTutor(null); setConfirmFor(profileTutor); }}
+          onStatusChange={(id, newStatus) => {
+            setTutors(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+            setProfileTutor(prev => prev ? { ...prev, status: newStatus } : null);
+          }}
         />
       )}
 

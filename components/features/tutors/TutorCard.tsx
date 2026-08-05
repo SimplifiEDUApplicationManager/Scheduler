@@ -115,6 +115,11 @@ export function TutorCard({
                 No calendar
               </span>
             )}
+            {tutor.status === 'disabled' && (
+              <span className="text-[9px] font-bold px-1.5 py-px rounded whitespace-nowrap bg-red-100 text-red-600">
+                Deactivated
+              </span>
+            )}
           </div>
 
           {/* Subject chips */}
