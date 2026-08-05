@@ -32,7 +32,6 @@ interface TutorsClientProps {
 
 export function TutorsClient({ tutors: initialTutors, requests, subjects, invitations }: TutorsClientProps) {
   const [tutors, setTutors] = useState(initialTutors);
-  const [showDisabled, setShowDisabled] = useState(false);
   const router     = useRouter();
   const pathname   = usePathname();
   const rawParams  = useSearchParams();
@@ -101,11 +100,7 @@ export function TutorsClient({ tutors: initialTutors, requests, subjects, invita
     setFilters({ ...filters, reqId: null, subjects: [], tuples: [] });
   }
 
-  const visibleTutors = useMemo(
-    () => showDisabled ? tutors : tutors.filter(t => t.status !== 'disabled'),
-    [tutors, showDisabled],
-  );
-  const filtered = useMemo(() => filterTutors(visibleTutors, filters), [visibleTutors, filters]);
+  const filtered = useMemo(() => filterTutors(tutors, filters), [tutors, filters]);
 
   // Stable key representing the current set of filtered tutor IDs.
   // Changes only when the actual set of IDs changes, not on every render —
@@ -252,19 +247,8 @@ export function TutorsClient({ tutors: initialTutors, requests, subjects, invita
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="px-4 pt-2.5 pb-1.5 flex items-center justify-between">
             <span className="text-[10px] font-bold text-fg-muted uppercase tracking-[0.06em]">
-              Matching · {filtered.length} of {visibleTutors.length}
+              Matching · {filtered.length} of {tutors.length}
             </span>
-            {tutors.some(t => t.status === 'disabled') && (
-              <label className="flex items-center gap-1.5 text-[10px] text-fg-muted cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showDisabled}
-                  onChange={e => setShowDisabled(e.target.checked)}
-                  className="accent-brand-teal-600"
-                />
-                Show deactivated
-              </label>
-            )}
             <button
               onClick={() => setFilters({ q: '', subjects: [], conf: ['HIGH', 'MEDIUM'], tuples: [], reqId: null })}
               className="text-[11px] text-fg-3 hover:text-fg-1 transition-colors"
@@ -395,9 +379,9 @@ export function TutorsClient({ tutors: initialTutors, requests, subjects, invita
           invitations={invitations}
           onClose={() => setProfileTutor(null)}
           onPropose={() => { setProfileTutor(null); setConfirmFor(profileTutor); }}
-          onStatusChange={(id, newStatus) => {
-            setTutors(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
-            setProfileTutor(prev => prev ? { ...prev, status: newStatus } : null);
+          onDelete={(id) => {
+            setTutors(prev => prev.filter(t => t.id !== id));
+            setProfileTutor(null);
           }}
         />
       )}

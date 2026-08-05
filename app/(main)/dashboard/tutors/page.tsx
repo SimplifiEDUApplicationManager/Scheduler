@@ -43,7 +43,7 @@ export default async function TutorsPage() {
   if (authError || !user) redirect('/login');
 
   const [tutors, { data: subjectRows, error: subjectsError }, { data: requestRows }, { data: coordRow }] = await Promise.all([
-    fetchAllTutors(supabase, true),
+    fetchAllTutors(supabase),
     supabase.from('subjects').select('id, name, category, level').order('name'),
     supabase.from('requests').select('*').eq('coordinator_id', user.id).eq('status', 'open').order('created_at', { ascending: false }),
     supabase.from('users').select('timezone').eq('id', user.id).single(),
