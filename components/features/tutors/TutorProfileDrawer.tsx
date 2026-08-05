@@ -18,12 +18,12 @@ interface Props {
   invitations: Invitation[];
   onClose: () => void;
   onPropose: () => void;
-  onStatusChange?: (tutorId: string, newStatus: 'active' | 'disabled') => void;
+  onDelete?: (tutorId: string) => void;
 }
 
-export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPropose, onStatusChange }: Props) {
+export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPropose, onDelete }: Props) {
   const [tab, setTab] = useState<Tab>('overview');
-  const [statusBusy, setStatusBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const roster = useMemo(() => fakeRoster(tutor, subjects), [tutor, subjects]);
 
   // Coordinator-managed personality notes fetched from tutor_context
@@ -131,31 +131,19 @@ export function TutorProfileDrawer({ tutor, subjects, invitations, onClose, onPr
             View calendar
           </button>
           <div className="flex-1" />
-          {onStatusChange && (
+          {onDelete && (
             <button
-              disabled={statusBusy}
+              disabled={deleteBusy}
               onClick={async () => {
-                const newStatus = tutor.status === 'disabled' ? 'ACTIVE' : 'DISABLED';
-                const verb = newStatus === 'DISABLED' ? 'deactivate' : 'reactivate';
-                if (!confirm(`Are you sure you want to ${verb} ${tutor.name}?`)) return;
-                setStatusBusy(true);
-                const res = await fetch(`/api/tutors/${tutor.id}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ status: newStatus }),
-                });
-                setStatusBusy(false);
-                if (res.ok) {
-                  onStatusChange(tutor.id, newStatus === 'DISABLED' ? 'disabled' : 'active');
-                }
+                if (!confirm(`Are you sure you want to permanently remove ${tutor.name}? This cannot be undone.`)) return;
+                setDeleteBusy(true);
+                const res = await fetch(`/api/tutors/${tutor.id}`, { method: 'DELETE' });
+                setDeleteBusy(false);
+                if (res.ok) onDelete(tutor.id);
               }}
-              className={`h-8 px-3 rounded-lg border text-[12px] font-semibold flex items-center transition-colors ${
-                tutor.status === 'disabled'
-                  ? 'border-green-200 text-green-700 hover:bg-green-50'
-                  : 'border-red-200 text-red-600 hover:bg-red-50'
-              }`}
+              className="h-8 px-3 rounded-lg border border-red-200 text-red-600 text-[12px] font-semibold flex items-center hover:bg-red-50 transition-colors"
             >
-              {statusBusy ? '...' : tutor.status === 'disabled' ? 'Reactivate' : 'Deactivate'}
+              {deleteBusy ? 'Removing...' : 'Remove tutor'}
             </button>
           )}
         </div>
