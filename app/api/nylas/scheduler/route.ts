@@ -220,8 +220,10 @@ export async function PUT(request: Request) {
     if (!auth.ok) return auth.response;
     const { user, supabase } = auth;
 
-    const body = await request.json() as SchedulerPrefs;
-    const { hours, exceptions, cushionMin } = body;
+    const body = await request.json() as Partial<SchedulerPrefs>;
+    const hours = body.hours ?? { ...EMPTY_HOURS_MAP };
+    const exceptions = body.exceptions ?? [];
+    const cushionMin = body.cushionMin ?? 0;
 
     // ── Check total availability hours ──────────────────────────────────────
     const totalHours = computeTotalWeeklyHours(hours);
