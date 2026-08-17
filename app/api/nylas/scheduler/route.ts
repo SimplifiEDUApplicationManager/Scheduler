@@ -225,51 +225,7 @@ export async function PUT(request: Request) {
     const exceptions = body.exceptions ?? [];
     const cushionMin = body.cushionMin ?? 0;
 
-    // ── Check total availability hours ──────────────────────────────────────
     const totalHours = computeTotalWeeklyHours(hours);
-
-    if (totalHours < 10) {
-      // Block the save — create an approval request instead.
-      // The pending prefs are stored in details.prefs so the coordinator can
-      // apply them to Nylas when approving.
-      const { data: existingReq } = await supabase
-        .from('tutor_availability_requests')
-        .select('id')
-        .eq('tutor_id', user.id)
-        .eq('request_type', 'LOW_AVAILABILITY_WINDOWS')
-        .eq('status', 'PENDING')
-        .maybeSingle();
-
-      if (existingReq) {
-        return NextResponse.json(
-          { error: 'A pending request for low availability windows already exists. Wait for coordinator review.' },
-          { status: 409 },
-        );
-      }
-
-      const { data: newReq, error: insertErr } = await supabase
-        .from('tutor_availability_requests')
-        .insert({
-          tutor_id:     user.id,
-          request_type: 'LOW_AVAILABILITY_WINDOWS',
-          reason:       'Submitted via scheduling preferences editor',
-          details:      { total_hours: totalHours, prefs: { hours, exceptions, cushionMin } } as unknown as Json,
-          status:       'PENDING',
-        })
-        .select('id')
-        .single();
-
-      if (insertErr) {
-        return NextResponse.json({ error: 'Failed to create approval request' }, { status: 500 });
-      }
-
-      return NextResponse.json({
-        ok:           false,
-        needs_approval: true,
-        request_id:   newReq.id,
-        total_hours:  totalHours,
-      });
-    }
 
     const { data: row } = await supabase
       .from('users')
