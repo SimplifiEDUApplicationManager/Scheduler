@@ -147,11 +147,29 @@ export async function GET() {
 
     const { data: row } = await supabase
       .from('users')
-      .select('nylas_grant_id, nylas_scheduler_config_id')
+      .select('email, nylas_grant_id, nylas_scheduler_config_id, availability')
       .eq('id', user.id)
       .single();
 
     const defaults: SchedulerPrefs = { hours: { ...EMPTY_HOURS_MAP }, exceptions: [], cushionMin: 0 };
+
+    // Roshni can use the modal without a connected calendar — reconstruct
+    // HoursMap from the stored availability (decimal-hour format) if present.
+    const isCalendarOptional = (row?.email as string | null) === 'truax@berkeley.edu';
+    if (!row?.nylas_grant_id && isCalendarOptional) {
+      const stored = row?.availability as Record<number, [number, number][]> | null;
+      if (!stored) return NextResponse.json(defaults);
+      const hours: HoursMap = { ...EMPTY_HOURS_MAP };
+      for (const [dayNum, windows] of Object.entries(stored)) {
+        const key = DAY_NUM_TO_KEY[Number(dayNum)];
+        if (!key) continue;
+        hours[key] = (windows as [number, number][]).map(([s, e]) => ({
+          start: `${String(Math.floor(s)).padStart(2, '0')}:${String(Math.round((s % 1) * 60)).padStart(2, '0')}`,
+          end:   `${String(Math.floor(e)).padStart(2, '0')}:${String(Math.round((e % 1) * 60)).padStart(2, '0')}`,
+        }));
+      }
+      return NextResponse.json({ hours, exceptions: [], cushionMin: 0 });
+    }
 
     if (!row?.nylas_grant_id || !row?.nylas_scheduler_config_id) {
       return NextResponse.json(defaults);
@@ -233,8 +251,40 @@ export async function PUT(request: Request) {
       .eq('id', user.id)
       .single();
 
-    if (!row?.nylas_grant_id) {
+    // Roshni can save availability without a connected calendar — store hours
+    // in the database for coordinator matching but skip all Nylas operations.
+    const isCalendarOptional = (row?.email as string | null) === 'truax@berkeley.edu';
+
+    if (!row?.nylas_grant_id && !isCalendarOptional) {
       return NextResponse.json({ error: 'Calendar not connected' }, { status: 400 });
+    }
+
+    if (!row?.nylas_grant_id && isCalendarOptional) {
+      const availabilityMap = hoursMapToAvailability(hours);
+      const workingHoursFmt = fmtWorkingHours(toDefaultOpenHours(hours, (row.timezone as string | null) ?? 'America/New_York', []));
+
+      await Promise.all([
+        supabase
+          .from('users')
+          .update({
+            total_availability_hours: totalHours,
+            availability: availabilityMap as unknown as Json,
+          })
+          .eq('id', user.id),
+        supabase.from('tutor_availability_activity').insert({
+          tutor_id:   user.id,
+          event_type: 'scheduling_prefs_updated',
+          summary:    `Scheduling preferences updated · ${workingHoursFmt}`,
+          details:    { working_hours: workingHoursFmt, total_hours: totalHours },
+        }),
+      ]);
+
+      const summary: SchedulerSummary = {
+        workingHours:  workingHoursFmt,
+        exceptions:    '—',
+        breakDuration: '—',
+      };
+      return NextResponse.json({ ok: true, summary });
     }
 
     const timezone = (row.timezone as string | null) ?? 'America/New_York';
