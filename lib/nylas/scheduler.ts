@@ -4,7 +4,7 @@
 // Fetch and format Nylas Scheduler v3 configuration for read-only display
 // on the tutor settings page.
 
-import { nylasGet, nylasPost, nylasPut, nylasPatch } from './client';
+import { nylasGet, nylasPost, nylasPut, nylasPatch, nylasDelete } from './client';
 
 // ── Nylas Scheduler config types (v3) ────────────────────────────────────────
 //
@@ -349,6 +349,58 @@ export async function createSchedulerConfig(params: {
       ...(params.meetingLink ? { location: params.meetingLink } : {}),
     },
   });
+
+  // If slug already exists (e.g. tutor reconnected calendar), delete the old
+  // config and retry once.
+  if (!result.ok && result.error?.toLowerCase().includes('slug already exists')) {
+    const listResult = await nylasGet<{ id: string; slug?: string }[]>(
+      `/v3/grants/${params.grantId}/scheduling/configurations`,
+    );
+    if (listResult.ok) {
+      const configs = Array.isArray(listResult.data) ? listResult.data : [];
+      const stale = configs.find(c => c.slug === slug);
+      if (stale) {
+        await nylasDelete(`/v3/grants/${params.grantId}/scheduling/configurations/${stale.id}`);
+        const retry = await nylasPost<CreatedConfig>(`/v3/grants/${params.grantId}/scheduling/configurations`, {
+          requires_session_auth: false,
+          slug,
+          participants: [{
+            name: params.tutorName,
+            email: params.tutorEmail,
+            is_organizer: true,
+            availability: { calendar_ids: ['primary'] },
+            booking:      { calendar_id: 'primary' },
+          }],
+          availability: {
+            duration_minutes: 60,
+            interval_minutes: params.cushionMinutes ?? 0,
+            ...(params.openHours && params.openHours.length > 0
+              ? {
+                  availability_rules: {
+                    default_open_hours: params.openHours.map(h => ({
+                      days:     h.days,
+                      start:    h.start,
+                      end:      h.end,
+                      timezone: params.timezone || 'America/New_York',
+                    })),
+                  },
+                }
+              : {}),
+          },
+          event_booking: {
+            title: 'Tutoring Session',
+            timezone: params.timezone || 'America/New_York',
+            ...(params.meetingLink ? { location: params.meetingLink } : {}),
+          },
+        });
+        if (retry.ok) {
+          return { configId: retry.data.id, bookingUrl: `${appUrl}/book/${slug}` };
+        }
+        console.error('[nylas/scheduler] Retry after slug cleanup failed:', retry.statusCode, retry.error);
+        return { configId: null, error: retry.error };
+      }
+    }
+  }
 
   if (!result.ok) {
     console.error('[nylas/scheduler] Failed to create config:', result.statusCode, result.error);
