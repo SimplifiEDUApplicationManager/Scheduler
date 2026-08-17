@@ -1,13 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { HoursMap, SchedulerException } from '@/lib/types/scheduler';
+import type { HoursMap } from '@/lib/types/scheduler';
 import { EMPTY_HOURS_MAP } from '@/lib/types/scheduler';
 import type { SchedulerSummary } from '@/lib/nylas/scheduler';
 import { WorkingHoursEditor } from './WorkingHoursEditor';
-import { ExceptionsEditor } from './ExceptionsEditor';
-
-const CUSHION_OPTIONS = [0, 5, 10, 15, 20] as const;
 
 interface Props {
   open: boolean;
@@ -41,8 +38,6 @@ function SectionLabel({ children, tooltip }: { children: React.ReactNode; toolti
 
 export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
   const [hours, setHours]           = useState<HoursMap>({ ...EMPTY_HOURS_MAP });
-  const [exceptions, setExceptions] = useState<SchedulerException[]>([]);
-  const [cushionMin, setCushion]    = useState(0);
   const [loading, setLoading]       = useState(false);
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -56,10 +51,8 @@ export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
         if (!r.ok) throw new Error('load_failed');
         return r.json();
       })
-      .then((data: { hours?: HoursMap; exceptions?: SchedulerException[]; cushionMin?: number }) => {
+      .then((data: { hours?: HoursMap }) => {
         setHours(data.hours ?? { ...EMPTY_HOURS_MAP });
-        setExceptions(data.exceptions ?? []);
-        setCushion(data.cushionMin ?? 0);
       })
       .catch(() => setError('Could not load your current preferences.'))
       .finally(() => setLoading(false));
@@ -86,17 +79,10 @@ export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
           return;
         }
       }
-      for (const ex of exceptions) {
-        if (ex.windows.length > 1 && windowsOverlap(ex.windows)) {
-          setError(`Overlapping time windows on ${ex.date}. Please fix before saving.`);
-          setSaving(false);
-          return;
-        }
-      }
       const res = await fetch('/api/nylas/scheduler', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hours, exceptions, cushionMin }),
+        body: JSON.stringify({ hours }),
       });
       const data = await res.json() as { ok?: boolean; needs_approval?: boolean; total_hours?: number; summary?: SchedulerSummary; error?: string };
       if (!res.ok) { setError(data.error ?? 'Failed to save preferences.'); return; }
@@ -121,7 +107,7 @@ export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
       <div style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 16, padding: '36px 40px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', width: '100%', maxWidth: 640, position: 'relative' }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#71717A', marginBottom: 6 }}>Scheduling preferences</div>
         <h2 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px', letterSpacing: '-0.02em' }}>Working hours &amp; availability</h2>
-        <p style={{ fontSize: 14, color: '#52525B', margin: '0 0 28px', lineHeight: 1.5 }}>Set when you're generally open to tutor each week, add date-specific exceptions, and choose your session cushion.</p>
+        <p style={{ fontSize: 14, color: '#52525B', margin: '0 0 28px', lineHeight: 1.5 }}>Set when you're generally open to tutor each week.</p>
 
         {error && <div style={{ marginBottom: 16, padding: '10px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 13, color: '#DC2626' }}>{error}</div>}
 
@@ -131,22 +117,6 @@ export function SchedulerPreferencesModal({ open, onClose, onSaved }: Props) {
           <>
             <SectionLabel>Weekly working hours</SectionLabel>
             <WorkingHoursEditor hours={hours} onChange={setHours} />
-
-            <div style={{ margin: '24px 0', borderTop: '1px solid #F4F4F5' }} />
-
-            <SectionLabel tooltip="A buffer added between back-to-back tutoring sessions. Use this to give yourself a short break or travel time between appointments.">Session cushion</SectionLabel>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-              {CUSHION_OPTIONS.map(v => (
-                <button key={v} onClick={() => setCushion(v)} type="button"
-                  style={{ padding: '6px 14px', borderRadius: 999, background: cushionMin === v ? '#2B7265' : '#fff', color: cushionMin === v ? '#fff' : '#3F3F46', border: `1px solid ${cushionMin === v ? '#2B7265' : '#E4E4E7'}`, fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-                  {v === 0 ? 'None' : `${v} min`}
-                </button>
-              ))}
-            </div>
-            <div style={{ fontSize: 11, color: '#A1A1AA', marginBottom: 24, lineHeight: 1.4 }}>Minimum gap between back-to-back sessions. Does not add buffer around existing calendar events.</div>
-
-            <SectionLabel tooltip="Override your weekly schedule for specific dates — mark a day as fully unavailable, or set different available hours for that day only.">Exceptions to my upcoming availability</SectionLabel>
-            <ExceptionsEditor exceptions={exceptions} onChange={setExceptions} />
           </>
         )}
 

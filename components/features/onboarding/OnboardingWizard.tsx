@@ -34,7 +34,6 @@ const TIMEZONES = [
   'Pacific/Auckland',
 ];
 
-const CUSHION_OPTIONS = [0, 5, 10, 15, 20] as const;
 
 // Day key -> Nylas day number (0=Sun, 1=Mon ... 6=Sat)
 const DAY_NUM: Record<string, number> = {
@@ -74,7 +73,6 @@ export function OnboardingWizard({ initialName, email }: Props) {
 
   // Step 3
   const [hours, setHours]       = useState<HoursMap>({ ...DEFAULT_HOURS });
-  const [cushion, setCushion]   = useState<number>(0);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -168,7 +166,6 @@ export function OnboardingWizard({ initialName, email }: Props) {
     const url = new URL('/api/nylas/auth', window.location.origin);
     url.searchParams.set('email', email);
     if (openHours.length > 0) url.searchParams.set('open_hours', JSON.stringify(openHours));
-    if (cushion > 0) url.searchParams.set('cushion', String(cushion));
     window.location.href = url.toString();
   }
 
@@ -317,29 +314,6 @@ export function OnboardingWizard({ initialName, email }: Props) {
 
             <WorkingHoursEditor hours={hours} onChange={setHours} />
 
-            {/* Session cushion */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-fg-1">Break between sessions</span>
-              <div className="flex gap-2">
-                {CUSHION_OPTIONS.map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCushion(c)}
-                    className={cn(
-                      'flex-1 h-9 rounded-md border text-xs font-semibold transition-colors',
-                      cushion === c
-                        ? 'bg-brand-primary text-fg-on-brand border-brand-primary'
-                        : 'bg-surface-1 text-fg-1 border-border-default hover:border-border-strong',
-                    )}
-                  >
-                    {c === 0 ? 'None' : `${c} min`}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-fg-3">Buffer time blocked between back-to-back sessions.</p>
-            </div>
-
             {error && <p className="text-xs text-danger-ink">{error}</p>}
 
             <div className="flex gap-3 mt-1">
@@ -368,9 +342,7 @@ export function OnboardingWizard({ initialName, email }: Props) {
             <div className="bg-surface-2 rounded-xl p-4 flex flex-col gap-1.5 text-sm text-fg-2">
               <p>Profile saved.</p>
               <p>
-                {activeDayCount} day{activeDayCount !== 1 ? 's' : ''} of availability and{' '}
-                {cushion === 0 ? 'no session break' : `${cushion}-min break`}{' '}
-                will be applied on connect.
+                {activeDayCount} day{activeDayCount !== 1 ? 's' : ''} of availability will be applied on connect.
               </p>
             </div>
 

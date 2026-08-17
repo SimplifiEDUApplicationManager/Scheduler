@@ -609,7 +609,7 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
           </Card>
 
           {/* Working hours & meeting link */}
-          <Card id="hours" dataTour="settings-hours" title="Working hours & meeting link" subtitle="Set your weekly working hours, date-specific exceptions, and session cushion. Your permanent meeting link auto-populates in all calendar invites.">
+          <Card id="hours" dataTour="settings-hours" title="Working hours & meeting link" subtitle="Set your weekly working hours. Your permanent meeting link auto-populates in all calendar invites.">
             <Row label="Permanent meeting link" sub="Pasted into every confirmed session invite. Use a link that doesn't expire (e.g. Google Meet personal room or Zoom PMI).">
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ position: 'relative', flex: 1 }}>
@@ -623,8 +623,6 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
             {schedulerSummaryState ? (
               <div style={{ padding: 14, background: '#FAFAFA', borderRadius: 10, display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 12 }}>
                 <PrefRow label="Working hours" value={schedulerSummaryState.workingHours} />
-                <PrefRow label="Exceptions to my upcoming availability" value={schedulerSummaryState.exceptions} />
-                <PrefRow label="Session cushion" value={schedulerSummaryState.breakDuration} />
               </div>
             ) : (
               <div style={{ padding: 14, background: '#FAFAFA', borderRadius: 10, fontSize: 12, color: '#A1A1AA', marginBottom: 12 }}>
