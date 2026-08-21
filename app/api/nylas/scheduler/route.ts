@@ -261,7 +261,7 @@ export async function PUT(request: Request) {
 
     if (!row?.nylas_grant_id && isCalendarOptional) {
       const availabilityMap = hoursMapToAvailability(hours);
-      const workingHoursFmt = fmtWorkingHours(toDefaultOpenHours(hours, (row.timezone as string | null) ?? 'America/New_York', []));
+      const workingHoursFmt = fmtWorkingHours(toDefaultOpenHours(hours, (row?.timezone as string | null) ?? 'America/New_York', []));
 
       await Promise.all([
         supabase
