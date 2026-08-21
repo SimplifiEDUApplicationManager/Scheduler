@@ -155,7 +155,7 @@ export async function GET() {
 
     // Roshni can use the modal without a connected calendar — reconstruct
     // HoursMap from the stored availability (decimal-hour format) if present.
-    const isCalendarOptional = (row?.email as string | null) === 'truax@berkeley.edu';
+    const isCalendarOptional = ['truax@berkeley.edu', 'trevorregister@gmail.com'].includes((row?.email as string | null) ?? '');
     if (!row?.nylas_grant_id && isCalendarOptional) {
       const stored = row?.availability as Record<number, [number, number][]> | null;
       if (!stored) return NextResponse.json(defaults);
@@ -253,7 +253,7 @@ export async function PUT(request: Request) {
 
     // Roshni can save availability without a connected calendar — store hours
     // in the database for coordinator matching but skip all Nylas operations.
-    const isCalendarOptional = (row?.email as string | null) === 'truax@berkeley.edu';
+    const isCalendarOptional = ['truax@berkeley.edu', 'trevorregister@gmail.com'].includes((row?.email as string | null) ?? '');
 
     if (!row?.nylas_grant_id && !isCalendarOptional) {
       return NextResponse.json({ error: 'Calendar not connected' }, { status: 400 });

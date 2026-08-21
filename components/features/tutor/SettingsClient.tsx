@@ -640,8 +640,8 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
             )}
             <button
               onClick={openSchedulerEdit}
-              disabled={!me.nylasGrantId && me.email !== 'truax@berkeley.edu'}
-              style={{ ...btn('primary'), opacity: (!me.nylasGrantId && me.email !== 'truax@berkeley.edu') ? 0.5 : 1, cursor: (!me.nylasGrantId && me.email !== 'truax@berkeley.edu') ? 'not-allowed' : 'pointer' }}
+              disabled={!me.nylasGrantId && !['truax@berkeley.edu', 'trevorregister@gmail.com'].includes(me.email)}
+              style={{ ...btn('primary'), opacity: (!me.nylasGrantId && !['truax@berkeley.edu', 'trevorregister@gmail.com'].includes(me.email)) ? 0.5 : 1, cursor: (!me.nylasGrantId && !['truax@berkeley.edu', 'trevorregister@gmail.com'].includes(me.email)) ? 'not-allowed' : 'pointer' }}
             >
               <svg width={13} height={13} viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" aria-hidden><rect x={1.5} y={2.5} width={10} height={9} rx={1.5} /><path d="M1.5 5.5h10M4.5 1v3M8.5 1v3" /></svg>
               Edit scheduling preferences
