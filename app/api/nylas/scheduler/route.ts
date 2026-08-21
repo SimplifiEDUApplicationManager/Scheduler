@@ -287,6 +287,10 @@ export async function PUT(request: Request) {
       return NextResponse.json({ ok: true, summary });
     }
 
+    if (!row) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const timezone = (row.timezone as string | null) ?? 'America/New_York';
     let configId = row.nylas_scheduler_config_id as string | null;
 
