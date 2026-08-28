@@ -248,6 +248,23 @@ export function OnboardingWizard({ initialName, email }: Props) {
               Continue
             </Button>
 
+            <button
+              type="button"
+              className="text-xs text-fg-3 hover:text-fg-1 transition-colors text-center"
+              disabled={submitting}
+              onClick={async () => {
+                setSubmitting(true);
+                setError(null);
+                try {
+                  const res = await fetch('/api/onboarding/skip', { method: 'POST' });
+                  if (!res.ok) { setError('Failed to skip. Please try again.'); return; }
+                  router.replace('/tutor/settings');
+                } catch { setError('Failed to skip. Please try again.'); } finally { setSubmitting(false); }
+              }}
+            >
+              Skip tutorial — I'll set things up later
+            </button>
+
             <p className="text-xs text-fg-muted text-center">Signed in as {email}</p>
           </form>
         )}
