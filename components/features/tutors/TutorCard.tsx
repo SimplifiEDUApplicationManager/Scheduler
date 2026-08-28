@@ -107,7 +107,7 @@ export function TutorCard({
                 Calendar conflict
               </span>
             )}
-            {calendarStatus === 'no_calendar' && (
+            {(calendarStatus === 'no_calendar' || !tutor.nylasGrantId) && (
               <span className={cn(
                 'text-[9px] font-bold px-1.5 py-px rounded whitespace-nowrap',
                 selected ? 'bg-neutral-600 text-neutral-300' : 'bg-surface-3 text-fg-muted',
