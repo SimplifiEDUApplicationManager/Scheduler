@@ -153,10 +153,9 @@ export async function GET() {
 
     const defaults: SchedulerPrefs = { hours: { ...EMPTY_HOURS_MAP }, exceptions: [], cushionMin: 0 };
 
-    // Roshni can use the modal without a connected calendar — reconstruct
-    // HoursMap from the stored availability (decimal-hour format) if present.
-    const isCalendarOptional = ['truax@berkeley.edu', 'trevorregister@gmail.com'].includes((row?.email as string | null) ?? '');
-    if (!row?.nylas_grant_id && isCalendarOptional) {
+    // If no calendar connected, reconstruct HoursMap from the stored
+    // availability (decimal-hour format) if present, otherwise return defaults.
+    if (!row?.nylas_grant_id || !row?.nylas_scheduler_config_id) {
       const stored = row?.availability as Record<number, [number, number][]> | null;
       if (!stored) return NextResponse.json(defaults);
       const hours: HoursMap = { ...EMPTY_HOURS_MAP };
@@ -169,10 +168,6 @@ export async function GET() {
         }));
       }
       return NextResponse.json({ hours, exceptions: [], cushionMin: 0 });
-    }
-
-    if (!row?.nylas_grant_id || !row?.nylas_scheduler_config_id) {
-      return NextResponse.json(defaults);
     }
 
     const result = await nylasGet<Record<string, unknown>>(
@@ -252,14 +247,9 @@ export async function PUT(request: Request) {
       .single();
 
     // Roshni can save availability without a connected calendar — store hours
-    // in the database for coordinator matching but skip all Nylas operations.
-    const isCalendarOptional = ['truax@berkeley.edu', 'trevorregister@gmail.com'].includes((row?.email as string | null) ?? '');
-
-    if (!row?.nylas_grant_id && !isCalendarOptional) {
-      return NextResponse.json({ error: 'Calendar not connected' }, { status: 400 });
-    }
-
-    if (!row?.nylas_grant_id && isCalendarOptional) {
+    // If no calendar connected, save hours to the database for coordinator
+    // matching but skip all Nylas operations.
+    if (!row?.nylas_grant_id) {
       const availabilityMap = hoursMapToAvailability(hours);
       const workingHoursFmt = fmtWorkingHours(toDefaultOpenHours(hours, (row?.timezone as string | null) ?? 'America/New_York', []));
 
