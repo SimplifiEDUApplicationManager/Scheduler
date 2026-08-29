@@ -281,13 +281,11 @@ export default async function DashboardPage() {
             value={`${capacityPct}%`}
             hint={`${atCap} at capacity · ${underbooked} underbooked`}
             trend={
-              capacityPct === 0
-                ? { dir: 'flat', text: 'No sessions booked yet' }
-                : capacityPct < 40
-                  ? { dir: 'down', text: 'Low utilization', warn: true }
-                  : capacityPct < 80
-                    ? { dir: 'up', text: 'Healthy utilization' }
-                    : { dir: 'up', text: 'Near capacity', warn: true }
+              capacityPct < 40
+                ? { dir: 'down', text: 'Underutilization', warn: true }
+                : capacityPct < 80
+                  ? { dir: 'up', text: 'Healthy utilization' }
+                  : { dir: 'down', text: 'Overutilization', warn: true }
             }
             accentColor="var(--brand-ink)"
           />
