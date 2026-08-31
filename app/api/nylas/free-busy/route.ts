@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   const supabase = createServiceClient();
   const { data: tutorRows } = await supabase
     .from('users')
-    .select('id, nylas_grant_id')
+    .select('id, nylas_grant_id, selected_calendar_ids')
     .in('id', tutorIds);
 
   if (!tutorRows?.length) {
@@ -84,6 +84,7 @@ export async function POST(request: Request) {
   }
 
   const grantById = new Map(tutorRows.map(t => [t.id as string, t.nylas_grant_id as string | null]));
+  const selectedCalsById = new Map(tutorRows.map(t => [t.id as string, (t.selected_calendar_ids as string[] | null)]));
 
   // Expand tuples to concrete time ranges for the next 2 occurrences.
   const ranges = expandTuples(tuples, tz);
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
     tutorIds.map(async tutorId => {
       const grantId = grantById.get(tutorId);
       if (!grantId) return { tutorId, events: null };
-      const events = await fetchTutorEvents(grantId, startTime, endTime, tz);
+      const events = await fetchTutorEvents(grantId, startTime, endTime, tz, [], selectedCalsById.get(tutorId));
       return { tutorId, events };
     }),
   );

@@ -140,14 +140,18 @@ function toTutorEvent(
 /** Nylas calendar shape (subset). */
 interface NylasCalendar {
   id: string;
+  name?: string;
   read_only: boolean;
 }
 
 /**
- * Fetch all writable calendar IDs for a grant.
+ * Fetch writable calendar IDs for a grant.
+ * If `selectedIds` is provided (non-null), only return IDs that appear in
+ * both the writable set AND the selected set — this is how tutors control
+ * which calendars the platform reads for privacy.
  * Falls back to ['primary'] on error so callers always get something.
  */
-async function fetchCalendarIds(grantId: string): Promise<string[]> {
+async function fetchCalendarIds(grantId: string, selectedIds?: string[] | null): Promise<string[]> {
   const result = await nylasList<NylasCalendar>(
     `${grantPath(grantId, 'calendars')}?limit=50`,
   );
@@ -155,8 +159,30 @@ async function fetchCalendarIds(grantId: string): Promise<string[]> {
     console.error('[nylas/events] fetchCalendarIds failed:', result.error);
     return ['primary'];
   }
-  const ids = result.data.filter(c => !c.read_only).map(c => c.id);
+  let ids = result.data.filter(c => !c.read_only).map(c => c.id);
+  // If the tutor selected specific calendars, intersect with the writable set.
+  if (selectedIds && selectedIds.length > 0) {
+    const allowed = new Set(selectedIds);
+    ids = ids.filter(id => allowed.has(id));
+  }
   return ids.length > 0 ? ids : ['primary'];
+}
+
+/**
+ * Fetch all writable calendars for a grant (id + name + read_only).
+ * Used by the calendar picker UI so tutors can see calendar names.
+ */
+export async function fetchWritableCalendars(grantId: string): Promise<{ id: string; name: string }[]> {
+  const result = await nylasList<NylasCalendar>(
+    `${grantPath(grantId, 'calendars')}?limit=50`,
+  );
+  if (!result.ok) {
+    console.error('[nylas/events] fetchWritableCalendars failed:', result.error);
+    return [];
+  }
+  return result.data
+    .filter(c => !c.read_only)
+    .map(c => ({ id: c.id, name: c.name ?? c.id }));
 }
 
 /**
@@ -209,8 +235,9 @@ export async function fetchTutorEvents(
   endUnix: number,
   tz: string,
   overrides: EventOverride[] = [],
+  selectedCalendarIds?: string[] | null,
 ): Promise<TutorEvent[]> {
-  const calendarIds = await fetchCalendarIds(grantId);
+  const calendarIds = await fetchCalendarIds(grantId, selectedCalendarIds);
 
   const perCalendar = await Promise.all(
     calendarIds.map(id => fetchEventsForCalendar(grantId, id, startUnix, endUnix)),
@@ -244,12 +271,13 @@ import { weekBounds } from '@/lib/utils/capacity';
  */
 export async function fetchTutorEventsForCapacity(
   grantId: string,
+  selectedCalendarIds?: string[] | null,
 ): Promise<NylasEventForCapacity[]> {
   const { start, end } = weekBounds();
   const startSec = Math.floor(start / 1000);
   const endSec   = Math.floor(end   / 1000);
 
-  const calendarIds = await fetchCalendarIds(grantId);
+  const calendarIds = await fetchCalendarIds(grantId, selectedCalendarIds);
   const perCalendar = await Promise.all(
     calendarIds.map(id => fetchEventsForCalendar(grantId, id, startSec, endSec)),
   );

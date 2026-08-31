@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   // Fetch user row and overrides in parallel.
   const [userResult, overridesResult] = await Promise.all([
-    supabase.from('users').select('nylas_grant_id, timezone').eq('id', user.id).single(),
+    supabase.from('users').select('nylas_grant_id, timezone, selected_calendar_ids').eq('id', user.id).single(),
     supabase.from('event_overrides').select('nylas_event_id, master_event_id, counted').eq('user_id', user.id),
   ]);
 
@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
 
   const tz = row.timezone ?? 'UTC';
   const { startUnix, endUnix } = weekRange(weekOffset);
-  const events = await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, tz, overrides);
+  const selectedCalendarIds = (row.selected_calendar_ids as string[] | null) ?? null;
+  const events = await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, tz, overrides, selectedCalendarIds);
 
   return NextResponse.json(events);
 }

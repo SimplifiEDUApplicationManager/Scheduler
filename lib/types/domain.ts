@@ -117,6 +117,8 @@ export interface Tutor {
   bookingPageUrl?: string;
   nylasSchedulerConfigId?: string;
   nylasGrantId?: string;
+  /** Nylas calendar IDs the tutor opted in to. Undefined/null = all writable calendars. */
+  selectedCalendarIds?: string[];
   photoUrl?: string;
   isPaused: boolean;
   totalAvailabilityHours: number;

@@ -27,6 +27,7 @@ const SELECT_TUTOR = [
   'booking_page_url',
   'nylas_scheduler_config_id',
   'nylas_grant_id',
+  'selected_calendar_ids',
   'photo_url',
   'is_paused',
   'total_availability_hours',
@@ -55,6 +56,7 @@ type RawTutorRow = {
   booking_page_url: string | null;
   nylas_scheduler_config_id: string | null;
   nylas_grant_id: string | null;
+  selected_calendar_ids: string[] | null;
   photo_url: string | null;
   is_paused: boolean;
   total_availability_hours: number;
@@ -182,6 +184,7 @@ function rowToTutor(row: RawTutorRow, pendingChanges: RawChangeRow[], availabili
     bookingPageUrl:         row.booking_page_url ?? undefined,
     nylasSchedulerConfigId: row.nylas_scheduler_config_id ?? undefined,
     nylasGrantId:           row.nylas_grant_id ?? undefined,
+    selectedCalendarIds:    row.selected_calendar_ids ?? undefined,
     photoUrl:               row.photo_url ?? undefined,
     isPaused:               row.is_paused ?? false,
     totalAvailabilityHours: Number(row.total_availability_hours ?? 0),
@@ -236,7 +239,7 @@ export async function fetchTutor(
 
   if (tutorRow.nylas_grant_id) {
     try {
-      const events = await fetchTutorEventsForCapacity(tutorRow.nylas_grant_id);
+      const events = await fetchTutorEventsForCapacity(tutorRow.nylas_grant_id, tutorRow.selected_calendar_ids);
       tutor.hoursCurrent = computeWeeklyHours(events);
     } catch {
       // Non-fatal: show 0h if Nylas is unavailable
@@ -265,7 +268,7 @@ export async function fetchAllTutors(supabase: SupabaseInstance): Promise<Tutor[
       .filter(r => r.nylas_grant_id)
       .map(async r => {
         try {
-          const events = await fetchTutorEventsForCapacity(r.nylas_grant_id!);
+          const events = await fetchTutorEventsForCapacity(r.nylas_grant_id!, r.selected_calendar_ids);
           hoursMap.set(r.id, computeWeeklyHours(events));
         } catch {
           // Non-fatal: tutor shows 0h if Nylas is unavailable

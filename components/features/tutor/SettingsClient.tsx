@@ -61,6 +61,10 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
   const [activeSection, setActive] = useState<SectionId>('profile');
   const [schedulerSummaryState, setSchedulerSummary] = useState<SchedulerSummary | null>(schedulerSummary);
   const [showSchedulerModal, setShowSchedulerModal] = useState(false);
+  const [nylasCalendars, setNylasCalendars] = useState<{ id: string; name: string }[] | null>(null);
+  const [selectedCalIds, setSelectedCalIds] = useState<string[] | null>(null);
+  const [calPickerLoading, setCalPickerLoading] = useState(false);
+  const [calPickerSaving, setCalPickerSaving] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
 
@@ -308,6 +312,59 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
 
     return () => clearTimeout(timer);
   }, [name, tz, maxHours, minHours, minRate, meetingLink]);
+
+  // Fetch writable calendars from Nylas when connected
+  useEffect(() => {
+    if (!me.nylasGrantId) return;
+    setCalPickerLoading(true);
+    fetch('/api/tutor/calendars')
+      .then(res => res.json())
+      .then((data: { calendars: { id: string; name: string }[]; selectedIds: string[] | null }) => {
+        setNylasCalendars(data.calendars ?? []);
+        setSelectedCalIds(data.selectedIds);
+      })
+      .catch(() => { /* non-fatal */ })
+      .finally(() => setCalPickerLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleCalendarToggle(calId: string, checked: boolean) {
+    if (!nylasCalendars) return;
+    // If currently null (all selected), start from the full list
+    const current = selectedCalIds ?? nylasCalendars.map(c => c.id);
+    const next = checked
+      ? [...current, calId]
+      : current.filter(id => id !== calId);
+
+    // Don't allow deselecting all calendars
+    if (next.length === 0) {
+      showToast('You must keep at least one calendar selected');
+      return;
+    }
+
+    // If all calendars are now selected, store null (= all)
+    const allSelected = nylasCalendars.every(c => next.includes(c.id));
+    const toSave = allSelected ? null : next;
+
+    setSelectedCalIds(toSave);
+    setCalPickerSaving(true);
+    try {
+      const res = await fetch('/api/tutor/calendars', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedIds: toSave }),
+      });
+      if (!res.ok) {
+        showToast('Failed to save calendar selection');
+        setSelectedCalIds(selectedCalIds); // revert
+      }
+    } catch {
+      showToast('Failed to save — check your connection');
+      setSelectedCalIds(selectedCalIds); // revert
+    } finally {
+      setCalPickerSaving(false);
+    }
+  }
 
   // Scroll to section from ?section= query param on initial mount
   useEffect(() => {
@@ -697,6 +754,37 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 </a>
               </div>
             )}
+            {/* Calendar picker — choose which calendars are read */}
+            {me.nylasGrantId && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#3F3F46', marginBottom: 6 }}>Connected calendars</div>
+                <div style={{ fontSize: 11, color: '#A1A1AA', marginBottom: 8 }}>Choose which calendars we check for busy times. Only selected calendars affect your availability.</div>
+                {calPickerLoading ? (
+                  <div style={{ fontSize: 12, color: '#A1A1AA', padding: '8px 0' }}>Loading calendars…</div>
+                ) : nylasCalendars && nylasCalendars.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {nylasCalendars.map(cal => {
+                      const isChecked = selectedCalIds === null || selectedCalIds.includes(cal.id);
+                      return (
+                        <label key={cal.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: isChecked ? '#F0FDF9' : '#FAFAFA', border: `1px solid ${isChecked ? '#A7F3D0' : '#E4E4E7'}`, borderRadius: 8, cursor: calPickerSaving ? 'not-allowed' : 'pointer', transition: 'all 0.12s', opacity: calPickerSaving ? 0.6 : 1 }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={e => handleCalendarToggle(cal.id, e.target.checked)}
+                            disabled={calPickerSaving}
+                            style={{ width: 16, height: 16, accentColor: '#2B7265', cursor: 'inherit' }}
+                          />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: '#18181B' }}>{cal.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : nylasCalendars && nylasCalendars.length === 0 ? (
+                  <div style={{ fontSize: 12, color: '#A1A1AA', padding: '8px 0' }}>No writable calendars found.</div>
+                ) : null}
+              </div>
+            )}
+
             <div style={{ padding: 12, background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, fontSize: 12, color: '#78350F', lineHeight: 1.55, marginBottom: 16 }}>
               <b>Careful:</b> disconnecting your calendar hides your availability from coordinators until a new calendar is connected.
             </div>
