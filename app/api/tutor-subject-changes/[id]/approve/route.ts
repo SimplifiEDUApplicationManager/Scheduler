@@ -36,6 +36,21 @@ export async function POST(
     return NextResponse.json({ error: `Change is already ${change.status}` }, { status: 409 });
   }
 
+  // ── Mark the change as APPROVED first ─────────────────────────────────────
+  // Must happen before REMOVE deletes tutor_subjects, because the FK
+  // ON DELETE CASCADE would also delete this change row.
+
+  const { data: updated, error: approveErr } = await supabase
+    .from('tutor_subject_changes')
+    .update({ status: 'APPROVED', reviewed_by: user.id, reviewed_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id, status, reviewed_at')
+    .single();
+
+  if (approveErr) {
+    return NextResponse.json({ error: approveErr.message }, { status: 500 });
+  }
+
   // ── Apply the change ──────────────────────────────────────────────────────
 
   if (change.change_type === 'ADD') {
@@ -75,6 +90,8 @@ export async function POST(
     if (!change.tutor_subject_id) {
       return NextResponse.json({ error: 'REMOVE change is missing tutor_subject_id' }, { status: 500 });
     }
+    // Deleting tutor_subjects will CASCADE-delete this change row,
+    // but we've already marked it APPROVED above and returned `updated`.
     const { error: deleteErr } = await supabase
       .from('tutor_subjects')
       .delete()
@@ -82,19 +99,6 @@ export async function POST(
     if (deleteErr) {
       return NextResponse.json({ error: deleteErr.message }, { status: 500 });
     }
-  }
-
-  // ── Mark the change as APPROVED ───────────────────────────────────────────
-
-  const { data: updated, error: approveErr } = await supabase
-    .from('tutor_subject_changes')
-    .update({ status: 'APPROVED', reviewed_by: user.id, reviewed_at: new Date().toISOString() })
-    .eq('id', id)
-    .select('id, status, reviewed_at')
-    .single();
-
-  if (approveErr) {
-    return NextResponse.json({ error: approveErr.message }, { status: 500 });
   }
 
   return NextResponse.json(updated);
