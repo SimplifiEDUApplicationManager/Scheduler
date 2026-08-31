@@ -31,7 +31,7 @@ export async function PATCH(request: Request) {
   if (body.disconnectCalendar === true) {
     const { error: disconnectErr } = await supabase
       .from('users')
-      .update({ nylas_grant_id: null, nylas_scheduler_config_id: null, booking_page_url: null })
+      .update({ nylas_grant_id: null, nylas_scheduler_config_id: null, booking_page_url: null, selected_calendar_ids: null })
       .eq('id', user.id);
     if (disconnectErr) return NextResponse.json({ error: disconnectErr.message }, { status: 500 });
     return NextResponse.json({ ok: true });

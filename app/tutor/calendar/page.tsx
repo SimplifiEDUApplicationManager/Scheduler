@@ -30,7 +30,7 @@ export default async function TutorCalendarPage() {
 
   const { data: row } = await supabase
     .from('users')
-    .select('id, name, email, timezone, nylas_grant_id, max_weekly_hours, min_weekly_hours, min_rate')
+    .select('id, name, email, timezone, nylas_grant_id, selected_calendar_ids, max_weekly_hours, min_weekly_hours, min_rate')
     .eq('id', user.id)
     .single();
 
@@ -77,7 +77,7 @@ export default async function TutorCalendarPage() {
   }));
 
   let initialEvents = row.nylas_grant_id
-    ? await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, me.tz, overrides).catch(() => [])
+    ? await fetchTutorEvents(row.nylas_grant_id, startUnix, endUnix, me.tz, overrides, (row.selected_calendar_ids as string[] | null)).catch(() => [])
     : [];
 
   // Compute current weekly hours from the already-fetched events (no extra API call).

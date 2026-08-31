@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   const supabase = createServiceClient();
   const { data: tutorRows } = await supabase
     .from('users')
-    .select('id, nylas_grant_id')
+    .select('id, nylas_grant_id, selected_calendar_ids')
     .in('id', tutorIds);
 
   if (!tutorRows?.length) return NextResponse.json({ busySlots: {} });
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   const settled = await Promise.all(
     tutorRows.map(async row => {
       if (!row.nylas_grant_id) return { id: row.id as string, events: [] };
-      const events = await fetchTutorEvents(row.nylas_grant_id as string, startUnix, endUnix, tz);
+      const events = await fetchTutorEvents(row.nylas_grant_id as string, startUnix, endUnix, tz, [], (row.selected_calendar_ids as string[] | null));
       return { id: row.id as string, events };
     }),
   );
