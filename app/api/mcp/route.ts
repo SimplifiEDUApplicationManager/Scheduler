@@ -606,6 +606,13 @@ After calling this tool, for each task:
       const sName = subjectMap.get(change.subject_id as string) ?? 'Unknown';
 
       try {
+        // Mark as APPROVED first — for REMOVE, deleting tutor_subjects
+        // CASCADE-deletes the change row, so we must update it beforehand.
+        await sbPatch('tutor_subject_changes', `id=eq.${change.id}`, {
+          status: 'APPROVED',
+          reviewed_at: new Date().toISOString(),
+        });
+
         if (changeType === 'ADD') {
           await sbInsert('tutor_subjects', {
             tutor_id: change.tutor_id,
@@ -624,11 +631,6 @@ After calling this tool, for each task:
         } else if (changeType === 'REMOVE' && change.tutor_subject_id) {
           await sbDelete('tutor_subjects', `id=eq.${change.tutor_subject_id}`);
         }
-
-        await sbPatch('tutor_subject_changes', `id=eq.${change.id}`, {
-          status: 'APPROVED',
-          reviewed_at: new Date().toISOString(),
-        });
 
         return textContent(`Approved ${tName}'s ${changeType} request for ${sName}.`);
       } catch (err) {
