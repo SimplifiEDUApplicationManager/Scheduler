@@ -96,7 +96,6 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
                     <SnapField
                       label="Offered rate"
                       value={`$${p.offeredRate}/hr`}
-                      highlight={overBudget ? 'red' : undefined}
                     />
                   )}
                 </div>
