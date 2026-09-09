@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
-import { isValidRate } from '@/lib/utils/rate';
+
 
 export async function POST(request: Request) {
   // PENDING tutors are not ACTIVE, so we use requireAuth (session-only check).
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { name, timezone, minRate, maxWeeklyHours, minWeeklyHours, meetingLink, password } = body;
+  const { name, timezone, maxWeeklyHours, minWeeklyHours, meetingLink, password } = body;
 
   if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ error: 'Name is required' }, { status: 422 });
@@ -38,9 +38,6 @@ export async function POST(request: Request) {
   }
   if (!password || typeof password !== 'string' || String(password).length < 8) {
     return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 422 });
-  }
-  if (!isValidRate(minRate)) {
-    return NextResponse.json({ error: 'Rate must be 20, 25, 30, 35, or 40' }, { status: 422 });
   }
   const maxHours = Number(maxWeeklyHours);
   if (!Number.isInteger(maxHours) || maxHours < 6 || maxHours > 40) {
@@ -56,7 +53,6 @@ export async function POST(request: Request) {
     .update({
       name:             String(name).trim(),
       timezone:         String(timezone),
-      min_rate:         minRate as number,
       max_weekly_hours: maxHours,
       min_weekly_hours: minHours,
       meeting_link:     meetingLink ? String(meetingLink).trim() : null,

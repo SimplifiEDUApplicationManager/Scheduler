@@ -30,7 +30,7 @@ export default async function TutorCalendarPage() {
 
   const { data: row } = await supabase
     .from('users')
-    .select('id, name, email, timezone, nylas_grant_id, selected_calendar_ids, max_weekly_hours, min_weekly_hours, min_rate')
+    .select('id, name, email, timezone, nylas_grant_id, selected_calendar_ids, max_weekly_hours, min_weekly_hours')
     .eq('id', user.id)
     .single();
 
@@ -55,7 +55,6 @@ export default async function TutorCalendarPage() {
     hoursCurrent: 0,
     hoursMax:     row.max_weekly_hours ?? 20,
     hoursMin:     row.min_weekly_hours ?? 6,
-    minRate:      row.min_rate ?? 20,
     isPaused:     false,
     totalAvailabilityHours: 0,
     schedulingExceptions:   [],

@@ -28,7 +28,6 @@ export async function POST() {
     .update({
       status:           'ACTIVE',
       timezone:         'America/New_York',
-      min_rate:         20,
       max_weekly_hours: 20,
       min_weekly_hours: 6,
     })

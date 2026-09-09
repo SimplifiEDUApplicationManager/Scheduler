@@ -112,7 +112,6 @@ export interface Tutor {
   hoursCurrent: number;
   hoursMax: number;
   hoursMin: number;
-  minRate: number;
   meetingLink?: string;
   bookingPageUrl?: string;
   nylasSchedulerConfigId?: string;
