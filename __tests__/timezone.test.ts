@@ -187,28 +187,28 @@ describe('tupleToUtcRange — decimal (half-hour) start', () => {
 describe('convertTupleTimezone — identity', () => {
   it('returns an equal tuple when fromTz equals toTz', () => {
     const t = { day: 1, start: 17, end: 19 };
-    expect(convertTupleTimezone(t, ET, ET)).toEqual(t);
+    expect(convertTupleTimezone(t, ET, ET, WINTER_MON)).toEqual(t);
   });
 });
 
 describe('convertTupleTimezone — cross-timezone conversion', () => {
   // Mon 5–7 PM ET (UTC-5 in winter) = Mon 2–4 PM PT (UTC-8 in winter)
   it('shifts hours when converting ET → PT (Mon 5pm ET → Mon 2pm PT)', () => {
-    const result = convertTupleTimezone({ day: 1, start: 17, end: 19 }, ET, PT);
+    const result = convertTupleTimezone({ day: 1, start: 17, end: 19 }, ET, PT, WINTER_MON);
     expect(result.day).toBe(1);           // still Monday
     expect(result.start).toBeCloseTo(14); // 2 PM PT
     expect(result.end).toBeCloseTo(16);   // 4 PM PT
   });
 
   it('shifts hours when converting PT → ET (Mon 2pm PT → Mon 5pm ET)', () => {
-    const result = convertTupleTimezone({ day: 1, start: 14, end: 16 }, PT, ET);
+    const result = convertTupleTimezone({ day: 1, start: 14, end: 16 }, PT, ET, WINTER_MON);
     expect(result.day).toBe(1);
     expect(result.start).toBeCloseTo(17);
     expect(result.end).toBeCloseTo(19);
   });
 
   it('rolls the day back when early-morning ET crosses midnight going west (Mon 1am ET → Sun 10pm PT)', () => {
-    const result = convertTupleTimezone({ day: 1, start: 1, end: 2 }, ET, PT);
+    const result = convertTupleTimezone({ day: 1, start: 1, end: 2 }, ET, PT, WINTER_MON);
     expect(result.day).toBe(0);           // Sunday
     expect(result.start).toBeCloseTo(22); // 10 PM PT
     expect(result.end).toBeCloseTo(23);   // 11 PM PT
@@ -216,7 +216,7 @@ describe('convertTupleTimezone — cross-timezone conversion', () => {
 
   it('works for non-US timezone pairs (ET → London winter, UTC+0)', () => {
     // Mon 12pm ET (UTC-5) = Mon 5pm UTC
-    const result = convertTupleTimezone({ day: 1, start: 12, end: 13 }, ET, 'Europe/London');
+    const result = convertTupleTimezone({ day: 1, start: 12, end: 13 }, ET, 'Europe/London', WINTER_MON);
     expect(result.day).toBe(1);
     expect(result.start).toBeCloseTo(17);
     expect(result.end).toBeCloseTo(18);
@@ -224,7 +224,7 @@ describe('convertTupleTimezone — cross-timezone conversion', () => {
 
   it('works for large offsets (ET → Tokyo, UTC+9)', () => {
     // Mon 12pm ET (UTC-5) = Tue 2am JST (UTC+9, offset=14h)
-    const result = convertTupleTimezone({ day: 1, start: 12, end: 13 }, ET, 'Asia/Tokyo');
+    const result = convertTupleTimezone({ day: 1, start: 12, end: 13 }, ET, 'Asia/Tokyo', WINTER_MON);
     expect(result.day).toBe(2);           // Tuesday
     expect(result.start).toBeCloseTo(2);  // 2 AM JST
     expect(result.end).toBeCloseTo(3);    // 3 AM JST
@@ -263,7 +263,7 @@ describe('convertTupleTimezone — cross-timezone conversion', () => {
     // ET Mon 2 AM – 4 AM → PT (UTC-8): Sun 11 PM – Mon 1 AM PT
     // In PT: start=23 (Sunday), end=1 (Monday next day)
     // day is derived from utcStart in PT → Sunday (day=0), start=23, end=1 → end < start!
-    const result = convertTupleTimezone({ day: 1, start: 2, end: 4 }, ET, PT);
+    const result = convertTupleTimezone({ day: 1, start: 2, end: 4 }, ET, PT, WINTER_MON);
     // Mon 2 AM ET (UTC-5) = Sun 11 PM PT (UTC-8) → day=0 (Sun), start=23
     // Mon 4 AM ET (UTC-5) = Mon 1 AM PT (UTC-8) → end=1 in PT, but end < start would give 25
     expect(result.end).toBeGreaterThan(result.start); // must never produce end < start

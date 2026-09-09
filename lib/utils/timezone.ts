@@ -78,26 +78,35 @@ export function formatDecimalHour(decimal: number): string {
 
 // ── Tuple timezone conversion ──────────────────────────────────────────────
 
-// Fixed reference Monday in a northern-hemisphere winter week.
-// Using a stable anchor lets us do wall-clock conversions without picking an
-// arbitrary "today" — the relative offset is what matters for recurring slots.
-const REFERENCE_MON_MS = Date.UTC(2025, 0, 6); // Mon 2025-01-06 00:00:00 UTC
+/** Returns the UTC millisecond timestamp for Monday 00:00 of the current week. */
+function currentWeekMondayMs(): number {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0=Sun … 6=Sat
+  const diffToMon = day === 0 ? -6 : 1 - day;
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMon);
+}
 
 /**
  * Converts a recurring schedule Tuple from one IANA timezone to another.
  *
- * Uses a fixed reference week so the result is deterministic regardless of
- * when the function is called. Works for any pair of IANA timezones.
+ * Uses the current week as the reference so that DST offsets are correct for
+ * today's date. An optional `referenceMondayMs` can be passed for testing.
  *
  * @example
  * // Mon 5–7 PM ET → Mon 2–4 PM PT
  * convertTupleTimezone({ day: 1, start: 17, end: 19 }, 'America/New_York', 'America/Los_Angeles')
  * // → { day: 1, start: 14, end: 16 }
  */
-export function convertTupleTimezone(tuple: Tuple, fromTz: string, toTz: string): Tuple {
+export function convertTupleTimezone(
+  tuple: Tuple,
+  fromTz: string,
+  toTz: string,
+  referenceMondayMs?: number,
+): Tuple {
   if (fromTz === toTz) return tuple;
 
-  const { start: utcStart, end: utcEnd } = tupleToUtcRange(tuple, REFERENCE_MON_MS, fromTz);
+  const refMs = referenceMondayMs ?? currentWeekMondayMs();
+  const { start: utcStart, end: utcEnd } = tupleToUtcRange(tuple, refMs, fromTz);
 
   // ISO day of week: 1=Mon … 7=Sun → map to 0=Sun … 6=Sat via mod 7
   const isoDay = Number(formatInTimeZone(utcStart, toTz, 'i'));

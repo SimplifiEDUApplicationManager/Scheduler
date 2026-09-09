@@ -35,6 +35,9 @@ describe('formatTimezoneLabel — offset', () => {
   });
 });
 
+// Fixed winter Monday for deterministic conversions (ET=UTC-5, PT=UTC-8)
+const WINTER_MON = new Date('2025-01-06T00:00:00Z').getTime();
+
 describe('formatTimezoneLabel — IANA values work with convertTupleTimezone', () => {
   it('tz value from label round-trips correctly through convertTupleTimezone', () => {
     // Mon 5–7 PM ET → Mon 2–4 PM PT (standard offset test)
@@ -42,6 +45,7 @@ describe('formatTimezoneLabel — IANA values work with convertTupleTimezone', (
       { day: 1, start: 17, end: 19 },
       'America/New_York',
       'America/Los_Angeles',
+      WINTER_MON,
     );
     expect(result).toEqual({ day: 1, start: 14, end: 16 });
   });
@@ -51,7 +55,7 @@ describe('formatTimezoneLabel — IANA values work with convertTupleTimezone', (
     const zones = ['America/Chicago', 'Europe/London', 'Asia/Tokyo', 'Pacific/Auckland'];
     for (const tz of zones) {
       expect(() =>
-        convertTupleTimezone({ day: 1, start: 9, end: 10 }, 'America/New_York', tz)
+        convertTupleTimezone({ day: 1, start: 9, end: 10 }, 'America/New_York', tz, WINTER_MON)
       ).not.toThrow();
     }
   });
