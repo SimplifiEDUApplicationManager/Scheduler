@@ -69,6 +69,46 @@ def to_app_dow(python_weekday: int) -> int:
     return (python_weekday + 1) % 7
 
 
+def convert_windows(
+    windows: list[tuple[float, float]],
+    date: 'datetime.date',
+    tutor_tz: ZoneInfo,
+    display_tz: ZoneInfo,
+) -> list[tuple[float, float]]:
+    """Convert working-hour windows from tutor_tz to display_tz for a specific date.
+
+    Each window is a (start_decimal_hour, end_decimal_hour) pair.  We build an
+    actual datetime in the tutor's timezone, then convert to the display
+    timezone so that DST offsets are applied correctly for that calendar date.
+    """
+    if tutor_tz == display_tz:
+        return windows
+
+    result: list[tuple[float, float]] = []
+    for start_h, end_h in windows:
+        # Build datetimes in the tutor's timezone for this specific date
+        s_hour, s_min = int(start_h), round((start_h % 1) * 60)
+        e_hour, e_min = int(end_h), round((end_h % 1) * 60)
+
+        s_dt = datetime(date.year, date.month, date.day, s_hour, s_min, tzinfo=tutor_tz)
+        e_dt = datetime(date.year, date.month, date.day, e_hour, e_min, tzinfo=tutor_tz)
+
+        # Convert to display timezone
+        s_display = s_dt.astimezone(display_tz)
+        e_display = e_dt.astimezone(display_tz)
+
+        # Extract decimal hours
+        new_start = s_display.hour + s_display.minute / 60
+        new_end = e_display.hour + e_display.minute / 60
+
+        # Skip windows that land on a different date after conversion
+        if s_display.date() != date and e_display.date() != date:
+            continue
+
+        result.append((new_start, new_end))
+    return result
+
+
 def subtract_busy(
     windows: list[tuple[float, float]],
     busy_blocks: list[dict],
@@ -120,13 +160,13 @@ def main():
     app_url          = get_env("SIMPLIFI_APP_URL")
     skill_api_key    = get_env("SKILL_API_KEY")
 
-    # All active tutors with their working-hour windows
+    # All active tutors with their working-hour windows and timezone
     tutors = supabase_get(
         supabase_url, service_role_key,
         "users"
         "?role=eq.TUTOR"
         "&status=eq.ACTIVE"
-        "&select=id,name,availability"
+        "&select=id,name,availability,timezone"
         "&order=name.asc",
     )
 
@@ -169,7 +209,11 @@ def main():
             if not windows_raw:
                 continue
 
-            working = [(float(w[0]), float(w[1])) for w in windows_raw]
+            working_raw = [(float(w[0]), float(w[1])) for w in windows_raw]
+
+            # Convert working hours from the tutor's timezone to the display timezone
+            tutor_tz = ZoneInfo(t.get("timezone") or "America/New_York")
+            working = convert_windows(working_raw, d, tutor_tz, tz)
 
             # Subtract calendar events for this tutor on this specific day+week
             all_busy = busy_week[week_offset].get(t["id"], [])
