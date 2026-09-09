@@ -38,7 +38,6 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
   const remaining = Math.max(0, me.hoursMax - newTotal);
   const tz = p.tz.replace('America/', '');
   const conflictN = conflicts.filter(c => c.clashes.length).length;
-  const overBudget = p.offeredRate !== undefined && me.minRate > p.offeredRate;
 
   return (
     <>
@@ -56,17 +55,6 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
           </div>
 
           {/* Warning banners */}
-          {overBudget && (
-            <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', display: 'flex', gap: 10, marginBottom: 12 }}>
-              <span style={{ color: '#DC2626', flexShrink: 0, fontSize: 15 }}>⚠</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B' }}>Rate below your minimum</div>
-                <div style={{ fontSize: 12, color: '#7F1D1D', marginTop: 2 }}>
-                  This request offers ${p.offeredRate}/hr — below your ${me.minRate}/hr minimum. Contact your coordinator if you have questions.
-                </div>
-              </div>
-            </div>
-          )}
           {anyConflict && (
             <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', display: 'flex', gap: 10, marginBottom: 12 }}>
               <span style={{ color: '#DC2626', flexShrink: 0, fontSize: 15 }}>⚠</span>
@@ -202,9 +190,6 @@ export function ReviewStep({ p, me, events, conflicts, anyConflict, subjectConf,
                   <FitRow ok={!!subjectConf} label={subjectConf ? `You teach ${p.subject} · ${subjectConf.toLowerCase()} confidence` : `${p.subject} is not yet on your subject list`} />
                   <FitRow ok={!anyConflict} label={anyConflict ? `${conflictN} of ${p.tuples.length} proposed times conflict with your calendar` : 'All proposed times are open on your calendar'} />
                   <FitRow ok={!overCap} label={overCap ? `Accepting would put you at ${newTotal}/${me.hoursMax} hrs/week — over your cap` : `Fits under your weekly cap (${newTotal}/${me.hoursMax} hrs after accepting)`} />
-                  {p.offeredRate !== undefined && (
-                    <FitRow ok={!overBudget} label={overBudget ? `Offered rate ($${p.offeredRate}/hr) is below your minimum ($${me.minRate}/hr)` : `Offered rate ($${p.offeredRate}/hr) meets your minimum ($${me.minRate}/hr)`} />
-                  )}
                 </div>
               </Card>
             </div>

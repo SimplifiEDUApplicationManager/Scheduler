@@ -145,8 +145,8 @@ const STEPS: Step[] = [
     path: '/tutor/settings',
     target: '[data-tour="settings-capacity"]',
     pose: 'point',
-    title: 'Capacity & rate',
-    body: "Set your maximum weekly hours and minimum hourly rate here. Your minimum rate doesn't mean you'll be offered that rate for every job — it means you'll be flagged as \"over budget\" for any job with a lower rate, so coordinators know before proposing.",
+    title: 'Capacity',
+    body: "Set your maximum weekly hours here. Coordinators use this to decide how many sessions to route to you.",
     cta: 'Next',
   },
   {

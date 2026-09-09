@@ -28,14 +28,12 @@ export function TutorCard({
   activeSubjectId,
   selected,
   canPropose,
-  offeredRate,
   calendarStatus,
   onSelect,
   onPropose,
   onProfile,
 }: TutorCardProps) {
   const atCap      = tutor.hoursCurrent >= tutor.hoursMax;
-  const overBudget = offeredRate !== undefined && tutor.minRate > offeredRate;
   const capSt   = capacityStatus(tutor.hoursCurrent, tutor.hoursMax);
   const matchH  = activeTuples.length > 0 ? overlapHours(tutor.availability, activeTuples) : 0;
 
@@ -89,14 +87,6 @@ export function TutorCard({
                 selected ? 'bg-warning-ink text-warning-bg' : 'bg-warning-bg text-warning-ink',
               )}>
                 Near cap
-              </span>
-            )}
-            {overBudget && (
-              <span className={cn(
-                'text-[9px] font-bold px-1.5 py-px rounded whitespace-nowrap',
-                selected ? 'bg-danger-ink text-danger-bg' : 'bg-danger-bg text-danger-ink',
-              )}>
-                Over budget
               </span>
             )}
             {calendarStatus === 'conflict' && (
@@ -170,11 +160,6 @@ export function TutorCard({
                 selected ? 'text-brand-teal-200' : 'bg-brand-teal-50 text-brand-primary-ink',
               )}>
                 {matchH}h match
-              </span>
-            )}
-            {offeredRate === undefined && (
-              <span className={cn('text-[10px] whitespace-nowrap', selected ? 'text-neutral-400' : 'text-fg-muted')}>
-                ${tutor.minRate}/hr min
               </span>
             )}
           </div>
