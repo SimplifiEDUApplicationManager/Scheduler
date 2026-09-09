@@ -268,8 +268,8 @@ const TOOLS: Tool[] = [
     { timezone: z.string().default('America/New_York') },
     async ({ timezone }, authKey) => {
       const tutors = await sbGet(
-        'users', 'role=eq.TUTOR&status=eq.ACTIVE&select=id,name,availability&order=name.asc',
-      ) as { id: string; name: string; availability: unknown }[];
+        'users', 'role=eq.TUTOR&status=eq.ACTIVE&select=id,name,availability,timezone&order=name.asc',
+      ) as { id: string; name: string; availability: Record<string, [number, number][]> | null; timezone: string | null }[];
 
       if (!tutors.length) return textContent('No active tutors found.');
 
@@ -279,12 +279,47 @@ const TOOLS: Tool[] = [
         appPost('/api/nylas/weekly-busy', { tutorIds, weekOffset: 1, tz: timezone }, authKey),
       ]) as [{ busySlots: Record<string, unknown[]> }, { busySlots: Record<string, unknown[]> }];
 
-      const result = tutors.map(t => ({
-        name:         t.name,
-        workingHours: t.availability ?? {},
-        busyThisWeek: week0.busySlots?.[t.id] ?? [],
-        busyNextWeek: week1.busySlots?.[t.id] ?? [],
-      }));
+      // Convert each tutor's working hours from their timezone to the display timezone.
+      // Availability is stored as decimal hours in the tutor's own timezone.  DST
+      // offsets differ by date, so we anchor to the upcoming Sunday (start of the
+      // display range) for the conversion.
+      const now = new Date();
+      const result = tutors.map(t => {
+        const tutorTz = t.timezone ?? 'America/New_York';
+        const avail = t.availability ?? {};
+        let converted: Record<string, [number, number][]> = avail;
+        if (tutorTz !== timezone) {
+          converted = {};
+          for (const [dow, windows] of Object.entries(avail)) {
+            const cw: [number, number][] = windows.map(([startH, endH]) => {
+              // Build a real date for this day-of-week anchored to the current week
+              const refSunday = new Date(now);
+              refSunday.setDate(now.getDate() - now.getDay());
+              const d = new Date(refSunday);
+              d.setDate(refSunday.getDate() + Number(dow));
+              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+              const sH = Math.floor(startH);
+              const sM = Math.round((startH % 1) * 60);
+
+              // Get UTC offset difference between the two timezones on this date
+              const probe = new Date(`${dateStr}T${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}:00Z`);
+              const tutorLocal = new Date(probe.toLocaleString('en-US', { timeZone: tutorTz }));
+              const displayLocal = new Date(probe.toLocaleString('en-US', { timeZone: timezone }));
+              const diffHours = (displayLocal.getTime() - tutorLocal.getTime()) / 3600000;
+
+              return [startH + diffHours, endH + diffHours] as [number, number];
+            });
+            converted[dow] = cw;
+          }
+        }
+        return {
+          name:         t.name,
+          workingHours: converted,
+          busyThisWeek: week0.busySlots?.[t.id] ?? [],
+          busyNextWeek: week1.busySlots?.[t.id] ?? [],
+        };
+      });
 
       return textContent(JSON.stringify({ timezone, tutors: result }, null, 2));
     }),
