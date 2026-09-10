@@ -54,18 +54,25 @@ describe('isTutoringSession', () => {
     ).toBe(true);
   });
 
-  it('returns false for a plain calendar event with no metadata', () => {
+  it('returns false for a clearly non-tutoring event', () => {
     expect(isTutoringSession(makeEvent('Dentist appointment', WED, WED))).toBe(false);
   });
 
-  it('returns false when metadata has a different simplifi_type', () => {
-    expect(
-      isTutoringSession(makeEvent('Hold', WED, WED, { simplifi_type: 'hold' })),
-    ).toBe(false);
+  it('returns false for personal events', () => {
+    expect(isTutoringSession(makeEvent('Gym workout', WED, WED))).toBe(false);
+    expect(isTutoringSession(makeEvent('Lunch with Sarah', WED, WED))).toBe(false);
+    expect(isTutoringSession(makeEvent('Team standup', WED, WED))).toBe(false);
   });
 
-  it('returns false when title only partially matches (no brackets)', () => {
-    expect(isTutoringSession(makeEvent('Tutoring session', WED, WED))).toBe(false);
+  it('returns true for ambiguous events (e.g. just a student name)', () => {
+    expect(isTutoringSession(makeEvent('Julia', WED, WED))).toBe(true);
+    expect(isTutoringSession(makeEvent('SAT prep', WED, WED))).toBe(true);
+    expect(isTutoringSession(makeEvent('Oliver G. session', WED, WED))).toBe(true);
+  });
+
+  it('returns true when title contains tutoring without brackets', () => {
+    expect(isTutoringSession(makeEvent('Tutoring session', WED, WED))).toBe(true);
+    expect(isTutoringSession(makeEvent('Julia tutoring', WED, WED))).toBe(true);
   });
 });
 
