@@ -35,20 +35,34 @@ export interface CapacityOverride {
 
 // ── Session detection ──────────────────────────────────────────────────────
 
-/** Word-boundary match for "tutor" or "tutoring" (case-insensitive). */
-const TUTOR_WORD_RE = /\btutor(?:ing)?\b/i;
+/**
+ * Titles that are clearly NOT tutoring sessions. Case-insensitive.
+ * We exclude rather than include so that ambiguous events (e.g. a student's
+ * first name) default to counting — overcounting is preferable to undercounting.
+ */
+const NON_TUTORING_RE = /\b(lunch|dentist|doctor|gym|workout|yoga|therapy|meeting|standup|stand-up|sync|1:1|one-on-one|interview|hair|nail|pick up|pickup|drop off|dropoff|commute|drive|flight|travel|vacation|holiday|pto|sick|personal|break|blocked|busy|do not book|no sessions|office hours|staff|faculty|training|orientation|ceremony|birthday|wedding|party|dinner|brunch|coffee|happy hour|church|mass|service|volunteer|appointment|errand|car|oil change|vet|pet|walk|run|hike|class|lecture|seminar|lab|recital|rehearsal|practice|game|tournament|match)\b/i;
+
+/** Titles that are definitely tutoring, regardless of other patterns. */
+const TUTORING_RE = /\btutor(?:ing)?\b|\[tutoring\]/i;
 
 /**
  * Returns true if the event should count toward the tutor's weekly hours.
  *
- * An event is a tutoring session when ANY of the following is true:
- *   1. Its metadata has `simplifi_created === "true"` (set by createTutoringEvent).
- *   2. Its title contains "[Tutoring]" (case-insensitive) — fallback for older events.
+ * An event counts when ANY of the following is true:
+ *   1. Its metadata has `simplifi_created === "true"` (platform-created).
+ *   2. Its metadata has `simplifi_type === "session"`.
+ *   3. Its title contains "tutor" or "tutoring" (case-insensitive).
+ *   4. Its title does NOT match a known non-tutoring pattern — we default to
+ *      counting ambiguous events (e.g. just a student name like "Julia").
  */
 export function isTutoringSession(event: NylasEventForCapacity): boolean {
   if (event.metadata?.simplifi_created === 'true') return true;
-  if (/\[tutoring\]/i.test(event.title)) return true;
-  return false;
+  if (event.metadata?.simplifi_type === 'session') return true;
+  if (TUTORING_RE.test(event.title)) return true;
+  // Default: count unless clearly non-tutoring
+  if (NON_TUTORING_RE.test(event.title)) return false;
+  // Ambiguous title (e.g. "Julia", "SAT prep") — count it
+  return true;
 }
 
 /**
@@ -66,13 +80,8 @@ export function countsForCapacity(
   );
   if (override) return override.counted;
 
-  // App-created events always count
-  if (isTutoringSession(event)) return true;
-
-  // Auto-detect by title word boundary
-  if (TUTOR_WORD_RE.test(event.title)) return true;
-
-  return false;
+  // Use the inclusive session detection (overcount rather than undercount)
+  return isTutoringSession(event);
 }
 
 // ── Week bounds ────────────────────────────────────────────────────────────

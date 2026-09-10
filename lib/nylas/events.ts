@@ -46,12 +46,22 @@ function isAppCreated(ev: NylasEvent): boolean {
   return ev.metadata?.simplifi_created === 'true' || (ev.title ?? '').startsWith('[Tutoring]');
 }
 
-/** Word-boundary match for "tutor" or "tutoring" in the title (case-insensitive). */
-const TUTOR_WORD_RE = /\btutor(?:ing)?\b/i;
+/** Titles that are definitely tutoring, regardless of other patterns. */
+const TUTORING_RE = /\btutor(?:ing)?\b|\[tutoring\]/i;
 
-/** Returns true if the title contains "tutor" or "tutoring" as a standalone word. */
+/**
+ * Titles that are clearly NOT tutoring sessions. Case-insensitive.
+ * We exclude rather than include so that ambiguous events (e.g. a student's
+ * first name) default to counting — overcounting is preferable to undercounting.
+ */
+const NON_TUTORING_RE = /\b(lunch|dentist|doctor|gym|workout|yoga|therapy|meeting|standup|stand-up|sync|1:1|one-on-one|interview|hair|nail|pick up|pickup|drop off|dropoff|commute|drive|flight|travel|vacation|holiday|pto|sick|personal|break|blocked|busy|do not book|no sessions|office hours|staff|faculty|training|orientation|ceremony|birthday|wedding|party|dinner|brunch|coffee|happy hour|church|mass|service|volunteer|appointment|errand|car|oil change|vet|pet|walk|run|hike|class|lecture|seminar|lab|recital|rehearsal|practice|game|tournament|match)\b/i;
+
+/** Returns true if the title looks like a tutoring session (inclusive — overcounts). */
 function titleMatchesTutoring(title: string): boolean {
-  return TUTOR_WORD_RE.test(title);
+  if (TUTORING_RE.test(title)) return true;
+  if (NON_TUTORING_RE.test(title)) return false;
+  // Ambiguous title (e.g. "Julia", "SAT prep") — count it
+  return true;
 }
 
 /**
