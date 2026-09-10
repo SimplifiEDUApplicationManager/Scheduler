@@ -35,15 +35,21 @@ export interface CapacityOverride {
 
 // ── Session detection ──────────────────────────────────────────────────────
 
-/**
- * Titles that are clearly NOT tutoring sessions. Case-insensitive.
- * We exclude rather than include so that ambiguous events (e.g. a student's
- * first name) default to counting — overcounting is preferable to undercounting.
- */
-const NON_TUTORING_RE = /\b(lunch|dentist|doctor|gym|workout|yoga|therapy|meeting|standup|stand-up|sync|1:1|one-on-one|interview|hair|nail|pick up|pickup|drop off|dropoff|commute|drive|flight|travel|vacation|holiday|pto|sick|personal|break|blocked|busy|do not book|no sessions|office hours|staff|faculty|training|orientation|ceremony|birthday|wedding|party|dinner|brunch|coffee|happy hour|church|mass|service|volunteer|appointment|errand|car|oil change|vet|pet|walk|run|hike|class|lecture|seminar|lab|recital|rehearsal|practice|game|tournament|match)\b/i;
-
 /** Titles that are definitely tutoring, regardless of other patterns. */
 const TUTORING_RE = /\btutor(?:ing)?\b|\[tutoring\]/i;
+
+/**
+ * Positive signals that an event is likely a tutoring session — matches
+ * student-name patterns, subject keywords, and common tutoring formats.
+ * Intentionally broad: we prefer to overcount rather than undercount.
+ */
+/**
+ * Course-code pattern: 2-4 letter prefix + space + 3-4 digit number (e.g. MATH 208, PHIL 210).
+ * These are the tutor's own classes, not tutoring sessions.
+ */
+const COURSE_CODE_RE = /^[A-Z]{2,4}\s+\d{3,4}\b/i;
+
+const LIKELY_TUTORING_RE = /\b(session|prep|review|lesson|homework|hw|study|test prep|exam prep|sat|act|gre|gmat|lsat|mcat|ap\b|ib\b|gcse|reading|writing|math|english|science|history|physics|chemistry|biology|calculus|algebra|geometry|spanish|french|latin|econ|psych|stats|essay|dbq|frq)\b/i;
 
 /**
  * Returns true if the event should count toward the tutor's weekly hours.
@@ -52,17 +58,17 @@ const TUTORING_RE = /\btutor(?:ing)?\b|\[tutoring\]/i;
  *   1. Its metadata has `simplifi_created === "true"` (platform-created).
  *   2. Its metadata has `simplifi_type === "session"`.
  *   3. Its title contains "tutor" or "tutoring" (case-insensitive).
- *   4. Its title does NOT match a known non-tutoring pattern — we default to
- *      counting ambiguous events (e.g. just a student name like "Julia").
+ *   4. Its title contains a subject/test-prep keyword or session-like word.
+ *   5. The event has 1+ attendees (external participants suggest a session).
  */
 export function isTutoringSession(event: NylasEventForCapacity): boolean {
   if (event.metadata?.simplifi_created === 'true') return true;
   if (event.metadata?.simplifi_type === 'session') return true;
   if (TUTORING_RE.test(event.title)) return true;
-  // Default: count unless clearly non-tutoring
-  if (NON_TUTORING_RE.test(event.title)) return false;
-  // Ambiguous title (e.g. "Julia", "SAT prep") — count it
-  return true;
+  // Skip course codes (e.g. "MATH 208") — these are the tutor's own classes
+  if (COURSE_CODE_RE.test(event.title.trim())) return false;
+  if (LIKELY_TUTORING_RE.test(event.title)) return true;
+  return false;
 }
 
 /**

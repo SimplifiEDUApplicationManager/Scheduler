@@ -54,20 +54,20 @@ describe('isTutoringSession', () => {
     ).toBe(true);
   });
 
-  it('returns false for a clearly non-tutoring event', () => {
+  it('returns false for personal/non-tutoring events', () => {
     expect(isTutoringSession(makeEvent('Dentist appointment', WED, WED))).toBe(false);
+    expect(isTutoringSession(makeEvent('Meditation', WED, WED))).toBe(false);
+    expect(isTutoringSession(makeEvent('Adam soccer', WED, WED))).toBe(false);
+    expect(isTutoringSession(makeEvent('MG Work', WED, WED))).toBe(false);
+    expect(isTutoringSession(makeEvent('PHIL 210', WED, WED))).toBe(false);
   });
 
-  it('returns false for personal events', () => {
-    expect(isTutoringSession(makeEvent('Gym workout', WED, WED))).toBe(false);
-    expect(isTutoringSession(makeEvent('Lunch with Sarah', WED, WED))).toBe(false);
-    expect(isTutoringSession(makeEvent('Team standup', WED, WED))).toBe(false);
-  });
-
-  it('returns true for ambiguous events (e.g. just a student name)', () => {
-    expect(isTutoringSession(makeEvent('Julia', WED, WED))).toBe(true);
+  it('returns true for subject/keyword matches', () => {
     expect(isTutoringSession(makeEvent('SAT prep', WED, WED))).toBe(true);
     expect(isTutoringSession(makeEvent('Oliver G. session', WED, WED))).toBe(true);
+    expect(isTutoringSession(makeEvent('AP Chemistry review', WED, WED))).toBe(true);
+    expect(isTutoringSession(makeEvent('Math homework help', WED, WED))).toBe(true);
+    expect(isTutoringSession(makeEvent('Essay writing', WED, WED))).toBe(true);
   });
 
   it('returns true when title contains tutoring without brackets', () => {

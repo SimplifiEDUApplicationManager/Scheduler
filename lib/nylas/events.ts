@@ -50,18 +50,24 @@ function isAppCreated(ev: NylasEvent): boolean {
 const TUTORING_RE = /\btutor(?:ing)?\b|\[tutoring\]/i;
 
 /**
- * Titles that are clearly NOT tutoring sessions. Case-insensitive.
- * We exclude rather than include so that ambiguous events (e.g. a student's
- * first name) default to counting — overcounting is preferable to undercounting.
+ * Positive signals that an event is likely a tutoring session — matches
+ * subject keywords, test-prep terms, and common tutoring formats.
  */
-const NON_TUTORING_RE = /\b(lunch|dentist|doctor|gym|workout|yoga|therapy|meeting|standup|stand-up|sync|1:1|one-on-one|interview|hair|nail|pick up|pickup|drop off|dropoff|commute|drive|flight|travel|vacation|holiday|pto|sick|personal|break|blocked|busy|do not book|no sessions|office hours|staff|faculty|training|orientation|ceremony|birthday|wedding|party|dinner|brunch|coffee|happy hour|church|mass|service|volunteer|appointment|errand|car|oil change|vet|pet|walk|run|hike|class|lecture|seminar|lab|recital|rehearsal|practice|game|tournament|match)\b/i;
+/**
+ * Course-code pattern: 2-4 letter prefix + space + 3-4 digit number (e.g. MATH 208, PHIL 210).
+ * These are the tutor's own classes, not tutoring sessions.
+ */
+const COURSE_CODE_RE = /^[A-Z]{2,4}\s+\d{3,4}\b/i;
 
-/** Returns true if the title looks like a tutoring session (inclusive — overcounts). */
+const LIKELY_TUTORING_RE = /\b(session|prep|review|lesson|homework|hw|study|test prep|exam prep|sat|act|gre|gmat|lsat|mcat|ap\b|ib\b|gcse|reading|writing|math|english|science|history|physics|chemistry|biology|calculus|algebra|geometry|spanish|french|latin|econ|psych|stats|essay|dbq|frq)\b/i;
+
+/** Returns true if the title looks like a tutoring session. */
 function titleMatchesTutoring(title: string): boolean {
   if (TUTORING_RE.test(title)) return true;
-  if (NON_TUTORING_RE.test(title)) return false;
-  // Ambiguous title (e.g. "Julia", "SAT prep") — count it
-  return true;
+  // Skip course codes (e.g. "MATH 208") — these are the tutor's own classes
+  if (COURSE_CODE_RE.test(title.trim())) return false;
+  if (LIKELY_TUTORING_RE.test(title)) return true;
+  return false;
 }
 
 /**
