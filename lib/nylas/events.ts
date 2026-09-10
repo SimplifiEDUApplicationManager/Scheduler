@@ -46,28 +46,15 @@ function isAppCreated(ev: NylasEvent): boolean {
   return ev.metadata?.simplifi_created === 'true' || (ev.title ?? '').startsWith('[Tutoring]');
 }
 
-/** Titles that are definitely tutoring, regardless of other patterns. */
-const TUTORING_RE = /\btutor(?:ing)?\b|\[tutoring\]/i;
-
 /**
- * Positive signals that an event is likely a tutoring session — matches
- * subject keywords, test-prep terms, and common tutoring formats.
+ * Auto-detect: title contains "tutor", "tutoring", or "SAT prep".
+ * Everything else requires a manual pin via the tutor calendar.
  */
-/**
- * Course-code pattern: 2-4 letter prefix + space + 3-4 digit number (e.g. MATH 208, PHIL 210).
- * These are the tutor's own classes, not tutoring sessions.
- */
-const COURSE_CODE_RE = /^[A-Z]{2,4}\s+\d{3,4}\b/i;
+const AUTO_COUNT_RE = /\btutor(?:ing)?\b|\[tutoring\]|\bsat\s*prep\b/i;
 
-const LIKELY_TUTORING_RE = /\b(session|prep|review|lesson|homework|hw|study|test prep|exam prep|sat|act|gre|gmat|lsat|mcat|ap\b|ib\b|gcse|reading|writing|math|english|science|history|physics|chemistry|biology|calculus|algebra|geometry|spanish|french|latin|econ|psych|stats|essay|dbq|frq)\b/i;
-
-/** Returns true if the title looks like a tutoring session. */
+/** Returns true if the title auto-matches as a tutoring session. */
 function titleMatchesTutoring(title: string): boolean {
-  if (TUTORING_RE.test(title)) return true;
-  // Skip course codes (e.g. "MATH 208") — these are the tutor's own classes
-  if (COURSE_CODE_RE.test(title.trim())) return false;
-  if (LIKELY_TUTORING_RE.test(title)) return true;
-  return false;
+  return AUTO_COUNT_RE.test(title);
 }
 
 /**
