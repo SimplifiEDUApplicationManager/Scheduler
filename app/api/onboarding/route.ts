@@ -40,12 +40,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 422 });
   }
   const maxHours = Number(maxWeeklyHours);
-  if (!Number.isInteger(maxHours) || maxHours < 6 || maxHours > 40) {
-    return NextResponse.json({ error: 'Max weekly hours must be between 6 and 40' }, { status: 422 });
+  if (!Number.isInteger(maxHours) || maxHours < 1 || maxHours > 40) {
+    return NextResponse.json({ error: 'Max weekly hours must be between 1 and 40' }, { status: 422 });
   }
-  const minHours = Number(minWeeklyHours ?? 6);
-  if (!Number.isInteger(minHours) || minHours < 6 || minHours > maxHours) {
-    return NextResponse.json({ error: 'Min weekly hours must be between 6 and max weekly hours' }, { status: 422 });
+  const minHours = Number(minWeeklyHours ?? 1);
+  if (!Number.isInteger(minHours) || minHours < 1 || minHours > maxHours) {
+    return NextResponse.json({ error: 'Min weekly hours must be between 1 and max weekly hours' }, { status: 422 });
   }
 
   const { error } = await svc

@@ -507,22 +507,11 @@ export function SettingsClient({ me, allSubjects, schedulerSummary }: Props) {
                 {maxExceedsAvail && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Cannot exceed your {totalAvail} hrs/week of availability windows.</div>}
                 {!maxExceedsAvail && maxHours < 1 && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Must be at least 1 hour.</div>}
                 {!maxExceedsAvail && maxHours > 40 && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Must be 40 hours or less.</div>}
-                {!maxHoursLocked && maxHours <= 5 && maxHours >= 1 && (
-                  <div style={{ marginTop: 6, padding: '8px 10px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, fontSize: 12, color: '#78350F' }}>
-                    Hours of 5 or below require coordinator approval.{' '}
-                    <button onClick={() => setLowHoursOpen(true)} style={{ fontWeight: 700, color: '#B45309', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, padding: 0, textDecoration: 'underline' }}>Submit for approval</button>
-                  </div>
-                )}
-                {declinedLowHours && !pendingLowHours && (
-                  <div style={{ marginTop: 6, padding: '8px 10px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 12, color: '#991B1B' }}>
-                    Previous request declined{declinedLowHours.declineReason ? ` — ${declinedLowHours.declineReason}` : ''}.
-                  </div>
-                )}
               </div>
               <div>
                 <label style={metaLabel}>Minimum weekly hours</label>
-                <input type="number" min={6} value={minHours} onChange={e => { setMin(+e.target.value); }} style={input()} />
-                <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 4 }}>Target floor — flags you as underbooked. System min: 6 hours.</div>
+                <input type="number" min={1} value={minHours} onChange={e => { setMin(+e.target.value); }} style={input()} />
+                <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 4 }}>Target floor — flags you as underbooked if below this.</div>
               </div>
             </div>
             <div style={{ padding: 14, background: '#FAFAFA', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 16 }}>

@@ -29,7 +29,7 @@ export async function POST() {
       status:           'ACTIVE',
       timezone:         'America/New_York',
       max_weekly_hours: 20,
-      min_weekly_hours: 6,
+      min_weekly_hours: 1,
     })
     .eq('id', user.id);
 

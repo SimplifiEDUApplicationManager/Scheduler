@@ -212,7 +212,7 @@ def main():
             "role":             role,
             "status":           "PENDING",
             "max_weekly_hours": 20,
-            "min_weekly_hours": 6,
+            "min_weekly_hours": 1,
             "min_rate":         20,
         },
     )
