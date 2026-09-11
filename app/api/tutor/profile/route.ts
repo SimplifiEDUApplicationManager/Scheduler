@@ -57,10 +57,6 @@ export async function PATCH(request: Request) {
     if (!Number.isInteger(v) || v < 1 || v > 40) {
       return NextResponse.json({ error: 'max_weekly_hours must be an integer between 1 and 40', status: 422 }, { status: 422 });
     }
-    // Values ≤ 5 must go through the approval flow — block direct save.
-    if (v <= 5) {
-      return NextResponse.json({ error: 'Hours of 5 or below require coordinator approval. Submit an availability request instead.', status: 422 }, { status: 422 });
-    }
     // Max hours cannot exceed total availability hours (if the tutor has set scheduling prefs).
     const { data: tutorRow } = await supabase
       .from('users')

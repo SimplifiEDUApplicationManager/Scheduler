@@ -67,7 +67,7 @@ export function OnboardingWizard({ initialName, email }: Props) {
   const [confirmPassword, setConfirm] = useState(defaultPassword);
 
   // Step 2
-  const [minHours, setMinHours] = useState<string>('6');
+  const [minHours, setMinHours] = useState<string>('1');
   const [maxHours, setMaxHours] = useState<string>('20');
   const [meetingLink, setLink]  = useState('');
 
@@ -93,11 +93,11 @@ export function OnboardingWizard({ initialName, email }: Props) {
     e.preventDefault();
     const max = Number(maxHours);
     const min = Number(minHours);
-    if (!Number.isInteger(max) || max < 6 || max > 40) {
-      setError('Max weekly hours must be between 6 and 40'); return;
+    if (!Number.isInteger(max) || max < 1 || max > 40) {
+      setError('Max weekly hours must be between 1 and 40'); return;
     }
-    if (!Number.isInteger(min) || min < 6 || min > max) {
-      setError('Min weekly hours must be between 6 and max weekly hours'); return;
+    if (!Number.isInteger(min) || min < 1 || min > max) {
+      setError('Min weekly hours must be between 1 and max weekly hours'); return;
     }
     setError(null);
     setStep(3);
@@ -281,17 +281,17 @@ export function OnboardingWizard({ initialName, email }: Props) {
               <Input
                 label="Min weekly hours"
                 type="number"
-                min={6}
+                min={1}
                 max={40}
                 value={minHours}
                 onChange={e => setMinHours(e.target.value)}
-                hint="Minimum you'd like (6-40)"
+                hint="Minimum you'd like (1-40)"
                 required
               />
               <Input
                 label="Max weekly hours"
                 type="number"
-                min={6}
+                min={1}
                 max={40}
                 value={maxHours}
                 onChange={e => setMaxHours(e.target.value)}
